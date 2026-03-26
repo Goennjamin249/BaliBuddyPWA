@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "balibuddy",
+    "slug": "balibuddy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "balibuddy",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/images/ios/180.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android/launchericon-512x512.png",
+        "backgroundImage": "./assets/images/android/launchericon-512x512.png",
+        "monochromeImage": "./assets/images/android/launchericon-512x512.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/windows/Square150x150Logo.scale-200.png",
+      "name": "BaliBuddy - Offline Reise-Companion",
+      "shortName": "BaliBuddy",
+      "description": "Dein smarter Offline-Reise-Companion für Backpacker in Bali",
+      "themeColor": "#00B4D8",
+      "backgroundColor": "#FFFFFF",
+      "display": "standalone",
+      "orientation": "portrait",
+      "scope": "/",
+      "startUrl": "/",
+      "manifest": "./public/manifest.json",
+      "meta": {
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "default",
+        "apple-mobile-web-app-title": "BaliBuddy",
+        "mobile-web-app-capable": "yes",
+        "msapplication-TileColor": "#00B4D8",
+        "msapplication-tap-highlight": "no",
+        "theme-color": "#00B4D8"
+      },
+      "icons": {
+        "apple": "./assets/images/ios/180.png"
+      },
+      "splash": {
+        "backgroundColor": "#E0F2FE",
+        "resizeMode": "contain"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#208AEF",
+          "android": {
+            "image": "./assets/images/android/launchericon-96x96.png",
+            "imageWidth": 76
+          },
+          "ios": {
+            "image": "./assets/images/ios/80.png"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
