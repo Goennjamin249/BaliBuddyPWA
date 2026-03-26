@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { useColorScheme, Platform } from 'react-native';
 import '../i18n';
 import InstallPrompt from '../components/InstallPrompt';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -68,6 +69,9 @@ export default function RootLayout() {
       
       {/* PWA Install Prompt */}
       <InstallPrompt />
+      
+      {/* Vercel Speed Insights - Web only */}
+      {Platform.OS === 'web' && <SpeedInsights />}
     </ThemeProvider>
   );
 }
