@@ -1,0 +1,125 @@
+# BaliBuddy PWA - Project Rules & Standards
+
+## 🎯 Project Identity
+**App Name:** BaliBuddy
+**Type:** Progressive Web App (PWA) - Offline-First Travel Companion for Backpackers in Bali
+**Primary Language:** German (de) - All UI text must be in German by default
+
+## 🚫 STRICTLY FORBIDDEN - Web-Only Stack
+These native modules are BANNED and will break the web build:
+- ❌ @rnmapbox/maps (use maplibre-gl or react-map-gl instead)
+- ❌ react-native-vision-camera (use react-webcam + tesseract.js for OCR)
+- ❌ expo-notifications (use standard Web Push API with Service Workers)
+- ❌ Any other native module without web support
+
+## ✅ REQUIRED Tech Stack
+- **Framework:** Expo SDK 55 with react-native-web
+- **Routing:** Expo Router (src/app directory)
+- **Styling:** NativeWind v5 (Tailwind CSS)
+- **Database:** WatermelonDB with LokiJS (IndexedDB) adapter
+- **Maps:** maplibre-gl or react-map-gl (Web compatible)
+- **OCR:** react-webcam + tesseract.js
+- **Localization:** i18next-react (German primary, infinitely scalable)
+- **Icons:** lucide-react-native
+- **Offline:** Service Workers with aggressive caching
+
+## 🎨 UI/UX Philosophy: "Bright, Airy & Bento-Grid"
+**Visual Identity:**
+- Light Mode ONLY (no dark mode in MVP)
+- Tropical teal (#00B4D8) - primary accent
+- Rice-paddy green (#90BE6D) - success/nature
+- Coral sunset (#FF6B6B) - alerts/warnings
+- Clean white backgrounds with subtle shadows
+- Rounded corners (16px-24px border radius)
+
+**Layout System:**
+- Bento-Grid card-based design
+- 4-column grid on desktop, 2-column on mobile
+- Consistent 16px spacing between cards
+- Cards: white background, subtle shadow, hover effects
+- Never clutter screens - maximum 6-8 cards visible
+
+**Typography:**
+- System font stack (SF Pro, Inter, sans-serif)
+- Headlines: Bold, 24-32px
+- Body: Regular, 16px
+- Captions: 14px, muted color
+
+## 🌍 Internationalization (CRITICAL)
+- Default UI: German (de)
+- Toggle to English (en) as proof of concept
+- JSON structure must be infinitely scalable for: es, fr, ja, etc.
+- All text, menus, placeholders in German by default
+- Translation keys: nested objects by feature
+
+## 📱 PWA Requirements
+- public/manifest.json with "display": "standalone"
+- Service Worker for offline caching
+- "Add to Home Screen" (A2HS) prompt for iOS Safari
+- Works fully offline in "dense jungle" scenarios
+- IndexedDB for all persistent data
+
+## 🔧 Development Standards
+- TypeScript strict mode
+- Functional components only
+- Hooks over HOCs
+- Async/await for all API calls
+- Error boundaries on all screens
+- Loading states for all async operations
+- Offline indicators when data is stale
+
+## 📊 Database Schema Guidelines
+- All models must have: id, created_at, updated_at
+- Soft deletes (isDeleted flag) over hard deletes
+- Indexed fields for queries used in UI
+- Pre-seed static data (phrases, prices, etc.)
+
+## 🎯 Feature Implementation Priority
+1. Offline-first (all features work without internet)
+2. German language support
+3. Bento-Grid UI consistency
+4. PWA capabilities (installable, cached)
+5. Live data when available (currency, weather)
+
+## 🧪 Testing Requirements
+- Web builds must pass: `npm run web`
+- No console errors in production build
+- Offline functionality verified
+- German text displaying correctly
+- Responsive on 320px to 1920px screens
+
+## 📁 File Structure
+```
+src/
+├── app/                 # Expo Router pages
+├── components/          # Reusable UI components
+├── constants/           # Colors, sizes, strings
+├── db/                  # WatermelonDB models & schema
+├── hooks/               # Custom React hooks
+├── i18n/                # Translation files (de.json, en.json)
+├── services/            # API clients, external services
+├── types/               # TypeScript type definitions
+└── utils/               # Helper functions
+public/
+├── manifest.json        # PWA manifest
+├── sw.js               # Service Worker
+└── icons/              # App icons for PWA
+```
+
+## 🚀 Build Commands
+- `npm install` - Install dependencies
+- `npm run web` - Start web development server
+- `npm run build:web` - Production build
+
+## ⚠️ Common Pitfalls to Avoid
+- Adding native modules without web support
+- Hardcoding text instead of using i18n keys
+- Forgetting offline states in UI
+- Cluttering the Bento-Grid layout
+- Using dark colors on main screens
+- Skipping loading/error states
+
+---
+
+**Last Updated:** Phase 1 Init
+**Maintained by:** BaliBuddy PWA Team

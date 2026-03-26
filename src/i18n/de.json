@@ -1,0 +1,224 @@
+{
+  "common": {
+    "loading": "Laden...",
+    "error": "Fehler",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "close": "Schließen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "confirm": "Bestätigen",
+    "search": "Suchen",
+    "filter": "Filter",
+    "sort": "Sortieren",
+    "noData": "Keine Daten verfügbar",
+    "offline": "Offline",
+    "online": "Online",
+    "refresh": "Aktualisieren"
+  },
+  "navigation": {
+    "home": "Startseite",
+    "map": "Karte",
+    "tools": "Werkzeuge",
+    "learn": "Lernen",
+    "profile": "Profil",
+    "settings": "Einstellungen"
+  },
+  "home": {
+    "welcome": "Willkommen in BaliBuddy",
+    "subtitle": "Dein Offline-Reise-Companion für Bali",
+    "quickAccess": "Schnellzugriff",
+    "featured": "Alle Features",
+    "emergency": "Notfall"
+  },
+  "radar": {
+    "title": "POI Radar",
+    "subtitle": "Orte in der Nähe"
+  },
+  "weather": {
+    "title": "Wetter",
+    "subtitle": "Live-Updates"
+  },
+  "scooter": {
+    "title": "Scooter Check",
+    "subtitle": "Sicherheitscheck"
+  },
+  "ferries": {
+    "title": "Fähren",
+    "subtitle": "Fahrplan & Tickets"
+  },
+  "fare": {
+    "title": "Fahrpreis",
+    "subtitle": "Taxi & Grab Preise"
+  },
+  "laws": {
+    "title": "Gesetze",
+    "subtitle": "Wichtige Regeln"
+  },
+  "bars": {
+    "title": "Sichere Bars",
+    "subtitle": "Geprüfte Locations"
+  },
+  "crowd": {
+    "title": "Crowd-Radar",
+    "subtitle": "Auslastung prüfen"
+  },
+  "currency": {
+    "title": "Währungsrechner",
+    "subtitle": "IDR Umrechnung mit Live-Kursen",
+    "amount": "Betrag",
+    "from": "Von",
+    "to": "Nach",
+    "convert": "Umrechnen",
+    "result": "Ergebnis",
+    "lastUpdate": "Letzte Aktualisierung",
+    "offlineMode": "Offline-Modus (gecachezte Kurse)",
+    "refreshRates": "Kurse aktualisieren"
+  },
+  "phrasebook": {
+    "title": "Sprachführer",
+    "subtitle": "Bahasa Indonesia für Reisende",
+    "search": "Ausdrücke suchen",
+    "categories": "Kategorien",
+    "favorites": "Favoriten",
+    "greetings": "Begrüßungen",
+    "directions": "Wegbeschreibung",
+    "food": "Essen & Trinken",
+    "shopping": "Einkaufen",
+    "emergency": "Notfall",
+    "accommodation": "Unterkunft",
+    "transport": "Transport",
+    "numbers": "Zahlen",
+    "time": "Zeit",
+    "weather": "Wetter",
+    "playAudio": "Audio abspielen"
+  },
+  "bargaining": {
+    "title": "Handelsführer",
+    "subtitle": "Faire Preise für Bali",
+    "search": "Artikel suchen",
+    "categories": "Kategorien",
+    "typicalPrice": "Typischer Preis",
+    "bargainingTips": "Handelstipps",
+    "market": "Markt",
+    "shop": "Geschäft",
+    "street": "Straße"
+  },
+  "calendar": {
+    "title": "Odalan-Kalender",
+    "subtitle": "210-Tage Pawukon-Zyklus",
+    "upcoming": "Kommende Zeremonien",
+    "today": "Heute",
+    "ceremonies": "Zeremonien",
+    "temples": "Tempel",
+    "etiquette": "Tempel-Etikette"
+  },
+  "visa": {
+    "title": "Visum-Tracker",
+    "subtitle": "30-Tage VoA & Verlängerung",
+    "entryDate": "Einreisedatum",
+    "daysRemaining": "Verbleibende Tage",
+    "overstayWarning": "Overstay-Warnung",
+    "extension": "Verlängerung",
+    "penalties": "Strafen"
+  },
+  "emergency": {
+    "title": "Notfall-Dashboard",
+    "subtitle": "Sofortige Hilfe",
+    "call": "Anrufen",
+    "ambulance": "Krankenwagen",
+    "police": "Polizei",
+    "doctor": "Arzt",
+    "pharmacy": "Apotheke",
+    "embassy": "Botschaft",
+    "baliBelly": "Bali Belly",
+    "rabies": "Tollwut",
+    "methanol": "Methanol"
+  },
+  "map": {
+    "title": "Karte",
+    "subtitle": "POIs in Bali",
+    "waterRefills": "Wasser-Stationen",
+    "laundries": "Wäschereien",
+    "atms": "Geldautomaten",
+    "hospitals": "Krankenhäuser",
+    "pharmacies": "Apotheken",
+    "restaurants": "Restaurants",
+    "bars": "Bars",
+    "filterPOIs": "POIs filtern",
+    "directions": "Route",
+    "navigate": "Navigieren"
+  },
+  "scanner": {
+    "title": "Essens-Scanner",
+    "subtitle": "Menü-Übersetzer",
+    "camera": "Kamera aktivieren",
+    "capture": "Foto aufnehmen",
+    "processing": "Verarbeite...",
+    "translation": "Übersetzung",
+    "allergens": "Allergene",
+    "price": "Preis"
+  },
+  "itinerary": {
+    "title": "Reiseplaner",
+    "subtitle": "Tage planen & teilen",
+    "addDay": "Tag hinzufügen",
+    "addActivity": "Aktivität hinzufügen",
+    "squads": "Gruppen",
+    "sharePlan": "Plan teilen",
+    "dragToReorder": "Ziehen zum Neuordnen"
+  },
+  "expenses": {
+    "title": "Ausgaben-Tracker",
+    "subtitle": "Kosten teilen in IDR",
+    "addExpense": "Ausgabe hinzufügen",
+    "description": "Beschreibung",
+    "amount": "Betrag (IDR)",
+    "paidBy": "Bezahlt von",
+    "splitAmong": "Aufteilen unter",
+    "settlement": "Ausgleich",
+    "total": "Gesamt"
+  },
+  "packing": {
+    "title": "Packliste",
+    "subtitle": "Wetter- & aktivitätsbasiert",
+    "suggestions": "Vorschläge",
+    "myList": "Meine Liste",
+    "addItem": "Artikel hinzufügen",
+    "packed": "Eingepackt",
+    "weatherBased": "Wetterbasiert",
+    "activityBased": "Aktivitätsbasiert"
+  },
+  "safety": {
+    "title": "Sicherheits-Check-in",
+    "subtitle": "Timer für Notfallkontakte",
+    "setTimer": "Timer setzen",
+    "checkIn": "Einchecken",
+    "emergencyContacts": "Notfallkontakte",
+    "panicButton": "Panik-Button",
+    "locationSharing": "Standort teilen"
+  },
+  "rideshare": {
+    "title": "Mitfahrgelegenheit",
+    "subtitle": "Alleinreisende verbinden",
+    "findRide": "Fahrt finden",
+    "offerRide": "Fahrt anbieten",
+    "route": "Route",
+    "match": "Übereinstimmung",
+    "contact": "Kontaktieren"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "theme": "Design",
+    "notifications": "Benachrichtigungen",
+    "offline": "Offline-Modus",
+    "about": "Über BaliBuddy",
+    "version": "Version",
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen"
+  }
+}

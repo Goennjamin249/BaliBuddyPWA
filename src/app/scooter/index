@@ -1,0 +1,469 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { Camera, CheckCircle, XCircle, AlertTriangle, Shield, FileText } from 'lucide-react-native';
+
+interface ChecklistItem {
+  id: string;
+  category: string;
+  item: string;
+  description: string;
+  isChecked: boolean;
+  isCritical: boolean;
+}
+
+const checklistData: ChecklistItem[] = [
+  // Exterior
+  { id: '1', category: 'Exterior', item: 'Krater & Dellen', description: 'Alle sichtbaren Schäden fotografieren', isChecked: false, isCritical: true },
+  { id: '2', category: 'Exterior', item: 'Lackzustand', description: 'Kratzer, Rost, Farbabnutzung prüfen', isChecked: false, isCritical: false },
+  { id: '3', category: 'Exterior', item: 'Lenker', description: 'Festigkeit und Ausrichtung prüfen', isChecked: false, isCritical: true },
+  { id: '4', category: 'Exterior', item: 'Spiegel', description: 'Beide Spiegel vorhanden und einstellbar', isChecked: false, isCritical: true },
+  
+  // Tires & Wheels
+  { id: '5', category: 'Reifen', item: 'Reifendruck', description: 'Vorder- und Hinterreifen prüfen', isChecked: false, isCritical: true },
+  { id: '6', category: 'Reifen', item: 'Profil', description: 'Mindestens 2mm Profiltiefe', isChecked: false, isCritical: true },
+  { id: '7', category: 'Reifen', item: 'Felgen', description: 'Keine Risse oder Verformungen', isChecked: false, isCritical: false },
+  
+  // Brakes
+  { id: '8', category: 'Bremsen', item: 'Vorderradbremse', description: 'Hebel drücken - Rad muss blockieren', isChecked: false, isCritical: true },
+  { id: '9', category: 'Bremsen', item: 'Hinterradbremse', description: 'Fußbremse testen', isChecked: false, isCritical: true },
+  { id: '10', category: 'Bremsen', item: 'Bremsbeläge', description: 'Verschleiß prüfen', isChecked: false, isCritical: false },
+  
+  // Lights
+  { id: '11', category: 'Beleuchtung', item: 'Scheinwerfer', description: 'Abblend- und Fernlicht funktionieren', isChecked: false, isCritical: true },
+  { id: '12', category: 'Beleuchtung', item: 'Rücklicht', description: 'Standlicht und Bremslicht', isChecked: false, isCritical: true },
+  { id: '13', category: 'Beleuchtung', item: 'Blinker', description: 'Alle 4 Blinker funktionieren', isChecked: false, isCritical: false },
+  
+  // Engine & Fluids
+  { id: '14', category: 'Motor', item: 'Motoröl', description: 'Ölstand mit Messstab prüfen', isChecked: false, isCritical: true },
+  { id: '15', category: 'Motor', item: 'Kühlwasser', description: 'Bei wassergekühlten Motoren', isChecked: false, isCritical: false },
+  { id: '16', category: 'Motor', item: 'Kette', description: 'Spannung und Schmierung', isChecked: false, isCritical: false },
+  
+  // Documents
+  { id: '17', category: 'Dokumente', item: 'Fahrzeugschein (STNK)', description: 'Original oder Kopie', isChecked: false, isCritical: true },
+  { id: '18', category: 'Dokumente', item: 'Versicherung', description: 'Haftpflicht vorhanden', isChecked: false, isCritical: true },
+  { id: '19', category: 'Dokumente', item: 'Helm', description: 'Guter Zustand, richtige Größe', isChecked: false, isCritical: true },
+  
+  // Safety
+  { id: '20', category: 'Sicherheit', item: 'Hupe', description: 'Funktioniert einwandfrei', isChecked: false, isCritical: true },
+  { id: '21', category: 'Sicherheit', item: 'Notfall-Ausrüstung', description: 'Erste-Hilfe-Set, Werkzeug', isChecked: false, isCritical: false },
+  { id: '22', category: 'Sicherheit', item: 'Diebstahlsicherung', description: 'Schloss oder Kette vorhanden', isChecked: false, isCritical: false },
+];
+
+const categories = [...new Set(checklistData.map(item => item.category))];
+
+export default function ScooterChecklist() {
+  const { t } = useTranslation();
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(checklistData);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  const toggleItem = (id: string) => {
+    setChecklist(checklist.map(item =>
+      item.id === id ? { ...item, isChecked: !item.isChecked } : item
+    ));
+  };
+
+  const filteredChecklist = selectedCategory === 'all'
+    ? checklist
+    : checklist.filter(item => item.category === selectedCategory);
+
+  const checkedCount = checklist.filter(item => item.isChecked).length;
+  const criticalChecked = checklist.filter(item => item.isCritical && item.isChecked).length;
+  const criticalTotal = checklist.filter(item => item.isCritical).length;
+  const progress = (checkedCount / checklist.length) * 100;
+
+  const takePhoto = (id: string) => {
+    Alert.alert(
+      'Foto aufnehmen',
+      'Diese Funktion würde die Kamera öffnen, um Beweisfotos zu machen.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const completeInspection = () => {
+    if (criticalChecked < criticalTotal) {
+      Alert.alert(
+        'Warnung',
+        `Noch ${criticalTotal - criticalChecked} kritische Punkte nicht geprüft!`,
+        [{ text: 'Weiter prüfen' }]
+      );
+      return;
+    }
+    
+    Alert.alert(
+      'Inspektion abgeschlossen',
+      'Alle kritischen Punkte wurden geprüft. Du kannst jetzt den Mietvertrag abschließen.',
+      [{ text: 'Fertig' }]
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>{t('scooter.title', 'Scooter Checkliste')}</Text>
+          <Text style={styles.subtitle}>{t('scooter.subtitle', 'Anti-Scam Inspektion')}</Text>
+        </View>
+
+        {/* Progress Card */}
+        <View style={styles.progressCard}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressTitle}>Fortschritt</Text>
+            <Text style={styles.progressText}>{checkedCount}/{checklist.length}</Text>
+          </View>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+          </View>
+          <View style={styles.progressStats}>
+            <Text style={styles.progressStat}>
+              ✅ {checkedCount} geprüft
+            </Text>
+            <Text style={styles.progressStat}>
+              ⚠️ {criticalChecked}/{criticalTotal} kritisch
+            </Text>
+          </View>
+        </View>
+
+        {/* Warning */}
+        <View style={styles.warningCard}>
+          <AlertTriangle size={20} color="#FF6B6B" />
+          <Text style={styles.warningText}>
+            NIEMALS ohne vollständige Inspektion mieten! Fotografiere ALLE Schäden VOR der Abfahrt.
+          </Text>
+        </View>
+
+        {/* Category Filter */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryList}>
+          <TouchableOpacity
+            style={[styles.categoryChip, selectedCategory === 'all' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('all')}
+          >
+            <Text style={[styles.categoryChipText, selectedCategory === 'all' && styles.categoryChipTextActive]}>
+              Alle ({checklist.length})
+            </Text>
+          </TouchableOpacity>
+          {categories.map((category) => {
+            const count = checklist.filter(item => item.category === category).length;
+            return (
+              <TouchableOpacity
+                key={category}
+                style={[styles.categoryChip, selectedCategory === category && styles.categoryChipActive]}
+                onPress={() => setSelectedCategory(category)}
+              >
+                <Text style={[styles.categoryChipText, selectedCategory === category && styles.categoryChipTextActive]}>
+                  {category} ({count})
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Checklist */}
+        <View style={styles.checklistContainer}>
+          {filteredChecklist.map((item) => (
+            <View key={item.id} style={styles.checklistItem}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => toggleItem(item.id)}
+              >
+                <View style={[styles.checkbox, item.isChecked && styles.checkboxChecked]}>
+                  {item.isChecked ? (
+                    <CheckCircle size={20} color="#FFFFFF" />
+                  ) : (
+                    <View style={styles.checkboxEmpty} />
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.itemContent}>
+                <View style={styles.itemHeader}>
+                  <Text style={[styles.itemTitle, item.isChecked && styles.itemTitleChecked]}>
+                    {item.item}
+                  </Text>
+                  {item.isCritical && (
+                    <View style={styles.criticalBadge}>
+                      <Text style={styles.criticalBadgeText}>Kritisch</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.itemDescription}>{item.description}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.photoButton}
+                onPress={() => takePhoto(item.id)}
+              >
+                <Camera size={16} color="#00B4D8" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+
+        {/* Tips Section */}
+        <View style={styles.tipsCard}>
+          <Text style={styles.tipsTitle}>🛡️ Anti-Scam Tipps</Text>
+          <View style={styles.tipsList}>
+            <Text style={styles.tipItem}>• Immer bei Tageslicht inspizieren</Text>
+            <Text style={styles.tipItem}>• Vorher/Nachher Fotos machen</Text>
+            <Text style={styles.tipItem}>• Mietvertrag genau lesen</Text>
+            <Text style={styles.tipItem}>• Kaution nie bar zahlen</Text>
+            <Text style={styles.tipItem}>• GPS-Tracker prüfen</Text>
+            <Text style={styles.tipItem}>• Tankfüllstand notieren</Text>
+          </View>
+        </View>
+
+        {/* Complete Button */}
+        <TouchableOpacity style={styles.completeButton} onPress={completeInspection}>
+          <Shield size={20} color="#FFFFFF" />
+          <Text style={styles.completeButtonText}>Inspektion abschließen</Text>
+        </TouchableOpacity>
+
+        {/* Emergency */}
+        <View style={styles.emergencyCard}>
+          <Text style={styles.emergencyTitle}>🚨 Bei Problemen:</Text>
+          <Text style={styles.emergencyText}>
+            • Polizei: 110{'\n'}
+            • Touristenpolizei: +62 361 224111{'\n'}
+            • Mietfirma kontaktieren
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  progressCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#00B4D8',
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    marginBottom: 12,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#90BE6D',
+    borderRadius: 4,
+  },
+  progressStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressStat: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  warningCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B6B',
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#991B1B',
+    lineHeight: 18,
+  },
+  categoryList: {
+    marginBottom: 16,
+  },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    marginRight: 8,
+  },
+  categoryChipActive: {
+    backgroundColor: '#00B4D8',
+  },
+  categoryChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  categoryChipTextActive: {
+    color: '#FFFFFF',
+  },
+  checklistContainer: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  checkboxContainer: {
+    marginRight: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#90BE6D',
+    borderColor: '#90BE6D',
+  },
+  checkboxEmpty: {
+    width: 12,
+    height: 12,
+  },
+  itemContent: {
+    flex: 1,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  itemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  itemTitleChecked: {
+    textDecorationLine: 'line-through',
+    color: '#9CA3AF',
+  },
+  criticalBadge: {
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  criticalBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FF6B6B',
+  },
+  itemDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  photoButton: {
+    padding: 8,
+  },
+  tipsCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#90BE6D',
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#166534',
+    marginBottom: 12,
+  },
+  tipsList: {
+    gap: 8,
+  },
+  tipItem: {
+    fontSize: 13,
+    color: '#166534',
+    lineHeight: 18,
+  },
+  completeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#90BE6D',
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  completeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  emergencyCard: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B6B',
+  },
+  emergencyTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#991B1B',
+    marginBottom: 8,
+  },
+  emergencyText: {
+    fontSize: 13,
+    color: '#7F1D1D',
+    lineHeight: 20,
+  },
+});

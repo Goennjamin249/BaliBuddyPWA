@@ -1,0 +1,474 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Linking } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { Phone, AlertTriangle, Heart, Stethoscope, MapPin, ChevronRight } from 'lucide-react-native';
+
+interface EmergencyContact {
+  id: string;
+  name: string;
+  number: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+}
+
+export default function EmergencyDashboard() {
+  const { t } = useTranslation();
+  const [selectedTab, setSelectedTab] = useState<'baliBelly' | 'rabies'>('baliBelly');
+
+  const emergencyContacts: EmergencyContact[] = [
+    {
+      id: '1',
+      name: 'Krankenwagen',
+      number: '118',
+      description: 'Medizinischer Notfall',
+      icon: <Phone size={24} color="#FFFFFF" />,
+      color: '#FF6B6B',
+    },
+    {
+      id: '2',
+      name: 'Polizei',
+      number: '110',
+      description: 'Polizeilicher Notfall',
+      icon: <AlertTriangle size={24} color="#FFFFFF" />,
+      color: '#00B4D8',
+    },
+    {
+      id: '3',
+      name: 'Touristenpolizei',
+      number: '+62 361 224111',
+      description: 'Speziell für Touristen',
+      icon: <Heart size={24} color="#FFFFFF" />,
+      color: '#90BE6D',
+    },
+    {
+      id: '4',
+      name: 'Deutsche Botschaft',
+      number: '+62 21 39855000',
+      description: 'Konsularische Hilfe',
+      icon: <Stethoscope size={24} color="#FFFFFF" />,
+      color: '#FB923C',
+    },
+  ];
+
+  const baliBellySymptoms = [
+    'Übelkeit und Erbrechen',
+    'Durchfall',
+    'Bauchkrämpfe',
+    'Fieber',
+    'Kopfschmerzen',
+    'Appetitlosigkeit',
+  ];
+
+  const baliBellyTreatment = [
+    'Viel trinken (Wasser, Elektrolyte)',
+    'Leichte Kost: Bubur Ayam (Reisbrei)',
+    'Kokoswasser für Elektrolyte',
+    'ORS (Oral Rehydration Salts)',
+    'Ruhe und Schlaf',
+    'Bei Fieber: Paracetamol',
+  ];
+
+  const rabiesInfo = [
+    'Sofort mit Seife und Wasser waschen (15 Min.)',
+    'Desinfektionsmittel auftragen',
+    'NIEMALS die Wunde nähen',
+    'Sofort zum nächsten Krankenhaus',
+    'PEP-Impfung innerhalb 24 Stunden',
+    'Tetanus-Auffrischung prüfen',
+  ];
+
+  const nearbyClinics = [
+    { name: 'BIMC Hospital Kuta', distance: '2.3 km', hasPep: true },
+    { name: 'Kasih Ibu Hospital', distance: '3.1 km', hasPep: true },
+    { name: 'Sanglah General Hospital', distance: '4.5 km', hasPep: true },
+    { name: 'Siloam Hospital', distance: '5.2 km', hasPep: true },
+  ];
+
+  const makeCall = (number: string) => {
+    Linking.openURL(`tel:${number}`);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>{t('emergency.title')}</Text>
+          <Text style={styles.subtitle}>{t('emergency.subtitle')}</Text>
+        </View>
+
+        {/* Emergency Call Buttons */}
+        <View style={styles.emergencyButtons}>
+          {emergencyContacts.map((contact) => (
+            <TouchableOpacity
+              key={contact.id}
+              style={[styles.emergencyButton, { backgroundColor: contact.color }]}
+              onPress={() => makeCall(contact.number)}
+            >
+              <View style={styles.emergencyButtonIcon}>{contact.icon}</View>
+              <Text style={styles.emergencyButtonName}>{contact.name}</Text>
+              <Text style={styles.emergencyButtonNumber}>{contact.number}</Text>
+              <Text style={styles.emergencyButtonDesc}>{contact.description}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Tab Selector */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'baliBelly' && styles.tabActive]}
+            onPress={() => setSelectedTab('baliBelly')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'baliBelly' && styles.tabTextActive]}>
+              🤢 {t('emergency.baliBelly')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'rabies' && styles.tabActive]}
+            onPress={() => setSelectedTab('rabies')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'rabies' && styles.tabTextActive]}>
+              🐒 {t('emergency.rabies')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Bali Belly Section */}
+        {selectedTab === 'baliBelly' && (
+          <View style={styles.section}>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Symptome</Text>
+              {baliBellySymptoms.map((symptom, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={styles.listBullet}>•</Text>
+                  <Text style={styles.listText}>{symptom}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Behandlung</Text>
+              {baliBellyTreatment.map((treatment, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={styles.listBullet}>✓</Text>
+                  <Text style={styles.listText}>{treatment}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.dietCard}>
+              <Text style={styles.dietTitle}>🍚 Recovery Diät</Text>
+              <Text style={styles.dietSubtitle}>Bubur Ayam - Indonesischer Reisbrei</Text>
+              <View style={styles.dietList}>
+                <Text style={styles.dietItem}>• Leicht verdaulich</Text>
+                <Text style={styles.dietItem}>• Mit Hühnerbrühe</Text>
+                <Text style={styles.dietItem}>• Überall erhältlich</Text>
+                <Text style={styles.dietItem}>• Sanft für den Magen</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Rabies Section */}
+        {selectedTab === 'rabies' && (
+          <View style={styles.section}>
+            <View style={styles.warningCard}>
+              <AlertTriangle size={24} color="#FF6B6B" />
+              <Text style={styles.warningTitle}>⚠️ Tollwut ist LEBENSGEFAHRLICH!</Text>
+              <Text style={styles.warningText}>
+                Bei jedem Tierbiss oder Kratzer sofort handeln. 
+                Auch bei vermeintlich harmlosen Verletzungen.
+              </Text>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Sofortmaßnahmen</Text>
+              {rabiesInfo.map((info, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={styles.listNumber}>{index + 1}.</Text>
+                  <Text style={styles.listText}>{info}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <MapPin size={20} color="#00B4D8" />
+                <Text style={styles.cardTitle}>Kliniken mit PEP-Impfung</Text>
+              </View>
+              {nearbyClinics.map((clinic, index) => (
+                <View key={index} style={styles.clinicItem}>
+                  <View style={styles.clinicInfo}>
+                    <Text style={styles.clinicName}>{clinic.name}</Text>
+                    <Text style={styles.clinicDistance}>{clinic.distance}</Text>
+                  </View>
+                  {clinic.hasPep && (
+                    <View style={styles.pepBadge}>
+                      <Text style={styles.pepBadgeText}>PEP ✓</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity style={styles.navigateButton}>
+                    <ChevronRight size={20} color="#00B4D8" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={styles.quickAction}>
+            <Phone size={20} color="#00B4D8" />
+            <Text style={styles.quickActionText}>Direkt anrufen</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickAction}>
+            <MapPin size={20} color="#00B4D8" />
+            <Text style={styles.quickActionText}>Standort teilen</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  emergencyButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  emergencyButton: {
+    flex: 1,
+    minWidth: '45%',
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  emergencyButtonIcon: {
+    marginBottom: 8,
+  },
+  emergencyButtonName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  emergencyButtonNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  emergencyButtonDesc: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  tabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  tabTextActive: {
+    color: '#1F2937',
+  },
+  section: {
+    gap: 16,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+  },
+  listBullet: {
+    fontSize: 14,
+    color: '#00B4D8',
+    fontWeight: 'bold',
+  },
+  listNumber: {
+    fontSize: 14,
+    color: '#FF6B6B',
+    fontWeight: 'bold',
+    width: 20,
+  },
+  listText: {
+    fontSize: 14,
+    color: '#374151',
+    flex: 1,
+    lineHeight: 20,
+  },
+  warningCard: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B6B',
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#991B1B',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 13,
+    color: '#7F1D1D',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  dietCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#90BE6D',
+  },
+  dietTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#166534',
+    marginBottom: 4,
+  },
+  dietSubtitle: {
+    fontSize: 13,
+    color: '#15803D',
+    marginBottom: 12,
+  },
+  dietList: {
+    gap: 6,
+  },
+  dietItem: {
+    fontSize: 13,
+    color: '#166534',
+  },
+  clinicItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  clinicInfo: {
+    flex: 1,
+  },
+  clinicName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  clinicDistance: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  pepBadge: {
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  pepBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#166534',
+  },
+  navigateButton: {
+    padding: 8,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  quickAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#00B4D8',
+  },
+});

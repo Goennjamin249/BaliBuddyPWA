@@ -1,0 +1,192 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "noData": "No data available",
+    "offline": "Offline",
+    "online": "Online",
+    "refresh": "Refresh"
+  },
+  "navigation": {
+    "home": "Home",
+    "map": "Map",
+    "tools": "Tools",
+    "learn": "Learn",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "home": {
+    "welcome": "Welcome to BaliBuddy",
+    "subtitle": "Your offline travel companion for Bali",
+    "quickAccess": "Quick Access",
+    "featured": "Featured",
+    "emergency": "Emergency"
+  },
+  "currency": {
+    "title": "Currency Converter",
+    "subtitle": "IDR conversion with live rates",
+    "amount": "Amount",
+    "from": "From",
+    "to": "To",
+    "convert": "Convert",
+    "result": "Result",
+    "lastUpdate": "Last Update",
+    "offlineMode": "Offline Mode (cached rates)",
+    "refreshRates": "Refresh Rates"
+  },
+  "phrasebook": {
+    "title": "Phrasebook",
+    "subtitle": "Bahasa Indonesia for travelers",
+    "search": "Search phrases",
+    "categories": "Categories",
+    "favorites": "Favorites",
+    "greetings": "Greetings",
+    "directions": "Directions",
+    "food": "Food & Drinks",
+    "shopping": "Shopping",
+    "emergency": "Emergency",
+    "accommodation": "Accommodation",
+    "transport": "Transport",
+    "numbers": "Numbers",
+    "time": "Time",
+    "weather": "Weather",
+    "playAudio": "Play Audio"
+  },
+  "bargaining": {
+    "title": "Bargaining Guide",
+    "subtitle": "Fair prices for Bali",
+    "search": "Search items",
+    "categories": "Categories",
+    "typicalPrice": "Typical Price",
+    "bargainingTips": "Bargaining Tips",
+    "market": "Market",
+    "shop": "Shop",
+    "street": "Street"
+  },
+  "calendar": {
+    "title": "Odalan Calendar",
+    "subtitle": "210-day Pawukon cycle",
+    "upcoming": "Upcoming Ceremonies",
+    "today": "Today",
+    "ceremonies": "Ceremonies",
+    "temples": "Temples",
+    "etiquette": "Temple Etiquette"
+  },
+  "visa": {
+    "title": "Visa Tracker",
+    "subtitle": "30-day VoA & Extensions",
+    "entryDate": "Entry Date",
+    "daysRemaining": "Days Remaining",
+    "overstayWarning": "Overstay Warning",
+    "extension": "Extension",
+    "penalties": "Penalties"
+  },
+  "emergency": {
+    "title": "Emergency Dashboard",
+    "subtitle": "Immediate Help",
+    "call": "Call",
+    "ambulance": "Ambulance",
+    "police": "Police",
+    "doctor": "Doctor",
+    "pharmacy": "Pharmacy",
+    "embassy": "Embassy",
+    "baliBelly": "Bali Belly",
+    "rabies": "Rabies",
+    "methanol": "Methanol"
+  },
+  "map": {
+    "title": "Map",
+    "subtitle": "POIs in Bali",
+    "waterRefills": "Water Refills",
+    "laundries": "Laundries",
+    "atms": "ATMs",
+    "hospitals": "Hospitals",
+    "pharmacies": "Pharmacies",
+    "restaurants": "Restaurants",
+    "bars": "Bars",
+    "filterPOIs": "Filter POIs",
+    "directions": "Directions",
+    "navigate": "Navigate"
+  },
+  "scanner": {
+    "title": "Food Scanner",
+    "subtitle": "Menu Translator",
+    "camera": "Enable Camera",
+    "capture": "Capture Photo",
+    "processing": "Processing...",
+    "translation": "Translation",
+    "allergens": "Allergens",
+    "price": "Price"
+  },
+  "itinerary": {
+    "title": "Itinerary Planner",
+    "subtitle": "Plan & Share Days",
+    "addDay": "Add Day",
+    "addActivity": "Add Activity",
+    "squads": "Squads",
+    "sharePlan": "Share Plan",
+    "dragToReorder": "Drag to reorder"
+  },
+  "expenses": {
+    "title": "Expense Tracker",
+    "subtitle": "Split costs in IDR",
+    "addExpense": "Add Expense",
+    "description": "Description",
+    "amount": "Amount (IDR)",
+    "paidBy": "Paid by",
+    "splitAmong": "Split among",
+    "settlement": "Settlement",
+    "total": "Total"
+  },
+  "packing": {
+    "title": "Packing List",
+    "subtitle": "Weather & activity based",
+    "suggestions": "Suggestions",
+    "myList": "My List",
+    "addItem": "Add Item",
+    "packed": "Packed",
+    "weatherBased": "Weather Based",
+    "activityBased": "Activity Based"
+  },
+  "safety": {
+    "title": "Safety Check-in",
+    "subtitle": "Timer for emergency contacts",
+    "setTimer": "Set Timer",
+    "checkIn": "Check In",
+    "emergencyContacts": "Emergency Contacts",
+    "panicButton": "Panic Button",
+    "locationSharing": "Share Location"
+  },
+  "rideshare": {
+    "title": "Ride Share",
+    "subtitle": "Connect solo travelers",
+    "findRide": "Find Ride",
+    "offerRide": "Offer Ride",
+    "route": "Route",
+    "match": "Match",
+    "contact": "Contact"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "notifications": "Notifications",
+    "offline": "Offline Mode",
+    "about": "About BaliBuddy",
+    "version": "Version",
+    "privacy": "Privacy",
+    "terms": "Terms of Service"
+  }
+}
