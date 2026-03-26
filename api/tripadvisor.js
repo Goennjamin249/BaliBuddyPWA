@@ -4,6 +4,15 @@ export default async function handler(req, res) {
   
   // 2. Securely load the API key from process.env
   const apiKey = process.env.EXPO_PUBLIC_TRIPADVISOR_API_KEY;
+  
+  // Validate API key exists
+  if (!apiKey) {
+    console.error('TripAdvisor API key not configured');
+    return res.status(500).json({ 
+      error: 'API key not configured',
+      message: 'TripAdvisor API key is missing. Please set EXPO_PUBLIC_TRIPADVISOR_API_KEY in environment variables.'
+    });
+  }
 
   try {
     // 3. Fetch data from the external API
@@ -21,11 +30,20 @@ export default async function handler(req, res) {
         category: category
       }
     });
+    
+    if (!response.ok) {
+      throw new Error(`TripAdvisor API error: ${response.status}`);
+    }
+    
     const data = await response.json();
 
     // 4. Send data back to the PWA frontend
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch TripAdvisor data' });
+    console.error('TripAdvisor API error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch TripAdvisor data',
+      message: error.message 
+    });
   }
 }

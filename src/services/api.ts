@@ -1,10 +1,14 @@
 import { Platform } from 'react-native';
 
-// API Configuration
+// API Configuration - All external API calls now go through our serverless functions
 const API_CONFIG = {
-  BMKG_BASE_URL: 'https://api.bmkg.go.id',
-  MAGMA_BASE_URL: 'https://magma.esdm.go.id',
-  EXCHANGE_RATE_BASE_URL: 'https://api.exchangerate-api.com',
+  // Local API endpoints (secured via Vercel Serverless Functions)
+  WEATHER_ENDPOINT: '/api/weather',
+  VOLCANO_ENDPOINT: '/api/volcano',
+  EXCHANGE_RATE_ENDPOINT: '/api/exchange-rate',
+  FERRY_ENDPOINT: '/api/ferry',
+  OVERPASS_ENDPOINT: '/api/overpass',
+  TRIPADVISOR_ENDPOINT: '/api/tripadvisor',
 };
 
 // Types

@@ -428,6 +428,12 @@ self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-favorites') {
     event.waitUntil(syncFavorites());
   }
+  if (event.tag === 'sync-currency') {
+    event.waitUntil(syncCurrencyRates());
+  }
+  if (event.tag === 'sync-weather') {
+    event.waitUntil(syncWeatherAlerts());
+  }
 });
 
 async function syncExpenses() {
@@ -443,6 +449,93 @@ async function syncItinerary() {
 async function syncFavorites() {
   console.log('[SW] Syncing offline favorites...');
   // Implementation would sync with backend when online
+}
+
+async function syncCurrencyRates() {
+  console.log('[SW] Syncing currency rates in background...');
+  try {
+    const response = await fetch('/api/exchange-rate?from=USD');
+    if (response.ok) {
+      const data = await response.json();
+      // Store in IndexedDB for offline access
+      const db = await openIndexedDB();
+      const tx = db.transaction('currency', 'readwrite');
+      const store = tx.objectStore('currency');
+      await store.put({
+        id: 'latest-rates',
+        data: data,
+        timestamp: Date.now()
+      });
+      console.log('[SW] Currency rates cached successfully');
+    }
+  } catch (error) {
+    console.log('[SW] Currency sync failed:', error);
+  }
+}
+
+async function syncWeatherAlerts() {
+  console.log('[SW] Syncing weather alerts in background...');
+  try {
+    const response = await fetch('/api/weather?lat=-8.4095&lng=115.1889');
+    if (response.ok) {
+      const data = await response.json();
+      // Store in IndexedDB for offline access
+      const db = await openIndexedDB();
+      const tx = db.transaction('weather', 'readwrite');
+      const store = tx.objectStore('weather');
+      await store.put({
+        id: 'latest-weather',
+        data: data,
+        timestamp: Date.now()
+      });
+      console.log('[SW] Weather data cached successfully');
+    }
+  } catch (error) {
+    console.log('[SW] Weather sync failed:', error);
+  }
+}
+
+// Periodic Background Sync for live data
+self.addEventListener('periodicsync', (event) => {
+  console.log('[SW] Periodic sync triggered:', event.tag);
+  
+  if (event.tag === 'sync-currency-periodic') {
+    event.waitUntil(syncCurrencyRates());
+  }
+  if (event.tag === 'sync-weather-periodic') {
+    event.waitUntil(syncWeatherAlerts());
+  }
+});
+
+// IndexedDB helper for WatermelonDB persistence
+async function openIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('balibuddy-db', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      
+      // Create object stores for offline data
+      if (!db.objectStoreNames.contains('currency')) {
+        db.createObjectStore('currency', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('weather')) {
+        db.createObjectStore('weather', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('pois')) {
+        db.createObjectStore('pois', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('expenses')) {
+        db.createObjectStore('expenses', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('itinerary')) {
+        db.createObjectStore('itinerary', { keyPath: 'id' });
+      }
+    };
+  });
 }
 
 // Push notifications
