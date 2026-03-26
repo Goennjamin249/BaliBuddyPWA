@@ -1,18 +1,31 @@
 /**
- * Sync API Endpoint Placeholder
- * Ready for MongoDB backend integration
+ * Sync API Endpoint with MongoDB Integration
+ * Handles offline-first data synchronization
  */
 
+import { getDatabase } from '../lib/mongodb';
+import { ObjectId } from 'mongodb';
+
 export default async function handler(req, res) {
-  // Handle both pull and push sync operations
   const { method } = req;
+
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
   try {
     switch (method) {
       case 'POST':
         return await handleSyncRequest(req, res);
+      case 'GET':
+        return await healthCheck(req, res);
       default:
-        res.setHeader('Allow', ['POST']);
+        res.setHeader('Allow', ['POST', 'GET']);
         return res.status(405).json({ 
           error: 'Method not allowed',
           message: `Method ${method} is not supported`
@@ -28,20 +41,20 @@ export default async function handler(req, res) {
 }
 
 async function handleSyncRequest(req, res) {
-  const { action, lastPulledAt, changes, batchSize } = req.body;
+  const { action, lastPulledAt, changes, batchSize, collection } = req.body;
 
   try {
     switch (action) {
       case 'pull':
-        return await handlePullChanges(req, res, lastPulledAt, batchSize);
+        return await handlePullChanges(req, res, collection, lastPulledAt, batchSize);
       case 'push':
-        return await handlePushChanges(req, res, changes);
+        return await handlePushChanges(req, res, collection, changes);
       default:
         // Auto-detect based on request body
         if (lastPulledAt !== undefined) {
-          return await handlePullChanges(req, res, lastPulledAt, batchSize);
+          return await handlePullChanges(req, res, collection, lastPulledAt, batchSize);
         } else if (changes) {
-          return await handlePushChanges(req, res, changes);
+          return await handlePushChanges(req, res, collection, changes);
         } else {
           return res.status(400).json({ 
             error: 'Invalid request',
@@ -58,41 +71,46 @@ async function handleSyncRequest(req, res) {
   }
 }
 
-// Pull changes from MongoDB (placeholder implementation)
-async function handlePullChanges(req, res, lastPulledAt, batchSize = 100) {
+// Pull changes from MongoDB
+async function handlePullChanges(req, res, collection, lastPulledAt, batchSize = 100) {
   try {
-    // TODO: Implement MongoDB integration
-    // This is a placeholder that returns empty changes
+    const db = await getDatabase();
+    const collectionName = collection || 'default';
+    const col = db.collection(collectionName);
     
-    console.log('[Sync API] Pull changes requested:', { lastPulledAt, batchSize });
+    console.log('[Sync API] Pull changes requested:', { collection: collectionName, lastPulledAt, batchSize });
     
-    // Simulate MongoDB query delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Build query for changes since lastPulledAt
+    const query = lastPulledAt 
+      ? { updatedAt: { $gt: new Date(lastPulledAt) } }
+      : {};
     
-    // Return empty changes for now
-    // In production, this would query MongoDB for changes since lastPulledAt
+    // Fetch documents with limit
+    const documents = await col
+      .find(query)
+      .sort({ updatedAt: 1 })
+      .limit(batchSize)
+      .toArray();
+    
+    // Transform MongoDB documents for client sync
+    const transformedDocs = documents.map(doc => ({
+      ...doc,
+      id: doc._id.toString(),
+      _id: undefined,
+      createdAt: doc.createdAt?.toISOString(),
+      updatedAt: doc.updatedAt?.toISOString(),
+    }));
+    
     const response = {
       changes: {
-        // Example structure for future MongoDB integration:
-        // currencies: { created: [], updated: [], deleted: [] },
-        // phrases: { created: [], updated: [], deleted: [] },
-        // prices: { created: [], updated: [], deleted: [] },
-        // water_stations: { created: [], updated: [], deleted: [] },
-        // atms: { created: [], updated: [], deleted: [] },
-        // laundries: { created: [], updated: [], deleted: [] },
-        // safe_bars: { created: [], updated: [], deleted: [] },
-        // clinics: { created: [], updated: [], deleted: [] },
-        // itinerary_items: { created: [], updated: [], deleted: [] },
-        // squad_members: { created: [], updated: [], deleted: [] },
-        // expenses: { created: [], updated: [], deleted: [] },
-        // expense_splits: { created: [], updated: [], deleted: [] },
-        // packing_items: { created: [], updated: [], deleted: [] },
-        // emergency_contacts: { created: [], updated: [], deleted: [] },
-        // safety_checkins: { created: [], updated: [], deleted: [] },
-        // scooter_inspections: { created: [], updated: [], deleted: [] },
-        // settings: { created: [], updated: [], deleted: [] },
+        [collectionName]: {
+          created: transformedDocs.filter(d => d._syncStatus === 'created'),
+          updated: transformedDocs.filter(d => d._syncStatus === 'updated'),
+          deleted: [],
+        }
       },
       timestamp: Date.now(),
+      hasMore: documents.length === batchSize,
     };
     
     return res.status(200).json(response);
@@ -105,25 +123,83 @@ async function handlePullChanges(req, res, lastPulledAt, batchSize = 100) {
   }
 }
 
-// Push changes to MongoDB (placeholder implementation)
-async function handlePushChanges(req, res, changes) {
+// Push changes to MongoDB
+async function handlePushChanges(req, res, collection, changes) {
   try {
-    // TODO: Implement MongoDB integration
-    // This is a placeholder that acknowledges the push
+    const db = await getDatabase();
+    const collectionName = collection || 'default';
+    const col = db.collection(collectionName);
     
-    console.log('[Sync API] Push changes received:', Object.keys(changes));
+    console.log('[Sync API] Push changes received:', { collection: collectionName, changes: Object.keys(changes) });
     
-    // Simulate MongoDB write delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const operations = [];
+    const results = { created: 0, updated: 0, deleted: 0 };
     
-    // In production, this would write changes to MongoDB
-    // For now, just acknowledge receipt
+    // Process created documents
+    if (changes.created && Array.isArray(changes.created)) {
+      for (const doc of changes.created) {
+        const { id, ...docData } = doc;
+        operations.push({
+          updateOne: {
+            filter: { _id: new ObjectId(id) },
+            update: { 
+              $set: { 
+                ...docData,
+                _id: new ObjectId(id),
+                createdAt: new Date(docData.createdAt || Date.now()),
+                updatedAt: new Date(),
+                _syncStatus: 'synced'
+              } 
+            },
+            upsert: true
+          }
+        });
+        results.created++;
+      }
+    }
+    
+    // Process updated documents
+    if (changes.updated && Array.isArray(changes.updated)) {
+      for (const doc of changes.updated) {
+        const { id, ...docData } = doc;
+        operations.push({
+          updateOne: {
+            filter: { _id: new ObjectId(id) },
+            update: { 
+              $set: { 
+                ...docData,
+                updatedAt: new Date(),
+                _syncStatus: 'synced'
+              } 
+            }
+          }
+        });
+        results.updated++;
+      }
+    }
+    
+    // Process deleted documents
+    if (changes.deleted && Array.isArray(changes.deleted)) {
+      for (const doc of changes.deleted) {
+        operations.push({
+          deleteOne: {
+            filter: { _id: new ObjectId(doc.id) }
+          }
+        });
+        results.deleted++;
+      }
+    }
+    
+    // Execute bulk write if there are operations
+    if (operations.length > 0) {
+      await col.bulkWrite(operations, { ordered: false });
+    }
     
     return res.status(200).json({ 
       success: true,
-      message: 'Changes received',
+      message: 'Changes synced successfully',
       timestamp: Date.now(),
-      tablesUpdated: Object.keys(changes).length
+      results
     });
   } catch (error) {
     console.error('[Sync API] Push changes error:', error);
@@ -137,17 +213,31 @@ async function handlePushChanges(req, res, changes) {
 // Health check endpoint
 export async function healthCheck(req, res) {
   try {
-    // TODO: Add MongoDB connection check
+    const db = await getDatabase();
+    
+    // Test MongoDB connection
+    await db.command({ ping: 1 });
+    
+    // Get collection stats
+    const collections = await db.listCollections().toArray();
+    
     return res.status(200).json({ 
       status: 'healthy',
       service: 'sync-api',
       timestamp: Date.now(),
-      mongodb: 'not-connected' // Will be 'connected' when MongoDB is integrated
+      mongodb: {
+        status: 'connected',
+        database: db.databaseName,
+        collections: collections.map(c => c.name)
+      }
     });
   } catch (error) {
     return res.status(500).json({ 
       status: 'unhealthy',
-      error: error.message 
+      error: error.message,
+      mongodb: {
+        status: 'disconnected'
+      }
     });
   }
 }
