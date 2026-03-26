@@ -86,11 +86,24 @@ export class POIServiceError extends Error {
     message: string,
     public readonly source: POISource,
     public readonly originalError?: unknown,
+    public readonly code?: string,
   ) {
     super(message);
     this.name = "POIServiceError";
   }
 }
+
+/** Error codes for better error handling */
+const ERROR_CODES = {
+  INVALID_COORDINATES: "INVALID_COORDINATES",
+  INVALID_RADIUS: "INVALID_RADIUS",
+  RATE_LIMITED: "RATE_LIMITED",
+  API_FAILED: "API_FAILED",
+  CACHE_ERROR: "CACHE_ERROR",
+  NETWORK_ERROR: "NETWORK_ERROR",
+} as const;
+
+type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
 // ============================================================================
 // Constants
@@ -144,6 +157,36 @@ const RADIUS_BOUNDS = {
   min: 0.1,
   max: 50,
 } as const;
+
+/** Maximum number of cached sectors to prevent memory issues */
+const MAX_CACHED_SECTORS = 100 as const;
+
+/** Retry configuration */
+const RETRY_CONFIG = {
+  maxRetries: 2,
+  baseDelay: 1000, // 1 second
+  maxDelay: 5000, // 5 seconds
+} as const;
+
+/** Active requests map for deduplication */
+const activeRequests = new Map<string, Promise<POI[]>>();
+
+/** Logger utility for structured logging */
+const logger = {
+  info: (message: string, data?: Record<string, unknown>) => {
+    if (__DEV__) {
+      console.log(`[POI Service] ${message}`, data || "");
+    }
+  },
+  warn: (message: string, data?: Record<string, unknown>) => {
+    if (__DEV__) {
+      console.warn(`[POI Service] ${message}`, data || "");
+    }
+  },
+  error: (message: string, error?: unknown) => {
+    console.error(`[POI Service] ${message}`, error);
+  },
+};
 
 // ============================================================================
 // Configuration
@@ -363,6 +406,69 @@ const isRateLimitError = (error: unknown): boolean => {
 };
 
 /**
+ * Sleep utility for retry delays
+ * @param ms - Milliseconds to sleep
+ */
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Calculate exponential backoff delay
+ * @param attempt - Current attempt number (0-based)
+ * @returns Delay in milliseconds
+ */
+const getRetryDelay = (attempt: number): number => {
+  const delay = RETRY_CONFIG.baseDelay * Math.pow(2, attempt);
+  return Math.min(delay, RETRY_CONFIG.maxDelay);
+};
+
+/**
+ * Manage cache size to prevent memory issues
+ * Removes oldest expired entries if cache is too large
+ */
+const manageCacheSize = (): void => {
+  try {
+    const keys = Object.keys(localStorage);
+    const cacheKeys = keys.filter((key) => key.startsWith(CACHE_KEY_PREFIX));
+
+    if (cacheKeys.length <= MAX_CACHED_SECTORS) return;
+
+    // Get all cache entries with their expiration times
+    const cacheEntries = cacheKeys
+      .map((key) => {
+        try {
+          const cached = localStorage.getItem(key);
+          if (!cached) return null;
+          const data: CachedPOI = JSON.parse(cached);
+          return { key, expires_at: data.expires_at, is_valid: isCacheValid(data) };
+        } catch {
+          return null;
+        }
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+    // Sort by expiration time (oldest first)
+    cacheEntries.sort((a, b) => a.expires_at - b.expires_at);
+
+    // Remove oldest entries until we're under the limit
+    const entriesToRemove = cacheEntries.slice(
+      0,
+      cacheKeys.length - MAX_CACHED_SECTORS + 10,
+    );
+    entriesToRemove.forEach((entry) => {
+      localStorage.removeItem(entry.key);
+    });
+
+    logger.info("Cache cleanup completed", {
+      removed: entriesToRemove.length,
+      remaining: cacheKeys.length - entriesToRemove.length,
+    });
+  } catch (error) {
+    logger.warn("Cache cleanup failed", { error });
+  }
+};
+
+/**
  * Main fetch function with fallback logic
  * Fetches POIs from TripAdvisor first, falls back to OpenStreetMap if unavailable
  * @param latitude - Latitude coordinate
@@ -383,58 +489,129 @@ export const fetchPOIs = async (
   validateRadius(radius);
 
   const sector = getSectorKey(latitude, longitude);
+  const requestKey = `${sector}_${category || "all"}`;
+
+  // Check for active request (deduplication)
+  const activeRequest = activeRequests.get(requestKey);
+  if (activeRequest) {
+    logger.info("Deduplicating request", { requestKey });
+    return activeRequest;
+  }
 
   // Check cache first
   const cachedPOIs = getCachedPOIs(sector);
   if (cachedPOIs && cachedPOIs.length > 0) {
+    logger.info("Returning cached POIs", {
+      sector,
+      count: cachedPOIs.length,
+    });
     return cachedPOIs;
   }
 
-  // Try TripAdvisor API first
-  try {
-    const params: TripAdvisorSearchParams = {
-      latitude,
-      longitude,
-      radius,
-      category,
-      limit: serviceConfig.maxResults,
-    };
+  // Create new request promise
+  const requestPromise = (async (): Promise<POI[]> => {
+    try {
+      // Try TripAdvisor API first with retry logic
+      for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+        try {
+          const params: TripAdvisorSearchParams = {
+            latitude,
+            longitude,
+            radius,
+            category,
+            limit: serviceConfig.maxResults,
+          };
 
-    const tripAdvisorResponse = await tripAdvisorSearch(params);
+          const tripAdvisorResponse = await tripAdvisorSearch(params);
 
-    if (tripAdvisorResponse.data && tripAdvisorResponse.data.length > 0) {
-      const pois = tripAdvisorResponse.data.map(convertTripAdvisorPOI);
-      cachePOIs(sector, pois, POI_SOURCE.TRIPADVISOR);
-      return pois;
+          if (
+            tripAdvisorResponse.data &&
+            tripAdvisorResponse.data.length > 0
+          ) {
+            const pois = tripAdvisorResponse.data.map(convertTripAdvisorPOI);
+            cachePOIs(sector, pois, POI_SOURCE.TRIPADVISOR);
+            logger.info("TripAdvisor fetch successful", {
+              sector,
+              count: pois.length,
+              attempt,
+            });
+            return pois;
+          }
+          break; // No data, don't retry
+        } catch (error: unknown) {
+          if (isRateLimitError(error)) {
+            logger.warn("TripAdvisor rate limited", { attempt });
+            break; // Don't retry on rate limit
+          }
+
+          if (attempt < RETRY_CONFIG.maxRetries) {
+            const delay = getRetryDelay(attempt);
+            logger.warn("TripAdvisor fetch failed, retrying", {
+              attempt,
+              delay,
+              error,
+            });
+            await sleep(delay);
+          } else {
+            logger.warn("TripAdvisor fetch failed after retries", {
+              attempts: RETRY_CONFIG.maxRetries + 1,
+              error,
+            });
+          }
+        }
+      }
+
+      // Fallback to OpenStreetMap Overpass API with retry logic
+      for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+        try {
+          const overpassPOIs = await fetchOverpassPOIs(
+            latitude,
+            longitude,
+            radius,
+          );
+
+          if (overpassPOIs && overpassPOIs.length > 0) {
+            const pois = overpassPOIs.map(convertOverpassPOI);
+            cachePOIs(sector, pois, POI_SOURCE.OSM);
+            logger.info("Overpass fetch successful", {
+              sector,
+              count: pois.length,
+              attempt,
+            });
+            return pois;
+          }
+          break; // No data, don't retry
+        } catch (error: unknown) {
+          if (attempt < RETRY_CONFIG.maxRetries) {
+            const delay = getRetryDelay(attempt);
+            logger.warn("Overpass fetch failed, retrying", {
+              attempt,
+              delay,
+              error,
+            });
+            await sleep(delay);
+          } else {
+            logger.error("Overpass fetch failed after retries", {
+              attempts: RETRY_CONFIG.maxRetries + 1,
+              error,
+            });
+          }
+        }
+      }
+
+      // Both APIs failed
+      logger.warn("Both APIs failed, returning empty array", { sector });
+      return [];
+    } finally {
+      // Clean up active request
+      activeRequests.delete(requestKey);
     }
-  } catch (error: unknown) {
-    // Check if it's a rate limit error (429)
-    if (isRateLimitError(error)) {
-      // Fall through to OSM
-    } else {
-      // Fall through to OSM
-    }
-  }
+  })();
 
-  // Fallback to OpenStreetMap Overpass API
-  try {
-    const overpassPOIs = await fetchOverpassPOIs(latitude, longitude, radius);
+  // Store active request for deduplication
+  activeRequests.set(requestKey, requestPromise);
 
-    if (overpassPOIs && overpassPOIs.length > 0) {
-      const pois = overpassPOIs.map(convertOverpassPOI);
-      cachePOIs(sector, pois, POI_SOURCE.OSM);
-      return pois;
-    }
-  } catch (error: unknown) {
-    throw new POIServiceError(
-      "Both TripAdvisor and OpenStreetMap APIs failed",
-      POI_SOURCE.OSM,
-      error,
-    );
-  }
-
-  // If both fail, return empty array
-  return [];
+  return requestPromise;
 };
 
 /**

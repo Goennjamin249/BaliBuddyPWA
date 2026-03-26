@@ -41,6 +41,34 @@ const BALI_WEATHER_DATA: WeatherData = {
   ],
 };
 
+// Helper function to get weather condition from WMO code
+const getWeatherCondition = (code: number): string => {
+  if (code === 0) return 'Klar';
+  if (code <= 3) return 'Teilweise bewölkt';
+  if (code <= 48) return 'Nebel';
+  if (code <= 57) return 'Nieselregen';
+  if (code <= 67) return 'Regen';
+  if (code <= 77) return 'Schnee';
+  if (code <= 82) return 'Regenschauer';
+  if (code <= 86) return 'Schneeschauer';
+  if (code <= 99) return 'Gewitter';
+  return 'Unbekannt';
+};
+
+// Helper function to get weather emoji from WMO code
+const getWeatherEmoji = (code: number): string => {
+  if (code === 0) return '☀️';
+  if (code <= 3) return '⛅';
+  if (code <= 48) return '🌫️';
+  if (code <= 57) return '🌧️';
+  if (code <= 67) return '🌧️';
+  if (code <= 77) return '❄️';
+  if (code <= 82) return '🌦️';
+  if (code <= 86) return '🌨️';
+  if (code <= 99) return '⛈️';
+  return '🌤️';
+};
+
 // Weather alerts for Bali
 const WEATHER_ALERTS = [
   {
@@ -70,14 +98,29 @@ export default function WeatherScreen() {
   const fetchWeather = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Using OpenWeatherMap API (free tier)
-      // Note: In production, you would use a real API key
-      const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY || 'demo';
+      // Using local API endpoint for weather data
+      const response = await fetch('/api/weather?lat=-8.4095&lng=115.1889');
+      const data = await response.json();
       
-      if (API_KEY === 'demo') {
-        // Use simulated data for demo
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setWeather(BALI_WEATHER_DATA);
+      if (data.current) {
+        const weatherData: WeatherData = {
+          location: 'Bali, Indonesien',
+          temperature: Math.round(data.current.temperature_2m),
+          condition: getWeatherCondition(data.current.weather_code),
+          humidity: Math.round(data.current.relative_humidity_2m),
+          windSpeed: Math.round(data.current.wind_speed_10m),
+          visibility: 10, // Default visibility
+          uvIndex: Math.round(data.current.uv_index),
+          forecast: data.daily ? data.daily.time.slice(0, 5).map((date: string, index: number) => ({
+            day: index === 0 ? 'Heute' : new Date(date).toLocaleDateString('de-DE', { weekday: 'short' }),
+            tempMax: Math.round(data.daily.temperature_2m_max[index]),
+            tempMin: Math.round(data.daily.temperature_2m_min[index]),
+            condition: getWeatherCondition(data.daily.weather_code[index]),
+            icon: getWeatherEmoji(data.daily.weather_code[index]),
+          })) : BALI_WEATHER_DATA.forecast,
+        };
+        
+        setWeather(weatherData);
         setLastUpdate(new Date());
         setIsOffline(false);
         
@@ -85,39 +128,8 @@ export default function WeatherScreen() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('cachedWeather', JSON.stringify({
             timestamp: Date.now(),
-            data: BALI_WEATHER_DATA,
+            data: weatherData,
           }));
-        }
-      } else {
-        // Real API call
-        const response = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=Bali,ID&appid=${API_KEY}&units=metric&lang=de`
-        );
-        const data = await response.json();
-        
-        if (data.main) {
-          const weatherData: WeatherData = {
-            location: 'Bali, Indonesien',
-            temperature: Math.round(data.main.temp),
-            condition: data.weather[0].description,
-            humidity: data.main.humidity,
-            windSpeed: Math.round(data.wind.speed * 3.6), // m/s to km/h
-            visibility: Math.round(data.visibility / 1000), // m to km
-            uvIndex: 8, // Default for Bali
-            forecast: BALI_WEATHER_DATA.forecast, // Use static forecast for demo
-          };
-          
-          setWeather(weatherData);
-          setLastUpdate(new Date());
-          setIsOffline(false);
-          
-          // Cache to localStorage
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('cachedWeather', JSON.stringify({
-              timestamp: Date.now(),
-              data: weatherData,
-            }));
-          }
         }
       }
     } catch (error) {

@@ -51,7 +51,7 @@ export default function CurrencyScreen() {
     setIsLoading(true);
     try {
       // Using ExchangeRate-API (free tier)
-      const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+      const response = await fetch(`/api/exchange-rate?from=${fromCurrency}`);
       const data = await response.json();
       
       if (data.rates) {

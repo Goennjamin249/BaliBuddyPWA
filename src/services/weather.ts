@@ -83,9 +83,8 @@ class WeatherService {
 
     if (isOnline) {
       try {
-        // Call actual BMKG API
-        const apiUrl = process.env.EXPO_PUBLIC_API_KEY_BMKG || 'https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=31.71.01.1001';
-        const response = await fetch(apiUrl);
+        // Call local API endpoint
+        const response = await fetch(`/api/weather?lat=${latitude}&lng=${longitude}`);
         
         if (!response.ok) {
           throw new Error('BMKG API request failed');

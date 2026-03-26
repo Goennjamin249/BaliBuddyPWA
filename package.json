@@ -33,6 +33,7 @@
     "i18next": "^25.10.9",
     "lucide-react-native": "^1.6.0",
     "maplibre-gl": "^5.21.0",
+    "mongodb": "^7.1.1",
     "nativewind": "^4.2.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",

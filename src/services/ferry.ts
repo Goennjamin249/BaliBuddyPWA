@@ -55,8 +55,8 @@ const FERRY_CACHE_KEY = 'balibuddy_ferry_cache';
 const FERRY_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (real-time data)
 
 class FerryService {
-  // AIS API endpoint (simulated)
-  private aisApiUrl = 'https://api.aisstream.io/v0';
+  // AIS API endpoint (now using local API)
+  private aisApiUrl = '/api/ferry';
   
   // Popular Bali ferry routes
   private baliRoutes: FerryRoute[] = [

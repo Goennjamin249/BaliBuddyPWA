@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { MapPin, Navigation, Droplets, Shirt, CreditCard, Ship, AlertTriangle, Filter, Layers, ArrowLeft, X, Phone, Clock, Star, Home, RefreshCw, Globe, ExternalLink } from 'lucide-react-native';
-import { fetchPOIs, POI } from '../../services/poi-service';
+import { fetchPOIs, POI, TripAdvisorCategory } from '../../services/poi-service';
 import { openDirections, openWebsite, openPhone } from '../../services/tripadvisor';
 import TripAdvisorBranding from '../../components/TripAdvisorBranding';
 
@@ -110,11 +110,11 @@ export default function MapScreen() {
         out body;
       `;
       
-      const response = await fetch('https://overpass-api.de/api/interpreter', {
+      const response = await fetch('/api/overpass', {
         method: 'POST',
-        body: query,
+        body: JSON.stringify({ query }),
         headers: {
-          'Content-Type': 'text/plain',
+          'Content-Type': 'application/json',
         },
       });
       
@@ -279,14 +279,14 @@ export default function MapScreen() {
                     el.style.width = '36px';
                     el.style.height = '36px';
                     el.style.borderRadius = '50%';
-                    el.style.backgroundColor = getPOIColor(poi.type);
+                    el.style.backgroundColor = getPOIColor(poi.type || 'default');
                     el.style.cursor = 'pointer';
                     el.style.display = 'flex';
                     el.style.alignItems = 'center';
                     el.style.justifyContent = 'center';
                     el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
                     el.style.border = '2px solid white';
-                    el.innerHTML = getPOIEmoji(poi.type);
+                    el.innerHTML = getPOIEmoji(poi.type || 'default');
                     
                     el.addEventListener('click', () => {
                       setSelectedPOI(poi);
@@ -329,7 +329,7 @@ export default function MapScreen() {
     };
   }, []);
 
-  const getPOIIcon = (type: string) => {
+  const getPOIIcon = (type: string | undefined) => {
     switch (type) {
       case 'water': return <Droplets size={20} color="#FFFFFF" />;
       case 'laundry': return <Shirt size={20} color="#FFFFFF" />;
@@ -340,7 +340,7 @@ export default function MapScreen() {
     }
   };
 
-  const getPOIColor = (type: string) => {
+  const getPOIColor = (type: string | undefined) => {
     switch (type) {
       case 'water': return '#00B4D8';
       case 'laundry': return '#90BE6D';
@@ -351,7 +351,7 @@ export default function MapScreen() {
     }
   };
 
-  const getPOIEmoji = (type: string) => {
+  const getPOIEmoji = (type: string | undefined) => {
     switch (type) {
       case 'water': return '💧';
       case 'laundry': return '👕';

@@ -10,8 +10,8 @@ export interface OverpassPOI {
   distance?: number;
 }
 
-// Overpass API endpoint
-const OVERPASS_API_URL = 'https://overpass-api.de/api/interpreter';
+// Overpass API endpoint (now using local API)
+const OVERPASS_API_URL = '/api/overpass';
 
 // Build Overpass query for POIs
 const buildOverpassQuery = (

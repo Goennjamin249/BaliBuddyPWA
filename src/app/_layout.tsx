@@ -1,11 +1,40 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import React from 'react';
-import { useColorScheme } from 'react-native';
+import React, { useEffect } from 'react';
+import { useColorScheme, Platform } from 'react-native';
 import '../i18n';
+import InstallPrompt from '../components/InstallPrompt';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  // Register Service Worker
+  useEffect(() => {
+    if (Platform.OS === 'web' && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('Service Worker registered:', registration.scope);
+            
+            // Check for updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New version available
+                    console.log('New version available!');
+                  }
+                });
+              }
+            });
+          })
+          .catch((error) => {
+            console.error('Service Worker registration failed:', error);
+          });
+      });
+    }
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -36,6 +65,9 @@ export default function RootLayout() {
         <Stack.Screen name="weather/index" />
         <Stack.Screen name="radar/index" />
       </Stack>
+      
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </ThemeProvider>
   );
 }
