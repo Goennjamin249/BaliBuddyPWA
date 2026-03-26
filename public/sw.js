@@ -1,7 +1,17 @@
-const CACHE_NAME = 'balibuddy-v2';
-const STATIC_CACHE = 'balibuddy-static-v2';
-const DYNAMIC_CACHE = 'balibuddy-dynamic-v2';
-const OFFLINE_CACHE = 'balibuddy-offline-v2';
+// Version management for cache invalidation
+const VERSION = '2.0.0';
+const CACHE_PREFIX = 'balibuddy';
+
+// Dynamic cache names with versioning
+const CACHE_NAME = `${CACHE_PREFIX}-${VERSION}`;
+const STATIC_CACHE = `${CACHE_PREFIX}-static-${VERSION}`;
+const DYNAMIC_CACHE = `${CACHE_PREFIX}-dynamic-${VERSION}`;
+const OFFLINE_CACHE = `${CACHE_PREFIX}-offline-${VERSION}`;
+
+// Configurable logging - only log in development
+const DEBUG = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
+const log = (...args) => DEBUG && console.log('[SW]', ...args);
+const logError = (...args) => DEBUG && console.error('[SW]', ...args);
 
 // App Shell - Core assets for offline functionality
 const APP_SHELL = [
@@ -40,18 +50,18 @@ const STATIC_PATTERNS = [
 
 // Install event - cache app shell and offline fallback
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Service Worker v2...');
+  log('Installing Service Worker v' + VERSION + '...');
   
   event.waitUntil(
     Promise.all([
       // Cache App Shell
       caches.open(STATIC_CACHE).then((cache) => {
-        console.log('[SW] Caching App Shell');
+        log('Caching App Shell');
         return cache.addAll(APP_SHELL);
       }),
       // Cache offline fallback page
       caches.open(OFFLINE_CACHE).then((cache) => {
-        console.log('[SW] Caching offline fallback');
+        log('Caching offline fallback');
         return cache.add(OFFLINE_FALLBACK).catch(() => {
           // If offline.html doesn't exist, create a basic one
           const offlineResponse = new Response(
@@ -62,7 +72,7 @@ self.addEventListener('install', (event) => {
         });
       })
     ]).then(() => {
-      console.log('[SW] Installation complete');
+      log('Installation complete');
       return self.skipWaiting();
     })
   );
@@ -70,7 +80,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating Service Worker v2...');
+  log('Activating Service Worker v' + VERSION + '...');
   
   event.waitUntil(
     caches.keys()
@@ -78,18 +88,19 @@ self.addEventListener('activate', (event) => {
         return Promise.all(
           cacheNames
             .filter((name) => {
-              return name !== STATIC_CACHE && 
-                     name !== DYNAMIC_CACHE && 
-                     name !== OFFLINE_CACHE;
+              return !name.startsWith(CACHE_PREFIX) || 
+                     (name !== STATIC_CACHE && 
+                      name !== DYNAMIC_CACHE && 
+                      name !== OFFLINE_CACHE);
             })
             .map((name) => {
-              console.log('[SW] Deleting old cache:', name);
+              log('Deleting old cache:', name);
               return caches.delete(name);
             })
         );
       })
       .then(() => {
-        console.log('[SW] Activation complete');
+        log('Activation complete');
         return self.clients.claim();
       })
   );
@@ -141,7 +152,7 @@ async function handleNavigationRequest(request) {
     
     return networkResponse;
   } catch (error) {
-    console.log('[SW] Network failed for navigation, serving offline fallback');
+    log('Network failed for navigation, serving offline fallback');
     
     // Try to serve from cache first
     const cachedResponse = await caches.match(request);
@@ -246,13 +257,26 @@ async function staleWhileRevalidate(request) {
   return cachedResponse || fetchPromise;
 }
 
-// Background cache update
+// Background cache update with throttling
+let lastCacheUpdate = 0;
+const CACHE_UPDATE_THROTTLE = 5 * 60 * 1000; // 5 minutes
+
 async function updateCache(request) {
+  const now = Date.now();
+  
+  // Throttle cache updates to prevent excessive network requests
+  if (now - lastCacheUpdate < CACHE_UPDATE_THROTTLE) {
+    return;
+  }
+  
+  lastCacheUpdate = now;
+  
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse);
+      log('Background cache updated for:', request.url);
     }
   } catch (error) {
     // Silent fail for background updates
@@ -507,34 +531,60 @@ self.addEventListener('periodicsync', (event) => {
   }
 });
 
-// IndexedDB helper for WatermelonDB persistence
+// IndexedDB helper for WatermelonDB persistence with feature detection
 async function openIndexedDB() {
+  // Feature detection for IndexedDB support
+  if (!('indexedDB' in self)) {
+    logError('IndexedDB not supported in this browser');
+    throw new Error('IndexedDB not supported');
+  }
+
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('balibuddy-db', 1);
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-    
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
+    try {
+      const request = indexedDB.open('balibuddy-db', 1);
       
-      // Create object stores for offline data
-      if (!db.objectStoreNames.contains('currency')) {
-        db.createObjectStore('currency', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('weather')) {
-        db.createObjectStore('weather', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('pois')) {
-        db.createObjectStore('pois', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('expenses')) {
-        db.createObjectStore('expenses', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('itinerary')) {
-        db.createObjectStore('itinerary', { keyPath: 'id' });
-      }
-    };
+      request.onerror = () => {
+        logError('IndexedDB open failed:', request.error);
+        reject(request.error);
+      };
+      
+      request.onsuccess = () => {
+        log('IndexedDB opened successfully');
+        resolve(request.result);
+      };
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        log('IndexedDB upgrade needed, creating object stores');
+        
+        // Create object stores for offline data
+        if (!db.objectStoreNames.contains('currency')) {
+          db.createObjectStore('currency', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('weather')) {
+          db.createObjectStore('weather', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('pois')) {
+          db.createObjectStore('pois', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('expenses')) {
+          db.createObjectStore('expenses', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('itinerary')) {
+          db.createObjectStore('itinerary', { keyPath: 'id' });
+        }
+        
+        log('IndexedDB object stores created');
+      };
+
+      request.onblocked = () => {
+        logError('IndexedDB blocked - close other tabs using this database');
+        reject(new Error('IndexedDB blocked'));
+      };
+    } catch (error) {
+      logError('IndexedDB initialization error:', error);
+      reject(error);
+    }
   });
 }
 
