@@ -1,4 +1,6 @@
 {
+  "buildCommand": "npm install --legacy-peer-deps && npm run vercel-build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/(.*)",

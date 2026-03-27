@@ -183,20 +183,20 @@ export default function PackingList() {
         </View>
 
         {/* Weather Tips */}
-        <View style={styles.weatherTips}>
-          <View style={styles.weatherTip}>
-            <Sun size={20} color="#F59E0B" />
-            <Text style={styles.weatherTipText}>
-              {'Sonnig: Sonnencreme & Hut einpacken'}
-            </Text>
-          </View>
-          <View style={styles.weatherTip}>
-            <CloudRain size={20} color="#00B4D8" />
-            <Text style={styles.weatherTipText}>
-              {'Regenzeit: Regenjacke nicht vergessen'}
-            </Text>
-          </View>
-        </View>
+            <View style={styles.weatherTips}>
+              <View style={styles.weatherTip}>
+                <Sun size={20} color="#F59E0B" />
+                <Text style={styles.weatherTipText}>
+                  Sonnig: Sonnencreme & Hut einpacken
+                </Text>
+              </View>
+              <View style={styles.weatherTip}>
+                <CloudRain size={20} color="#00B4D8" />
+                <Text style={styles.weatherTipText}>
+                  Regenzeit: Regenjacke nicht vergessen
+                </Text>
+              </View>
+            </View>
 
         {/* Add Item Button */}
         <TouchableOpacity 

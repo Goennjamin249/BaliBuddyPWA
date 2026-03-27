@@ -16,11 +16,13 @@ BaliBuddy ist eine Progressive Web App (PWA) für Backpacker in Bali. Die App fu
 ## Architektur
 
 ### Offline-First Strategie
+
 - **Client:** WatermelonDB (LokiJS) für lokale Datenspeicherung
 - **Server:** MongoDB Atlas für persistente Datenspeicherung
 - **Sync:** Bidirektionale Synchronisation über REST API
 
 ### Datenbank-Setup
+
 - **Lokale DB:** WatermelonDB mit IndexedDB-Adapter
 - **Cloud DB:** MongoDB Atlas (kostenlos für Entwicklung)
 - **Sync-Strategie:** Pull/Push mit Change-Tracking
@@ -48,6 +50,7 @@ curl -X POST https://your-domain.vercel.app/api/init-db \
 ### Collections
 
 Die App verwendet folgende MongoDB-Collections:
+
 - `currencies` - Währungskurse
 - `phrases` - Übersetzungen und Sprachphrasen
 - `prices` - Preisinformationen
@@ -71,33 +74,39 @@ Die App verwendet folgende MongoDB-Collections:
 ## API Endpunkte
 
 ### Sync API (`/api/sync`)
+
 - `POST /api/sync` - Daten synchronisieren
   - `action: "pull"` - Änderungen vom Server laden
   - `action: "push"` - Änderungen zum Server senden
 - `GET /api/sync` - Health Check
 
 ### Init DB API (`/api/init-db`)
+
 - `POST /api/init-db` - Datenbank initialisieren (erfordert Auth)
 
 ## Get Started
 
 1. **Dependencies installieren:**
+
    ```bash
    npm install
    ```
 
 2. **Umgebungsvariablen konfigurieren:**
+
    ```bash
    cp .env.example .env.local
    # Füge deine MongoDB Connection String hinzu
    ```
 
 3. **Entwicklungsserver starten:**
+
    ```bash
    npm run web
    ```
 
 4. **Für Vercel Deployment:**
+
    ```bash
    npm run build
    ```
@@ -112,6 +121,7 @@ Die App verwendet folgende MongoDB-Collections:
    - `INIT_DB_SECRET` - Secret für DB-Initialisierung
 
 3. **Deploy:**
+
    ```bash
    vercel --prod
    ```
@@ -130,6 +140,7 @@ Die App verwendet folgende MongoDB-Collections:
 ## Entwicklung
 
 ### Projektstruktur
+
 ```
 ├── api/                    # Vercel Serverless Functions
 │   ├── sync.js            # Sync API
@@ -147,6 +158,7 @@ Die App verwendet folgende MongoDB-Collections:
 ```
 
 ### Verfügbare Skripte
+
 - `npm run web` - Web Development Server
 - `npm run build` - Production Build
 - `npm run lint` - Code Linting

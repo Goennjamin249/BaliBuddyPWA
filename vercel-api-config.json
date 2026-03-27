@@ -1,0 +1,23 @@
+{
+  "projectId": "balibuddy",
+  "orgId": "benschtv-7844s-projects",
+  "apiUrl": "https://api.vercel.com",
+  "endpoints": {
+    "deployments": "/v13/deployments",
+    "projects": "/v9/projects",
+    "env": "/v9/projects/{projectId}/env",
+    "domains": "/v10/projects/{projectId}/domains",
+    "checks": "/v1/deployments/{deploymentId}/checks",
+    "logs": "/v2/deployments/{deploymentId}/events"
+  },
+  "headers": {
+    "Authorization": "Bearer ${VERCEL_OIDC_TOKEN}",
+    "Content-Type": "application/json"
+  },
+  "features": {
+    "enableWebAnalytics": true,
+    "enableSpeedInsights": true,
+    "enableServerlessFunctions": true,
+    "enableEdgeFunctions": true
+  }
+}
