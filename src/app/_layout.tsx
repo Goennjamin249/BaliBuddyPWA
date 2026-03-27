@@ -5,6 +5,7 @@ import { useColorScheme, Platform } from 'react-native';
 import '../i18n';
 import InstallPrompt from '../components/InstallPrompt';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -72,6 +73,9 @@ export default function RootLayout() {
       
       {/* Vercel Speed Insights - Web only */}
       {Platform.OS === 'web' && <SpeedInsights />}
+      
+      {/* Vercel Analytics - Web only */}
+      {Platform.OS === 'web' && <Analytics />}
     </ThemeProvider>
   );
 }

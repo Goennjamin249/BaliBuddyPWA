@@ -17,6 +17,7 @@
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",
     "@react-navigation/native": "^7.1.33",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.4.3",
     "@vercel/speed-insights": "^2.0.0",
     "expo": "~55.0.8",
