@@ -4,6 +4,7 @@
   ],
   "hints": {
     "typescript-config/consistent-casing": "off",
+<<<<<<< HEAD
     "no-inline-styles": "off",
     "compat-api/html": [
       "default",
@@ -13,5 +14,8 @@
         ]
       }
     ]
+=======
+    "no-inline-styles": "off"
+>>>>>>> cc82678a821b204fb35b344758e557c638546072
   }
 }
