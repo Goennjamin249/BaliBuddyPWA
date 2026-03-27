@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Primary theme color for Chromium-based browsers (Chrome, Edge, Android). Firefox, Firefox for Android, and Opera ignore this meta tag and read theme_color from manifest.json instead -->
+    <meta name="theme-color" content="#00B4D8" />
+    <!-- Note: Firefox, Firefox for Android, and Opera prefer the manifest.json "theme_color" — keep the manifest link for those browsers -->
+    <link rel="manifest" href="/manifest.json" />
+    <!-- Apple touch icon for iOS home screen -->
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/icons/apple-touch-icon.png"
+    />
+    <!-- Windows/Edge Tile color -->
+    <meta name="msapplication-TileColor" content="#00B4D8" />
+    <!-- Enable standalone/installed app appearance on mobile -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- iOS status bar style when launched as PWA -->
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>BaliBuddy - Offline</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        text-align: center;
+        max-width: 400px;
+        background: white;
+        border-radius: 24px;
+        padding: 40px 32px;
+        box-shadow: 0 20px 40px rgba(0, 180, 216, 0.1);
+      }
+
+      .icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #00b4d8, #90be6d);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        font-size: 40px;
+      }
+
+      h1 {
+        color: #0f172a;
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+
+      p {
+        color: #64748b;
+        font-size: 16px;
+        line-height: 1.6;
+        margin-bottom: 24px;
+      }
+
+      .features {
+        text-align: left;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+
+      .feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        color: #0f172a;
+        font-size: 14px;
+      }
+
+      .feature:not(:last-child) {
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .retry-btn {
+        background: linear-gradient(135deg, #00b4d8, #0098b8);
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 16px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        width: 100%;
+      }
+
+      .retry-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 180, 216, 0.3);
+      }
+
+      .retry-btn:active {
+        transform: translateY(0);
+      }
+
+      .status {
+        margin-top: 20px;
+        padding: 12px;
+        background: #fef3c7;
+        border-radius: 12px;
+        font-size: 13px;
+        color: #92400e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">🌴</div>
+      <h1>Du bist offline</h1>
+      <p>
+        Keine Sorge! BaliBuddy funktioniert auch ohne Internet. Einige Features
+        sind bereits verfügbar:
+      </p>
+
+      <div class="features">
+        <div class="feature">💧 Gespeicherte Wasser-Stationen</div>
+        <div class="feature">🏥 Klinik-Standorte</div>
+        <div class="feature">💳 Sichere ATMs</div>
+        <div class="feature">👕 Wäschereien</div>
+        <div class="feature">⛴️ Fähr-Verbindungen</div>
+        <div class="feature">🗺️ Offline-Karten</div>
+      </div>
+
+      <button class="retry-btn" onclick="window.location.reload()">
+        🔄 Erneut versuchen
+      </button>
+
+      <div class="status">
+        📱 Tipp: Installiere BaliBuddy als App für beste Offline-Erfahrung!
+      </div>
+    </div>
+
+    <script>
+      // Auto-retry when back online
+      window.addEventListener("online", () => {
+        window.location.reload();
+      });
+
+      // Check connection status
+      if (navigator.onLine) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
+    </script>
+  </body>
+</html>
