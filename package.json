@@ -4,12 +4,12 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "expo start --web",
-    "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "lint": "expo lint"
+  "start": "expo start",
+  "android": "expo start --android",
+  "ios": "expo start --ios",
+  "web": "expo start --web",
+  "vercel-build": "expo export",
+  "lint": "expo lint"
   },
   "dependencies": {
     "@nozbe/watermelondb": "^0.25.5",
