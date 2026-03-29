@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { WifiOff } from 'lucide-react-native';
 import { useNetworkStatus } from '../services/network';
@@ -7,7 +7,7 @@ interface OfflineBannerProps {
   position?: 'top' | 'bottom';
 }
 
-export default function OfflineBanner({ position = 'top' }: OfflineBannerProps) {
+function OfflineBannerComponent({ position = 'top' }: OfflineBannerProps) {
   const { isOnline } = useNetworkStatus();
 
   if (isOnline) {
@@ -23,6 +23,8 @@ export default function OfflineBanner({ position = 'top' }: OfflineBannerProps) 
     </View>
   );
 }
+
+export default memo(OfflineBannerComponent);
 
 const styles = StyleSheet.create({
   banner: {

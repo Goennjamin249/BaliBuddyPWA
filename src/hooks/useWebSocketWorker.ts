@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 interface Vessel {
   mmsi: string;
@@ -32,9 +32,11 @@ export function useWebSocketWorker(): UseWebSocketWorkerReturn {
     status: 'disconnected'
   });
   const [isReady, setIsReady] = useState(false);
-  const [vesselCount, setVesselCount] = useState(0);
   
   const workerRef = useRef<Worker | null>(null);
+
+  // Memoized vessel count for performance
+  const vesselCount = useMemo(() => vessels.length, [vessels]);
 
   // Initialize worker
   useEffect(() => {
@@ -57,7 +59,6 @@ export function useWebSocketWorker(): UseWebSocketWorkerReturn {
               } else if (status === 'disconnected') {
                 setConnectionStatus({ status: 'disconnected' });
                 setVessels([]);
-                setVesselCount(0);
               } else if (status === 'failed') {
                 setConnectionStatus({ 
                   status: 'failed', 
@@ -68,7 +69,6 @@ export function useWebSocketWorker(): UseWebSocketWorkerReturn {
               
             case 'vessels':
               setVessels(vesselData);
-              setVesselCount(count);
               break;
               
             case 'error':

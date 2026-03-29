@@ -1,46 +1,48 @@
-import React from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { AlertTriangle, Phone, MapPin, Shield, Heart, ChevronLeft } from 'lucide-react-native';
 
-export default function EmergencyScreen() {
+function EmergencyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const emergencyContacts = [
+  // Memoized emergency contacts
+  const emergencyContacts = useMemo(() => [
     {
       id: 'police',
-      name: 'Polizei',
+      name: t('emergency.police'),
       number: '110',
       icon: <Shield size={24} color="#3B82F6" />,
-      description: 'Für Verbrechen und Sicherheitsprobleme',
+      description: t('emergency.policeDesc'),
     },
     {
       id: 'ambulance',
-      name: 'Krankenwagen',
+      name: t('emergency.ambulance'),
       number: '118',
       icon: <Heart size={24} color="#EF4444" />,
-      description: 'Für medizinische Notfälle',
+      description: t('emergency.ambulanceDesc'),
     },
     {
       id: 'fire',
-      name: 'Feuerwehr',
+      name: t('emergency.fire'),
       number: '113',
       icon: <AlertTriangle size={24} color="#F59E0B" />,
-      description: 'Für Brände und Rettung',
+      description: t('emergency.fireDesc'),
     },
     {
       id: 'tourist_police',
-      name: 'Touristenpolizei',
+      name: t('emergency.touristPolice'),
       number: '0361-224111',
       icon: <Shield size={24} color="#10B981" />,
-      description: 'Speziell für Touristen',
+      description: t('emergency.touristPoliceDesc'),
     },
-  ];
+  ], [t]);
 
-  const hospitals = [
+  // Memoized hospitals
+  const hospitals = useMemo(() => [
     {
       id: '1',
       name: 'RSUP Sanglah',
@@ -55,28 +57,42 @@ export default function EmergencyScreen() {
       phone: '0361-761263',
       distance: '5.1 km',
     },
-  ];
+  ], []);
 
-  const handleCall = (number: string) => {
+  // Memoized safety tips
+  const safetyTips = useMemo(() => [
+    t('emergency.tip1'),
+    t('emergency.tip2'),
+    t('emergency.tip3'),
+    t('emergency.tip4'),
+  ], [t]);
+
+  // Memoized call handler
+  const handleCall = useCallback((number: string) => {
     Linking.openURL(`tel:${number}`);
-  };
+  }, []);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ChevronLeft size={24} color="#1F2937" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>🚨 Notfall-Dashboard</Text>
-            <Text style={styles.subtitle}>Sofortige Hilfe in Bali</Text>
+            <Text style={styles.title}>🚨 {t('emergency.title')}</Text>
+            <Text style={styles.subtitle}>{t('emergency.subtitle')}</Text>
           </View>
         </View>
 
         {/* Emergency Contacts */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📞 Notfallkontakte</Text>
+          <Text style={styles.sectionTitle}>📞 {t('emergency.contacts')}</Text>
           {emergencyContacts.map((contact) => (
             <TouchableOpacity 
               key={contact.id}
@@ -100,7 +116,7 @@ export default function EmergencyScreen() {
 
         {/* Nearest Hospitals */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏥 Nächste Krankenhäuser</Text>
+          <Text style={styles.sectionTitle}>🏥 {t('emergency.nearestHospitals')}</Text>
           {hospitals.map((hospital) => (
             <View key={hospital.id} style={styles.hospitalCard}>
               <View style={styles.hospitalHeader}>
@@ -126,12 +142,11 @@ export default function EmergencyScreen() {
 
         {/* Safety Tips */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💡 Sicherheitstipps</Text>
+          <Text style={styles.sectionTitle}>💡 {t('emergency.safetyTips')}</Text>
           <View style={styles.tipsCard}>
-            <Text style={styles.tipText}>• Bewahre Kopien deines Reisepasses sicher auf</Text>
-            <Text style={styles.tipText}>• Teile deinen Standort mit Vertrauenspersonen</Text>
-            <Text style={styles.tipText}>• Lade die Offline-Karte herunter</Text>
-            <Text style={styles.tipText}>• Trage immer Bargeld für Notfälle mit</Text>
+            {safetyTips.map((tip, index) => (
+              <Text key={index} style={styles.tipText}>• {tip}</Text>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -284,3 +299,5 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
+
+export default memo(EmergencyScreen);

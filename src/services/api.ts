@@ -117,27 +117,34 @@ export const WeatherService = {
     if (cached) return cached;
 
     try {
-      // In production, this would call actual BMKG API
-      // For now, return simulated data
-      const simulatedData: WeatherData = {
-        location,
-        temperature: 28 + Math.floor(Math.random() * 5),
-        humidity: 75 + Math.floor(Math.random() * 15),
-        description: ['Cerah', 'Berawan', 'Hujan Ringan'][Math.floor(Math.random() * 3)],
-        icon: ['☀️', '⛅', '🌧️'][Math.floor(Math.random() * 3)],
-        windSpeed: 10 + Math.floor(Math.random() * 15),
-        forecast: Array.from({ length: 7 }, (_, i) => ({
+      const response = await fetchWithRetry(`${API_CONFIG.WEATHER_ENDPOINT}?location=${encodeURIComponent(location)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Weather API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform API response to match our interface
+      const weatherData: WeatherData = {
+        location: data.location || location,
+        temperature: data.temperature || data.current?.temperature_2m || 28,
+        humidity: data.humidity || data.current?.relative_humidity_2m || 75,
+        description: data.description || data.current?.weather_code?.toString() || 'Klar',
+        icon: data.icon || '☀️',
+        windSpeed: data.windSpeed || data.current?.wind_speed_10m || 10,
+        forecast: data.forecast || data.daily?.map((day: any, i: number) => ({
           date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toLocaleDateString('de-DE'),
-          tempMin: 24 + Math.floor(Math.random() * 3),
-          tempMax: 30 + Math.floor(Math.random() * 4),
-          description: ['Cerah', 'Berawan', 'Hujan'][Math.floor(Math.random() * 3)],
-          icon: ['☀️', '⛅', '🌧️'][Math.floor(Math.random() * 3)],
-          precipitation: Math.floor(Math.random() * 30),
-        })),
+          tempMin: day.temperature_2m_min || 24,
+          tempMax: day.temperature_2m_max || 30,
+          description: day.weather_code?.toString() || 'Klar',
+          icon: '☀️',
+          precipitation: day.precipitation || 0,
+        })) || [],
       };
 
-      cache.set(cacheKey, simulatedData, 30); // Cache for 30 minutes
-      return simulatedData;
+      cache.set(cacheKey, weatherData, 30); // Cache for 30 minutes
+      return weatherData;
     } catch (error) {
       console.error('Weather API error:', error);
       throw new Error('Wetterdaten konnten nicht geladen werden');
@@ -145,18 +152,19 @@ export const WeatherService = {
   },
 
   async getWeatherAlerts(location: string): Promise<string[]> {
-    // Simulated weather alerts
-    const alerts: string[] = [];
-    
-    if (Math.random() > 0.7) {
-      alerts.push('⚠️ Starkregen-Warnung für die nächsten 6 Stunden');
+    try {
+      const response = await fetchWithRetry(`${API_CONFIG.WEATHER_ENDPOINT}?location=${encodeURIComponent(location)}&alerts=true`);
+      
+      if (!response.ok) {
+        return [];
+      }
+      
+      const data = await response.json();
+      return data.alerts || [];
+    } catch (error) {
+      console.error('Weather alerts error:', error);
+      return [];
     }
-    
-    if (Math.random() > 0.8) {
-      alerts.push('🌊 Flutwelle-Warnung für Küstengebiete');
-    }
-    
-    return alerts;
   },
 };
 
@@ -168,46 +176,24 @@ export const VolcanoService = {
     if (cached) return cached;
 
     try {
-      // Simulated volcano data based on real Indonesian volcanoes
-      const volcanoes: VolcanoAlert[] = [
-        {
-          id: '1',
-          name: 'Gunung Agung',
-          level: 'watch',
-          levelColor: '#F59E0B',
-          description: 'Erhöhte seismische Aktivität. Status: Waspada (Watch).',
-          lastUpdate: new Date().toISOString(),
-          recommendations: [
-            'Nicht innerhalb von 4 km vom Gipfel entfernen',
-            'Evakuierungs Routen kennen',
-            'Auf offizielle Anweisungen achten',
-          ],
-        },
-        {
-          id: '2',
-          name: 'Gunung Batur',
-          level: 'normal',
-          levelColor: '#90BE6D',
-          description: 'Normale Aktivität. Status: Normal.',
-          lastUpdate: new Date().toISOString(),
-          recommendations: [
-            'Sicher zum Wandern',
-            'Empfohlene Routen einhalten',
-          ],
-        },
-        {
-          id: '3',
-          name: 'Gunung Rinjani',
-          level: 'normal',
-          levelColor: '#90BE6D',
-          description: 'Normale Aktivität. Status: Normal.',
-          lastUpdate: new Date().toISOString(),
-          recommendations: [
-            'Wanderungen möglich',
-            'Wetter prüfen vor Aufstieg',
-          ],
-        },
-      ];
+      const response = await fetchWithRetry(API_CONFIG.VOLCANO_ENDPOINT);
+      
+      if (!response.ok) {
+        throw new Error(`Volcano API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform API response to match our interface
+      const volcanoes: VolcanoAlert[] = data.volcanoes?.map((volcano: any) => ({
+        id: volcano.id,
+        name: volcano.name,
+        level: volcano.status === 'Normal' ? 'normal' : volcano.status === 'Waspada' ? 'watch' : volcano.status === 'Siaga' ? 'warning' : 'eruption',
+        levelColor: volcano.alertLevel === 1 ? '#90BE6D' : volcano.alertLevel === 2 ? '#F59E0B' : '#FF6B6B',
+        description: volcano.description || `${volcano.name} - Status: ${volcano.status}`,
+        lastUpdate: volcano.lastEruption || new Date().toISOString(),
+        recommendations: volcano.recommendations || [],
+      })) || [];
 
       cache.set(cacheKey, volcanoes, 15); // Cache for 15 minutes
       return volcanoes;
@@ -241,13 +227,21 @@ export const CurrencyService = {
     if (cached) return cached;
 
     try {
-      // Simulated exchange rates (in production, use ExchangeRate-API)
+      const response = await fetchWithRetry(`${API_CONFIG.EXCHANGE_RATE_ENDPOINT}?from=${baseCurrency}`);
+      
+      if (!response.ok) {
+        throw new Error(`Currency API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform API response to match our interface
       const rates: CurrencyRates = {
-        base: baseCurrency,
-        date: new Date().toISOString(),
-        rates: {
+        base: data.base || baseCurrency,
+        date: data.date || new Date().toISOString(),
+        rates: data.rates || {
           IDR: 1,
-          EUR: 0.000057, // 1 IDR = 0.000057 EUR
+          EUR: 0.000057,
           USD: 0.000062,
           GBP: 0.000050,
           AUD: 0.000095,
@@ -280,39 +274,25 @@ export const AISservice = {
     if (cached) return cached;
 
     try {
-      // Simulated ferry data
-      const ferries = [
-        {
-          id: '1',
-          name: 'Bali Express',
-          type: 'Fast Boat',
-          lat: -8.7183,
-          lng: 115.1687,
-          destination: 'Gili Trawangan',
-          eta: '45 min',
-          status: 'active',
-        },
-        {
-          id: '2',
-          name: 'Gili Getaway',
-          type: 'Fast Boat',
-          lat: -8.6477,
-          lng: 115.1378,
-          destination: 'Lombok',
-          eta: '1h 30min',
-          status: 'active',
-        },
-        {
-          id: '3',
-          name: 'Blue Water Express',
-          type: 'Ferry',
-          lat: -8.5069,
-          lng: 115.2624,
-          destination: 'Nusa Lembongan',
-          eta: '30 min',
-          status: 'active',
-        },
-      ];
+      const response = await fetchWithRetry(API_CONFIG.FERRY_ENDPOINT);
+      
+      if (!response.ok) {
+        throw new Error(`AIS API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform API response to match our interface
+      const ferries = data.vessels?.map((vessel: any) => ({
+        id: vessel.mmsi || vessel.id,
+        name: vessel.name,
+        type: vessel.type || 'Ferry',
+        lat: vessel.latitude || vessel.lat,
+        lng: vessel.longitude || vessel.lng,
+        destination: vessel.destination || 'Unknown',
+        eta: vessel.eta || 'Unknown',
+        status: vessel.status || 'active',
+      })) || [];
 
       cache.set(cacheKey, ferries, 5); // Cache for 5 minutes (real-time data)
       return ferries;

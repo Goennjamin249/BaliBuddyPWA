@@ -4,7 +4,7 @@
  */
 
 import { Model } from '@nozbe/watermelondb';
-import { field, text, date } from '@nozbe/watermelondb/decorators';
+import { field, text, date, readonly } from '@nozbe/watermelondb/decorators';
 
 export default class Currency extends Model {
   static table = 'currencies';
@@ -14,6 +14,6 @@ export default class Currency extends Model {
   @text('symbol') symbol!: string;
   @field('rate_to_idr') rateToIdr!: number;
   @field('last_updated') lastUpdated!: number;
-  @date('created_at') createdAt!: Date;
-  @date('updated_at') updatedAt!: Date;
+  @readonly @date('created_at') createdAt!: Date;
+  @readonly @date('updated_at') updatedAt!: Date;
 }

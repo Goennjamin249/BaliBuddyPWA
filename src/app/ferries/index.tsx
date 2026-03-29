@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -19,103 +19,115 @@ interface Ferry {
   departureTime: string;
 }
 
-const ferriesData: Ferry[] = [
-  {
-    id: '1',
-    name: 'Bali Express',
-    type: 'Fast Boat',
-    latitude: -8.7183,
-    longitude: 115.1687,
-    destination: 'Gili Trawangan',
-    eta: '45 min',
-    status: 'active',
-    capacity: 80,
-    price: 450000,
-    operator: 'Bali Fast Boats',
-    departureTime: '09:00',
-  },
-  {
-    id: '2',
-    name: 'Gili Getaway',
-    type: 'Speed Boat',
-    latitude: -8.6477,
-    longitude: 115.1378,
-    destination: 'Gili Air',
-    eta: '1h 15min',
-    status: 'active',
-    capacity: 60,
-    price: 380000,
-    operator: 'Gili Getaway',
-    departureTime: '10:30',
-  },
-  {
-    id: '3',
-    name: 'Blue Water Express',
-    type: 'Ferry',
-    latitude: -8.5069,
-    longitude: 115.2624,
-    destination: 'Nusa Lembongan',
-    eta: '30 min',
-    status: 'active',
-    capacity: 150,
-    price: 175000,
-    operator: 'Blue Water Express',
-    departureTime: '11:00',
-  },
-  {
-    id: '4',
-    name: 'Scoot Cruise',
-    type: 'Fast Boat',
-    latitude: -8.7183,
-    longitude: 115.1687,
-    destination: 'Lombok',
-    eta: '2h 30min',
-    status: 'delayed',
-    capacity: 100,
-    price: 550000,
-    operator: 'Scoot Cruise',
-    departureTime: '14:00',
-  },
-];
-
-export default function FerryTracker() {
+function FerryTracker() {
   const { t } = useTranslation();
-  const [ferries, setFerries] = useState<Ferry[]>(ferriesData);
   const [selectedFerry, setSelectedFerry] = useState<Ferry | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const onRefresh = async () => {
+  // Memoized ferries data
+  const ferriesData = useMemo<Ferry[]>(() => [
+    {
+      id: '1',
+      name: 'Bali Express',
+      type: 'Fast Boat',
+      latitude: -8.7183,
+      longitude: 115.1687,
+      destination: 'Gili Trawangan',
+      eta: '45 min',
+      status: 'active',
+      capacity: 80,
+      price: 450000,
+      operator: 'Bali Fast Boats',
+      departureTime: '09:00',
+    },
+    {
+      id: '2',
+      name: 'Gili Getaway',
+      type: 'Speed Boat',
+      latitude: -8.6477,
+      longitude: 115.1378,
+      destination: 'Gili Air',
+      eta: '1h 15min',
+      status: 'active',
+      capacity: 60,
+      price: 380000,
+      operator: 'Gili Getaway',
+      departureTime: '10:30',
+    },
+    {
+      id: '3',
+      name: 'Blue Water Express',
+      type: 'Ferry',
+      latitude: -8.5069,
+      longitude: 115.2624,
+      destination: 'Nusa Lembongan',
+      eta: '30 min',
+      status: 'active',
+      capacity: 150,
+      price: 175000,
+      operator: 'Blue Water Express',
+      departureTime: '11:00',
+    },
+    {
+      id: '4',
+      name: 'Scoot Cruise',
+      type: 'Fast Boat',
+      latitude: -8.7183,
+      longitude: 115.1687,
+      destination: 'Lombok',
+      eta: '2h 30min',
+      status: 'delayed',
+      capacity: 100,
+      price: 550000,
+      operator: 'Scoot Cruise',
+      departureTime: '14:00',
+    },
+  ], []);
+
+  const [ferries, setFerries] = useState<Ferry[]>(ferriesData);
+
+  // Update ferries when ferriesData changes
+  React.useEffect(() => {
+    setFerries(ferriesData);
+  }, [ferriesData]);
+
+  // Memoized refresh handler
+  const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsRefreshing(false);
-  };
+  }, []);
 
-  const getStatusColor = (status: string) => {
+  // Memoized get status color function
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'active': return '#90BE6D';
       case 'delayed': return '#F59E0B';
       case 'cancelled': return '#FF6B6B';
       default: return '#6B7280';
     }
-  };
+  }, []);
 
-  const getStatusText = (status: string) => {
+  // Memoized get status text function
+  const getStatusText = useCallback((status: string) => {
     switch (status) {
-      case 'active': return 'Unterwegs';
-      case 'delayed': return 'Verspätet';
-      case 'cancelled': return 'Abgesagt';
-      default: return 'Unbekannt';
+      case 'active': return t('ferries.active');
+      case 'delayed': return t('ferries.delayed');
+      case 'cancelled': return t('ferries.cancelled');
+      default: return t('ferries.unknown');
     }
-  };
+  }, [t]);
 
-  const getTypeIcon = (type: string) => {
-    return <Ship size={20} color="#00B4D8" />;
-  };
-
-  const formatPrice = (price: number) => {
+  // Memoized format price function
+  const formatPrice = useCallback((price: number) => {
     return `Rp ${price.toLocaleString('de-DE')}`;
-  };
+  }, []);
+
+  // Memoized ferry selection handler
+  const handleFerrySelect = useCallback((ferry: Ferry) => {
+    setSelectedFerry(selectedFerry?.id === ferry.id ? null : ferry);
+  }, [selectedFerry]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,20 +139,20 @@ export default function FerryTracker() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>{t('ferries.title', 'Fähr-Tracker')}</Text>
-          <Text style={styles.subtitle}>{t('ferries.subtitle', 'Echtzeit-Positionen')}</Text>
+          <Text style={styles.title}>{t('ferries.title')}</Text>
+          <Text style={styles.subtitle}>{t('ferries.subtitle')}</Text>
         </View>
 
         {/* Refresh Button */}
         <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
           <RefreshCw size={20} color="#00B4D8" />
-          <Text style={styles.refreshText}>Aktualisieren</Text>
+          <Text style={styles.refreshText}>{t('ferries.refresh')}</Text>
         </TouchableOpacity>
 
         {/* Live Indicator */}
         <View style={styles.liveIndicator}>
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>Live-Daten (AIS)</Text>
+          <Text style={styles.liveText}>{t('ferries.liveData')}</Text>
         </View>
 
         {/* Ferries List */}
@@ -152,12 +164,12 @@ export default function FerryTracker() {
                 styles.ferryCard,
                 selectedFerry?.id === ferry.id && styles.ferryCardSelected,
               ]}
-              onPress={() => setSelectedFerry(selectedFerry?.id === ferry.id ? null : ferry)}
+              onPress={() => handleFerrySelect(ferry)}
             >
               <View style={styles.ferryHeader}>
                 <View style={styles.ferryTitleRow}>
                   <View style={styles.ferryIcon}>
-                    {getTypeIcon(ferry.type)}
+                    <Ship size={20} color="#00B4D8" />
                   </View>
                   <View style={styles.ferryInfo}>
                     <Text style={styles.ferryName}>{ferry.name}</Text>
@@ -174,7 +186,7 @@ export default function FerryTracker() {
               <View style={styles.ferryRoute}>
                 <View style={styles.routePoint}>
                   <MapPin size={14} color="#6B7280" />
-                  <Text style={styles.routeText}>Bali (Padangbai)</Text>
+                  <Text style={styles.routeText}>{t('ferries.bali')}</Text>
                 </View>
                 <Navigation size={16} color="#00B4D8" style={styles.routeArrow} />
                 <View style={styles.routePoint}>
@@ -186,11 +198,11 @@ export default function FerryTracker() {
               <View style={styles.ferryMeta}>
                 <View style={styles.metaItem}>
                   <Clock size={14} color="#6B7280" />
-                  <Text style={styles.metaText}>Abfahrt: {ferry.departureTime}</Text>
+                  <Text style={styles.metaText}>{t('ferries.departure')}: {ferry.departureTime}</Text>
                 </View>
                 <View style={styles.metaItem}>
                   <Clock size={14} color="#6B7280" />
-                  <Text style={styles.metaText}>ETA: {ferry.eta}</Text>
+                  <Text style={styles.metaText}>{t('ferries.eta')}: {ferry.eta}</Text>
                 </View>
               </View>
 
@@ -199,19 +211,19 @@ export default function FerryTracker() {
                 <View style={styles.ferryDetails}>
                   <View style={styles.detailsGrid}>
                     <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Typ</Text>
+                      <Text style={styles.detailLabel}>{t('ferries.type')}</Text>
                       <Text style={styles.detailValue}>{ferry.type}</Text>
                     </View>
                     <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Kapazität</Text>
-                      <Text style={styles.detailValue}>{ferry.capacity} Personen</Text>
+                      <Text style={styles.detailLabel}>{t('ferries.capacity')}</Text>
+                      <Text style={styles.detailValue}>{ferry.capacity} {t('ferries.persons')}</Text>
                     </View>
                     <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Preis</Text>
+                      <Text style={styles.detailLabel}>{t('ferries.price')}</Text>
                       <Text style={styles.detailValue}>{formatPrice(ferry.price)}</Text>
                     </View>
                     <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Position</Text>
+                      <Text style={styles.detailLabel}>{t('ferries.position')}</Text>
                       <Text style={styles.detailValue}>
                         {ferry.latitude.toFixed(4)}, {ferry.longitude.toFixed(4)}
                       </Text>
@@ -222,13 +234,13 @@ export default function FerryTracker() {
                     <View style={styles.delayWarning}>
                       <AlertCircle size={16} color="#F59E0B" />
                       <Text style={styles.delayText}>
-                        Diese Fähre hat Verspätung. Bitte planen Sie zusätzliche Zeit ein.
+                        {t('ferries.delayWarning')}
                       </Text>
                     </View>
                   )}
 
                   <TouchableOpacity style={styles.bookButton}>
-                    <Text style={styles.bookButtonText}>Ticket buchen</Text>
+                    <Text style={styles.bookButtonText}>{t('ferries.bookTicket')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -238,28 +250,27 @@ export default function FerryTracker() {
 
         {/* Info Card */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>ℹ️ Hinweis</Text>
+          <Text style={styles.infoTitle}>ℹ️ {t('ferries.infoTitle')}</Text>
           <Text style={styles.infoText}>
-            Die Positionsdaten werden über AIS (Automatic Identification System) empfangen. 
-            Bei schlechtem Wetter kann es zu Verzögerungen kommen.
+            {t('ferries.infoText')}
           </Text>
         </View>
 
         {/* Legend */}
         <View style={styles.legend}>
-          <Text style={styles.legendTitle}>Legende</Text>
+          <Text style={styles.legendTitle}>{t('ferries.legend')}</Text>
           <View style={styles.legendItems}>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#90BE6D' }]} />
-              <Text style={styles.legendText}>Unterwegs</Text>
+              <Text style={styles.legendText}>{t('ferries.active')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
-              <Text style={styles.legendText}>Verspätet</Text>
+              <Text style={styles.legendText}>{t('ferries.delayed')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#FF6B6B' }]} />
-              <Text style={styles.legendText}>Abgesagt</Text>
+              <Text style={styles.legendText}>{t('ferries.cancelled')}</Text>
             </View>
           </View>
         </View>
@@ -528,3 +539,5 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
 });
+
+export default memo(FerryTracker);

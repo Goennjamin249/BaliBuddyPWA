@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Users, MapPin, Calendar, DollarSign, ChevronLeft, Plus, MessageCircle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 interface RideShare {
   id: string;
@@ -16,44 +17,48 @@ interface RideShare {
   description: string;
 }
 
-export default function RideShareScreen() {
+function RideShareScreen() {
   const router = useRouter();
-  const [rides, setRides] = useState<RideShare[]>([
+  const { t } = useTranslation();
+
+  // Memoized initial rides
+  const initialRides = useMemo<RideShare[]>(() => [
     {
       id: '1',
-      destination: 'Ubud Tagesausflug',
+      destination: t('rideshare.ubudTrip'),
       date: '2026-03-28',
       spotsTotal: 4,
       spotsAvailable: 2,
       costPerPerson: 175000,
       totalCost: 700000,
       organizer: 'Max M.',
-      description: 'Tegallalang Rice Terraces, Monkey Forest, Tirta Empul',
+      description: t('rideshare.ubudDescription'),
     },
     {
       id: '2',
-      destination: 'Nusa Penida Tour',
+      destination: t('rideshare.nusaPenida'),
       date: '2026-03-30',
       spotsTotal: 4,
       spotsAvailable: 3,
       costPerPerson: 200000,
       totalCost: 800000,
       organizer: 'Sarah K.',
-      description: 'Kelingking Beach, Angel Billabong, Broken Beach',
+      description: t('rideshare.nusaPenidaDescription'),
     },
     {
       id: '3',
-      destination: 'Uluwatu Sunset',
+      destination: t('rideshare.uluwatu'),
       date: '2026-04-01',
       spotsTotal: 3,
       spotsAvailable: 1,
       costPerPerson: 217000,
       totalCost: 650000,
       organizer: 'Tom B.',
-      description: 'Uluwatu Temple, Kecak Dance, Jimbaran Bay Dinner',
+      description: t('rideshare.uluwatuDescription'),
     },
-  ]);
+  ], [t]);
 
+  const [rides, setRides] = useState<RideShare[]>(initialRides);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDestination, setNewDestination] = useState('');
   const [newDate, setNewDate] = useState('');
@@ -61,14 +66,16 @@ export default function RideShareScreen() {
   const [newCost, setNewCost] = useState('');
   const [newDescription, setNewDescription] = useState('');
 
-  const formatIDR = (amount: number) => amount.toLocaleString('id-ID');
+  // Memoized format IDR function
+  const formatIDR = useCallback((amount: number) => amount.toLocaleString('id-ID'), []);
 
-  const addRide = () => {
+  // Memoized add ride handler
+  const addRide = useCallback(() => {
     if (newDestination && newDate && newSpots && newCost) {
       const spots = parseInt(newSpots);
       const cost = parseInt(newCost);
       if (!isNaN(spots) && !isNaN(cost) && spots > 0 && cost > 0) {
-        setRides([{
+        setRides(prev => [{
           id: Date.now().toString(),
           destination: newDestination,
           date: newDate,
@@ -76,9 +83,9 @@ export default function RideShareScreen() {
           spotsAvailable: spots - 1,
           costPerPerson: Math.round(cost / spots),
           totalCost: cost,
-          organizer: 'Du',
-          description: newDescription || 'Keine Beschreibung',
-        }, ...rides]);
+          organizer: t('rideshare.you'),
+          description: newDescription || t('rideshare.noDescription'),
+        }, ...prev]);
         setNewDestination('');
         setNewDate('');
         setNewSpots('');
@@ -87,19 +94,63 @@ export default function RideShareScreen() {
         setShowAddForm(false);
       }
     }
-  };
+  }, [newDestination, newDate, newSpots, newCost, newDescription, t]);
+
+  // Memoized show form handler
+  const handleShowForm = useCallback(() => {
+    setShowAddForm(true);
+  }, []);
+
+  // Memoized hide form handler
+  const handleHideForm = useCallback(() => {
+    setShowAddForm(false);
+  }, []);
+
+  // Memoized input handlers
+  const handleDestinationChange = useCallback((text: string) => {
+    setNewDestination(text);
+  }, []);
+
+  const handleDateChange = useCallback((text: string) => {
+    setNewDate(text);
+  }, []);
+
+  const handleSpotsChange = useCallback((text: string) => {
+    setNewSpots(text);
+  }, []);
+
+  const handleCostChange = useCallback((text: string) => {
+    setNewCost(text);
+  }, []);
+
+  const handleDescriptionChange = useCallback((text: string) => {
+    setNewDescription(text);
+  }, []);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  // Memoized tips
+  const tips = useMemo(() => [
+    t('rideshare.tip1'),
+    t('rideshare.tip2'),
+    t('rideshare.tip3'),
+    t('rideshare.tip4'),
+  ], [t]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ChevronLeft size={24} color="#1F2937" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>🚗 Ride-Share</Text>
-            <Text style={styles.subtitle}>Fahrer-Kosten teilen</Text>
+            <Text style={styles.title}>🚗 {t('rideshare.title')}</Text>
+            <Text style={styles.subtitle}>{t('rideshare.subtitle')}</Text>
           </View>
         </View>
 
@@ -107,10 +158,9 @@ export default function RideShareScreen() {
         <View style={styles.infoCard}>
           <DollarSign size={24} color="#90BE6D" />
           <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>Ganztägiger Fahrer</Text>
+            <Text style={styles.infoTitle}>{t('rideshare.fullDayDriver')}</Text>
             <Text style={styles.infoText}>
-              Basiskosten: IDR 650.000 - 800.000{'\n'}
-              Teile die Kosten mit anderen Reisenden!
+              {t('rideshare.baseCosts')}
             </Text>
           </View>
         </View>
@@ -119,61 +169,61 @@ export default function RideShareScreen() {
         {!showAddForm && (
           <TouchableOpacity 
             style={styles.addRideButton}
-            onPress={() => setShowAddForm(true)}
+            onPress={handleShowForm}
           >
             <Plus size={20} color="#FFFFFF" />
-            <Text style={styles.addRideButtonText}>Neue Fahrt erstellen</Text>
+            <Text style={styles.addRideButtonText}>{t('rideshare.createRide')}</Text>
           </TouchableOpacity>
         )}
 
         {/* Add Ride Form */}
         {showAddForm && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>🚗 Neue Fahrt erstellen</Text>
+            <Text style={styles.formTitle}>🚗 {t('rideshare.createRide')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Ziel (z.B. Ubud)"
+              placeholder={t('rideshare.destinationPlaceholder')}
               value={newDestination}
-              onChangeText={setNewDestination}
+              onChangeText={handleDestinationChange}
             />
             <TextInput
               style={styles.input}
-              placeholder="Datum (z.B. 2026-03-28)"
+              placeholder={t('rideshare.datePlaceholder')}
               value={newDate}
-              onChangeText={setNewDate}
+              onChangeText={handleDateChange}
             />
             <TextInput
               style={styles.input}
-              placeholder="Anzahl Plätze (inkl. dir)"
+              placeholder={t('rideshare.spotsPlaceholder')}
               value={newSpots}
-              onChangeText={setNewSpots}
+              onChangeText={handleSpotsChange}
               keyboardType="numeric"
             />
             <TextInput
               style={styles.input}
-              placeholder="Gesamtkosten in IDR"
+              placeholder={t('rideshare.costPlaceholder')}
               value={newCost}
-              onChangeText={setNewCost}
+              onChangeText={handleCostChange}
               keyboardType="numeric"
             />
             <TextInput
               style={styles.input}
-              placeholder="Beschreibung (optional)"
+              placeholder={t('rideshare.descriptionPlaceholder')}
               value={newDescription}
-              onChangeText={setNewDescription}
+              onChangeText={handleDescriptionChange}
             />
             <View style={styles.formButtons}>
               <TouchableOpacity 
                 style={styles.cancelButton}
-                onPress={() => setShowAddForm(false)}
+                onPress={handleHideForm}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>{t('rideshare.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.submitButton}
                 onPress={addRide}
               >
-                <Text style={styles.submitButtonText}>Erstellen</Text>
+                <Text style={styles.submitButtonText}>{t('rideshare.create')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -181,7 +231,7 @@ export default function RideShareScreen() {
 
         {/* Available Rides */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🚘 Verfügbare Fahrten</Text>
+          <Text style={styles.sectionTitle}>🚘 {t('rideshare.availableRides')}</Text>
           {rides.map((ride) => (
             <View key={ride.id} style={styles.rideCard}>
               <View style={styles.rideHeader}>
@@ -191,7 +241,7 @@ export default function RideShareScreen() {
                   ride.spotsAvailable === 0 && styles.spotsBadgeFull,
                 ]}>
                   <Text style={styles.spotsBadgeText}>
-                    {ride.spotsAvailable}/{ride.spotsTotal} Plätze
+                    {ride.spotsAvailable}/{ride.spotsTotal} {t('rideshare.spots')}
                   </Text>
                 </View>
               </View>
@@ -211,11 +261,11 @@ export default function RideShareScreen() {
 
               <View style={styles.rideFooter}>
                 <View style={styles.costInfo}>
-                  <Text style={styles.costLabel}>Pro Person:</Text>
+                  <Text style={styles.costLabel}>{t('rideshare.perPerson')}:</Text>
                   <Text style={styles.costValue}>IDR {formatIDR(ride.costPerPerson)}</Text>
                 </View>
                 <View style={styles.costInfo}>
-                  <Text style={styles.costLabel}>Gesamt:</Text>
+                  <Text style={styles.costLabel}>{t('rideshare.total')}:</Text>
                   <Text style={styles.costTotal}>IDR {formatIDR(ride.totalCost)}</Text>
                 </View>
               </View>
@@ -223,13 +273,13 @@ export default function RideShareScreen() {
               {ride.spotsAvailable > 0 && (
                 <TouchableOpacity style={styles.joinButton}>
                   <MessageCircle size={16} color="#FFFFFF" />
-                  <Text style={styles.joinButtonText}>Mitfahren</Text>
+                  <Text style={styles.joinButtonText}>{t('rideshare.join')}</Text>
                 </TouchableOpacity>
               )}
 
               {ride.spotsAvailable === 0 && (
                 <View style={styles.fullBadge}>
-                  <Text style={styles.fullBadgeText}>Ausgebucht</Text>
+                  <Text style={styles.fullBadgeText}>{t('rideshare.full')}</Text>
                 </View>
               )}
             </View>
@@ -238,11 +288,10 @@ export default function RideShareScreen() {
 
         {/* Tips */}
         <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>💡 Tipps</Text>
-          <Text style={styles.tipText}>• Treffe dich immer an öffentlichen Orten</Text>
-          <Text style={styles.tipText}>• Teile deine Reiseroute mit Freunden</Text>
-          <Text style={styles.tipText}>• Bezahle erst bei Abfahrt</Text>
-          <Text style={styles.tipText}>• Klare Absprache über Stopps</Text>
+          <Text style={styles.tipsTitle}>💡 {t('rideshare.tips')}</Text>
+          {tips.map((tip, index) => (
+            <Text key={index} style={styles.tipText}>• {tip}</Text>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -497,3 +546,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+export default memo(RideShareScreen);

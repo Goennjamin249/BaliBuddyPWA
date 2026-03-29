@@ -1,7 +1,7 @@
 import {
-  TripAdvisorPOI,
+  BookingPOI,
   searchPOIs as tripAdvisorSearch,
-  TripAdvisorSearchParams,
+  BookingSearchParams,
 } from "./tripadvisor";
 import { fetchOverpassPOIs, OverpassPOI } from "./overpass";
 
@@ -345,7 +345,7 @@ const cachePOIs = (
  * @param poi - TripAdvisor POI
  * @returns Unified POI
  */
-const convertTripAdvisorPOI = (poi: TripAdvisorPOI): POI => ({
+const convertTripAdvisorPOI = (poi: BookingPOI): POI => ({
   id: poi.location_id,
   name: poi.name,
   latitude: poi.latitude,
@@ -376,7 +376,7 @@ const convertOverpassPOI = (poi: OverpassPOI): POI => ({
   category: poi.type,
   distance: poi.distance,
   source: POI_SOURCE.OSM,
-  type: CATEGORY_TO_MAP_TYPE[poi.type as POICategory],
+  type: CATEGORY_TO_MAP_TYPE[poi.type as POICategory] || undefined,
 });
 
 /**
@@ -514,7 +514,7 @@ export const fetchPOIs = async (
       // Try TripAdvisor API first with retry logic
       for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
         try {
-          const params: TripAdvisorSearchParams = {
+          const params: BookingSearchParams = {
             latitude,
             longitude,
             radius,

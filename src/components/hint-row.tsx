@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 
 import { ThemedText } from './themed-text';
@@ -11,7 +11,7 @@ type HintRowProps = {
   hint?: ReactNode;
 };
 
-export function HintRow({ title = 'Try editing', hint = 'app/index.tsx' }: HintRowProps) {
+function HintRowComponent({ title = 'Try editing', hint = 'app/index.tsx' }: HintRowProps) {
   return (
     <View style={styles.stepRow}>
       <ThemedText type="small">{title}</ThemedText>
@@ -21,6 +21,8 @@ export function HintRow({ title = 'Try editing', hint = 'app/index.tsx' }: HintR
     </View>
   );
 }
+
+export const HintRow = memo(HintRowComponent);
 
 const styles = StyleSheet.create({
   stepRow: {

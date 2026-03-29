@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -19,51 +19,7 @@ interface FareEstimate {
   savings: number;
 }
 
-const zones: Zone[] = [
-  {
-    id: '1',
-    name: 'Kuta Beach Area',
-    type: 'red',
-    description: 'Hochtouristische Zone - überhöhte Taxipreise',
-    tips: ['Nur Meter-Taxi nutzen', 'Grab/Gojek bevorzugen', 'Vorher Preis vereinbaren'],
-  },
-  {
-    id: '2',
-    name: 'Seminyak',
-    type: 'red',
-    description: 'Premium-Touristengebiet',
-    tips: ['Feste Preise verlangen', 'Alternativ Scooter mieten'],
-  },
-  {
-    id: '3',
-    name: 'Ubud Center',
-    type: 'yellow',
-    description: 'Mittleres Risiko',
-    tips: ['Handeln üblich', 'Local Price erfragen'],
-  },
-  {
-    id: '4',
-    name: 'Canggu',
-    type: 'green',
-    description: 'Surfer-Preise - fairer',
-    tips: ['Normale Taxipreise', 'Gojek verfügbar'],
-  },
-  {
-    id: '5',
-    name: 'Airport Zone',
-    type: 'red',
-    description: 'Taxi-Mafia aktiv',
-    tips: ['Fixpreis am Schalter', 'Grab am Parkplatz', 'Niemanden folgen'],
-  },
-];
-
-const fareTable = {
-  taxi: { base: 7000, perKm: 6500 },
-  grab: { base: 8000, perKm: 4000 },
-  gojek: { base: 5000, perKm: 3500 },
-};
-
-export default function FareEstimator() {
+function FareEstimator() {
   const { t } = useTranslation();
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
@@ -71,7 +27,54 @@ export default function FareEstimator() {
   const [estimate, setEstimate] = useState<FareEstimate | null>(null);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
 
-  const calculateFare = () => {
+  // Memoized zones data
+  const zones = useMemo<Zone[]>(() => [
+    {
+      id: '1',
+      name: t('fare.kutaBeach'),
+      type: 'red',
+      description: t('fare.kutaBeachDesc'),
+      tips: [t('fare.kutaTip1'), t('fare.kutaTip2'), t('fare.kutaTip3')],
+    },
+    {
+      id: '2',
+      name: t('fare.seminyak'),
+      type: 'red',
+      description: t('fare.seminyakDesc'),
+      tips: [t('fare.seminyakTip1'), t('fare.seminyakTip2')],
+    },
+    {
+      id: '3',
+      name: t('fare.ubudCenter'),
+      type: 'yellow',
+      description: t('fare.ubudCenterDesc'),
+      tips: [t('fare.ubudTip1'), t('fare.ubudTip2')],
+    },
+    {
+      id: '4',
+      name: t('fare.canggu'),
+      type: 'green',
+      description: t('fare.cangguDesc'),
+      tips: [t('fare.cangguTip1'), t('fare.cangguTip2')],
+    },
+    {
+      id: '5',
+      name: t('fare.airportZone'),
+      type: 'red',
+      description: t('fare.airportZoneDesc'),
+      tips: [t('fare.airportTip1'), t('fare.airportTip2'), t('fare.airportTip3')],
+    },
+  ], [t]);
+
+  // Memoized fare table
+  const fareTable = useMemo(() => ({
+    taxi: { base: 7000, perKm: 6500 },
+    grab: { base: 8000, perKm: 4000 },
+    gojek: { base: 5000, perKm: 3500 },
+  }), []);
+
+  // Memoized calculate fare handler
+  const calculateFare = useCallback(() => {
     const dist = parseFloat(distance) || 5;
     const duration = Math.round(dist * 3); // ~3 min per km in traffic
     
@@ -85,80 +88,109 @@ export default function FareEstimator() {
       estimatedFare: grabFare,
       savings,
     });
-  };
+  }, [distance, fareTable]);
 
-  const formatPrice = (price: number) => {
+  // Memoized format price function
+  const formatPrice = useCallback((price: number) => {
     return `Rp ${price.toLocaleString('de-DE')}`;
-  };
+  }, []);
 
-  const getZoneColor = (type: string) => {
+  // Memoized get zone color function
+  const getZoneColor = useCallback((type: string) => {
     switch (type) {
       case 'red': return '#FF6B6B';
       case 'yellow': return '#F59E0B';
       case 'green': return '#90BE6D';
       default: return '#6B7280';
     }
-  };
+  }, []);
+
+  // Memoized zone selection handler
+  const handleZoneSelect = useCallback((zone: Zone) => {
+    setSelectedZone(selectedZone?.id === zone.id ? null : zone);
+  }, [selectedZone]);
+
+  // Memoized input handlers
+  const handleFromLocationChange = useCallback((text: string) => {
+    setFromLocation(text);
+  }, []);
+
+  const handleToLocationChange = useCallback((text: string) => {
+    setToLocation(text);
+  }, []);
+
+  const handleDistanceChange = useCallback((text: string) => {
+    setDistance(text);
+  }, []);
+
+  // Memoized general tips
+  const generalTips = useMemo(() => [
+    t('fare.generalTip1'),
+    t('fare.generalTip2'),
+    t('fare.generalTip3'),
+    t('fare.generalTip4'),
+    t('fare.generalTip5'),
+  ], [t]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>{t('fare.title', 'Fahrpreis-Rechner')}</Text>
-          <Text style={styles.subtitle}>{t('fare.subtitle', 'Red Zone Radar')}</Text>
+          <Text style={styles.title}>{t('fare.title')}</Text>
+          <Text style={styles.subtitle}>{t('fare.subtitle')}</Text>
         </View>
 
         {/* Warning Banner */}
         <View style={styles.warningBanner}>
           <AlertTriangle size={20} color="#FF6B6B" />
           <Text style={styles.warningText}>
-            ⚠️ Taxi-Mafia in Touristengebieten aktiv! Immer Meter-Taxi oder App nutzen.
+            ⚠️ {t('fare.warning')}
           </Text>
         </View>
 
         {/* Fare Calculator */}
         <View style={styles.calculatorCard}>
-          <Text style={styles.calculatorTitle}>Preis berechnen</Text>
+          <Text style={styles.calculatorTitle}>{t('fare.calculatePrice')}</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Von</Text>
+            <Text style={styles.inputLabel}>{t('fare.from')}</Text>
             <View style={styles.inputRow}>
               <MapPin size={16} color="#6B7280" />
               <TextInput
                 style={styles.input}
-                placeholder="z.B. Flughafen"
+                placeholder={t('fare.fromPlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 value={fromLocation}
-                onChangeText={setFromLocation}
+                onChangeText={handleFromLocationChange}
               />
             </View>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Nach</Text>
+            <Text style={styles.inputLabel}>{t('fare.to')}</Text>
             <View style={styles.inputRow}>
               <Navigation size={16} color="#6B7280" />
               <TextInput
                 style={styles.input}
-                placeholder="z.B. Kuta"
+                placeholder={t('fare.toPlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 value={toLocation}
-                onChangeText={setToLocation}
+                onChangeText={handleToLocationChange}
               />
             </View>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Entfernung (km)</Text>
+            <Text style={styles.inputLabel}>{t('fare.distance')}</Text>
             <View style={styles.inputRow}>
               <Car size={16} color="#6B7280" />
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 12"
+                placeholder={t('fare.distancePlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 value={distance}
-                onChangeText={setDistance}
+                onChangeText={handleDistanceChange}
                 keyboardType="numeric"
               />
             </View>
@@ -166,28 +198,28 @@ export default function FareEstimator() {
 
           <TouchableOpacity style={styles.calculateButton} onPress={calculateFare}>
             <DollarSign size={20} color="#FFFFFF" />
-            <Text style={styles.calculateButtonText}>Preis berechnen</Text>
+            <Text style={styles.calculateButtonText}>{t('fare.calculate')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Result */}
         {estimate && (
           <View style={styles.resultCard}>
-            <Text style={styles.resultTitle}>Geschätzter Preis</Text>
+            <Text style={styles.resultTitle}>{t('fare.estimatedPrice')}</Text>
             
             <View style={styles.priceComparison}>
               <View style={styles.priceItem}>
-                <Text style={styles.priceLabel}>Taxi (Meter)</Text>
+                <Text style={styles.priceLabel}>{t('fare.taxiMeter')}</Text>
                 <Text style={styles.priceValue}>{formatPrice(estimate.estimatedFare + estimate.savings)}</Text>
               </View>
               <View style={styles.priceItem}>
-                <Text style={styles.priceLabel}>Grab/Gojek</Text>
+                <Text style={styles.priceLabel}>{t('fare.grabGojek')}</Text>
                 <Text style={styles.priceValueHighlight}>{formatPrice(estimate.estimatedFare)}</Text>
               </View>
             </View>
 
             <View style={styles.savingsBadge}>
-              <Text style={styles.savingsText}>💰 Ersparnis: {formatPrice(estimate.savings)}</Text>
+              <Text style={styles.savingsText}>💰 {t('fare.savings')}: {formatPrice(estimate.savings)}</Text>
             </View>
 
             <View style={styles.tripInfo}>
@@ -197,7 +229,7 @@ export default function FareEstimator() {
               </View>
               <View style={styles.tripInfoItem}>
                 <Clock size={16} color="#6B7280" />
-                <Text style={styles.tripInfoText}>~{estimate.duration} Min.</Text>
+                <Text style={styles.tripInfoText}>~{estimate.duration} {t('fare.minutes')}</Text>
               </View>
             </View>
           </View>
@@ -205,37 +237,37 @@ export default function FareEstimator() {
 
         {/* Price Table */}
         <View style={styles.priceTable}>
-          <Text style={styles.sectionTitle}>📊 Preisvergleich pro km</Text>
+          <Text style={styles.sectionTitle}>📊 {t('fare.priceComparison')}</Text>
           <View style={styles.tableRow}>
-            <Text style={styles.tableHeader}>Transport</Text>
-            <Text style={styles.tableHeader}>Grundpreis</Text>
-            <Text style={styles.tableHeader}>pro km</Text>
+            <Text style={styles.tableHeader}>{t('fare.transport')}</Text>
+            <Text style={styles.tableHeader}>{t('fare.basePrice')}</Text>
+            <Text style={styles.tableHeader}>{t('fare.perKm')}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>🚕 Taxi</Text>
+            <Text style={styles.tableCell}>🚕 {t('fare.taxi')}</Text>
             <Text style={styles.tableCell}>Rp 7.000</Text>
             <Text style={styles.tableCellDanger}>Rp 6.500</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>🚗 Grab</Text>
+            <Text style={styles.tableCell}>🚗 {t('fare.grab')}</Text>
             <Text style={styles.tableCell}>Rp 8.000</Text>
             <Text style={styles.tableCellSuccess}>Rp 4.000</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>🛵 Gojek</Text>
+            <Text style={styles.tableCell}>🛵 {t('fare.gojek')}</Text>
             <Text style={styles.tableCell}>Rp 5.000</Text>
             <Text style={styles.tableCellSuccess}>Rp 3.500</Text>
           </View>
         </View>
 
         {/* Red Zones */}
-        <Text style={styles.sectionTitle}>🔴 Zonen-Warnungen</Text>
+        <Text style={styles.sectionTitle}>🔴 {t('fare.zoneWarnings')}</Text>
         <View style={styles.zonesList}>
           {zones.map((zone) => (
             <TouchableOpacity 
               key={zone.id} 
               style={[styles.zoneCard, { borderLeftColor: getZoneColor(zone.type) }]}
-              onPress={() => setSelectedZone(selectedZone?.id === zone.id ? null : zone)}
+              onPress={() => handleZoneSelect(zone)}
             >
               <View style={styles.zoneHeader}>
                 <View style={[styles.zoneBadge, { backgroundColor: getZoneColor(zone.type) }]}>
@@ -249,7 +281,7 @@ export default function FareEstimator() {
               
               {selectedZone?.id === zone.id && (
                 <View style={styles.zoneTips}>
-                  <Text style={styles.tipsTitle}>Tipps:</Text>
+                  <Text style={styles.tipsTitle}>{t('fare.tips')}:</Text>
                   {zone.tips.map((tip, index) => (
                     <Text key={index} style={styles.tipItem}>• {tip}</Text>
                   ))}
@@ -261,14 +293,10 @@ export default function FareEstimator() {
 
         {/* Tips */}
         <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>💡 Allgemeine Tipps</Text>
-          <Text style={styles.tipsText}>
-            • IMMER den Preis VORHER vereinbaren{'\n'}
-            • Meter-Taxi verlangen oder Grab nutzen{'\n'}
-            • Kleingeld bereithalten (keine großen Scheine){'\n'}
-            • Bei Problemen: Touristenpolizei anrufen{'\n'}
-            • Alternativ: Scooter mieten (günstiger)
-          </Text>
+          <Text style={styles.tipsTitle}>💡 {t('fare.generalTips')}</Text>
+          {generalTips.map((tip, index) => (
+            <Text key={index} style={styles.tipsText}>• {tip}</Text>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -557,5 +585,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#92400E',
     lineHeight: 20,
+    marginBottom: 4,
   },
 });
+
+export default memo(FareEstimator);

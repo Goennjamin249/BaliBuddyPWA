@@ -21,7 +21,7 @@ const SYNC_CONFIG = {
 };
 
 // Pull changes from remote server
-async function pullChanges(lastPulledAt: number | null): Promise<any> {
+async function pullChanges(lastPulledAt: number | undefined): Promise<any> {
   try {
     const response = await fetch(SYNC_CONFIG.pullChangesEndpoint, {
       method: 'POST',
@@ -29,7 +29,7 @@ async function pullChanges(lastPulledAt: number | null): Promise<any> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        lastPulledAt: lastPulledAt || 0,
+        lastPulledAt: lastPulledAt ?? 0,
         batchSize: SYNC_CONFIG.batchSize,
       }),
     });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { WeatherData } from '../services/weather';
 
@@ -7,7 +7,7 @@ interface WeatherCardProps {
   isLoading?: boolean;
 }
 
-export default function WeatherCard({ weather, isLoading }: WeatherCardProps) {
+function WeatherCardComponent({ weather, isLoading }: WeatherCardProps) {
   if (isLoading) {
     return (
       <View style={styles.card}>
@@ -65,6 +65,8 @@ export default function WeatherCard({ weather, isLoading }: WeatherCardProps) {
     </View>
   );
 }
+
+export const WeatherCard = memo(WeatherCardComponent);
 
 const styles = StyleSheet.create({
   card: {

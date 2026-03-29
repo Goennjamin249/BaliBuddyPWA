@@ -55,20 +55,26 @@
       "purpose": "any"
     },
     {
-      "src": "/assets/images/ios/192.png",
-      "sizes": "192x192",
+      "src": "/assets/images/ios/167.png",
+      "sizes": "167x167",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/images/ios/512.png",
-      "sizes": "512x512",
+      "src": "/assets/images/ios/152.png",
+      "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/images/ios/1024.png",
-      "sizes": "1024x1024",
+      "src": "/assets/images/ios/120.png",
+      "sizes": "120x120",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/ios/76.png",
+      "sizes": "76x76",
       "type": "image/png",
       "purpose": "any"
     }
@@ -94,6 +100,30 @@
       "short_name": "Notfall",
       "description": "Notfall-Informationen und Kliniken",
       "url": "/emergency",
+      "icons": [
+        {
+          "src": "/assets/images/android/launchericon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Währungsrechner",
+      "short_name": "Währung",
+      "description": "IDR Währungsrechner mit Live-Kursen",
+      "url": "/currency",
+      "icons": [
+        {
+          "src": "/assets/images/android/launchericon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Sprachführer",
+      "short_name": "Sprache",
+      "description": "Bahasa Indonesia Sprachführer",
+      "url": "/phrasebook",
       "icons": [
         {
           "src": "/assets/images/android/launchericon-96x96.png",

@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import React, { useEffect } from 'react';
 import { useColorScheme, Platform } from 'react-native';
 import '../i18n';
+import '../lib/nativeWindInterop'; // NativeWind v5 Interop Configuration
 import InstallPrompt from '../components/InstallPrompt';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -66,6 +67,12 @@ export default function RootLayout() {
         <Stack.Screen name="laws/index" />
         <Stack.Screen name="weather/index" />
         <Stack.Screen name="radar/index" />
+        <Stack.Screen name="accommodations/index" />
+        <Stack.Screen name="scanner-live/index" />
+        <Stack.Screen name="atm/index" />
+        <Stack.Screen name="water-refill/index" />
+        <Stack.Screen name="laundry/index" />
+        <Stack.Screen name="media-demo/index" />
       </Stack>
       
       {/* PWA Install Prompt */}

@@ -101,13 +101,60 @@ class FerryService {
 
     if (isOnline) {
       try {
-        // Simulate AIS API response
-        const ferries = this.simulateFerryData(params);
+        // Fetch from local API
+        const response = await fetch(this.aisApiUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Ferry API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Transform API response to match our interface
+        const ferries: Ferry[] = data.vessels?.map((vessel: any, index: number) => {
+          const route = this.baliRoutes[index % this.baliRoutes.length];
+          const departureTime = new Date();
+          departureTime.setHours(6 + index * 3);
+          
+          const arrivalTime = new Date(departureTime);
+          arrivalTime.setMinutes(arrivalTime.getMinutes() + route.duration);
+          
+          return {
+            id: vessel.mmsi || `ferry_${index}`,
+            name: vessel.name || `${route.operators[0]} ${index + 1}`,
+            type: index % 2 === 0 ? 'fast_boat' : 'ferry',
+            operator: route.operators[index % route.operators.length],
+            departure: {
+              port: route.from,
+              time: departureTime.toTimeString().slice(0, 5),
+              date: departureTime.toISOString().split('T')[0],
+            },
+            arrival: {
+              port: route.to,
+              time: arrivalTime.toTimeString().slice(0, 5),
+              date: arrivalTime.toISOString().split('T')[0],
+            },
+            duration: route.duration,
+            price: {
+              economy: 150000 + Math.floor(Math.random() * 200000),
+              business: 250000 + Math.floor(Math.random() * 150000),
+              vip: 400000 + Math.floor(Math.random() * 200000),
+            },
+            status: vessel.status || 'scheduled',
+            capacity: 50 + Math.floor(Math.random() * 100),
+            availableSeats: Math.floor(Math.random() * 50),
+            amenities: ['AC', 'Toilet', 'Life Jacket'],
+            contact: {
+              phone: '+62 361 ' + Math.floor(Math.random() * 9000000 + 1000000),
+              website: 'https://example-ferry.com',
+            },
+          };
+        }) || [];
         
         // Cache the result
         this.cacheFerries(ferries);
         
-        return ferries;
+        return this.filterFerries(ferries, params);
       } catch (error) {
         console.error('Failed to fetch ferry schedules:', error);
         

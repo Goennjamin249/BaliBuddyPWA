@@ -21,7 +21,9 @@ const APP_SHELL = [
   '/assets/images/android/launchericon-192x192.png',
   '/assets/images/android/launchericon-512x512.png',
   '/assets/images/ios/180.png',
-  '/assets/images/ios/192.png'
+  '/assets/images/ios/192.png',
+  '/assets/images/ios/512.png',
+  '/assets/images/ios/1024.png'
 ];
 
 // Offline fallback page

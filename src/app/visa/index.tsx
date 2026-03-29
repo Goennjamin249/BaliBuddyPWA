@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -12,15 +12,42 @@ interface VisaEntry {
   isExtended: boolean;
 }
 
-export default function VisaTracker() {
+function VisaTracker() {
   const { t } = useTranslation();
   const [entryDate, setEntryDate] = useState('');
   const [selectedVisaType, setSelectedVisaType] = useState<'VOA' | 'B211' | 'KITAS'>('VOA');
   const [visaEntries, setVisaEntries] = useState<VisaEntry[]>([]);
   const [currentEntry, setCurrentEntry] = useState<VisaEntry | null>(null);
 
+  // Memoized visa types
+  const visaTypes = useMemo(() => ['VOA', 'B211', 'KITAS'] as const, []);
+
+  // Memoized visa info
+  const visaInfo = useMemo(() => ({
+    VOA: {
+      title: t('visa.voaTitle'),
+      text: t('visa.voaText'),
+    },
+    B211: {
+      title: t('visa.b211Title'),
+      text: t('visa.b211Text'),
+    },
+    KITAS: {
+      title: t('visa.kitasTitle'),
+      text: t('visa.kitasText'),
+    },
+  }), [t]);
+
+  // Memoized penalties info
+  const penaltiesInfo = useMemo(() => [
+    t('visa.penalty1'),
+    t('visa.penalty2'),
+    t('visa.penalty3'),
+    t('visa.penalty4'),
+  ], [t]);
+
+  // Initialize with sample data
   useEffect(() => {
-    // Initialize with sample data
     const sampleEntry: VisaEntry = {
       id: '1',
       entryDate: new Date(),
@@ -33,7 +60,8 @@ export default function VisaTracker() {
     setEntryDate(sampleEntry.entryDate.toISOString().split('T')[0]);
   }, []);
 
-  const calculateDaysRemaining = (entry: VisaEntry): number => {
+  // Memoized calculate days remaining
+  const calculateDaysRemaining = useCallback((entry: VisaEntry): number => {
     const today = new Date();
     const entryDateObj = new Date(entry.entryDate);
     const expiryDate = new Date(entryDateObj);
@@ -42,32 +70,36 @@ export default function VisaTracker() {
     const diffTime = expiryDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
-  };
+  }, []);
 
-  const getExpiryDate = (entry: VisaEntry): Date => {
+  // Memoized get expiry date
+  const getExpiryDate = useCallback((entry: VisaEntry): Date => {
     const entryDateObj = new Date(entry.entryDate);
     const expiryDate = new Date(entryDateObj);
     expiryDate.setDate(expiryDate.getDate() + entry.duration);
     return expiryDate;
-  };
+  }, []);
 
-  const getStatusColor = (daysRemaining: number): string => {
+  // Memoized get status color
+  const getStatusColor = useCallback((daysRemaining: number): string => {
     if (daysRemaining <= 0) return '#FF6B6B'; // Expired
     if (daysRemaining <= 7) return '#FB923C'; // Warning
     if (daysRemaining <= 14) return '#F59E0B'; // Caution
     return '#90BE6D'; // Safe
-  };
+  }, []);
 
-  const getStatusText = (daysRemaining: number): string => {
-    if (daysRemaining <= 0) return 'ABGELAUFEN';
-    if (daysRemaining <= 7) return 'Kritisch';
-    if (daysRemaining <= 14) return 'Achtung';
-    return 'In Ordnung';
-  };
+  // Memoized get status text
+  const getStatusText = useCallback((daysRemaining: number): string => {
+    if (daysRemaining <= 0) return t('visa.expired');
+    if (daysRemaining <= 7) return t('visa.critical');
+    if (daysRemaining <= 14) return t('visa.warning');
+    return t('visa.ok');
+  }, [t]);
 
-  const addVisaEntry = () => {
+  // Memoized add visa entry handler
+  const addVisaEntry = useCallback(() => {
     if (!entryDate) {
-      Alert.alert('Fehler', 'Bitte gib ein Einreisedatum ein.');
+      Alert.alert(t('visa.error'), t('visa.enterDate'));
       return;
     }
 
@@ -79,13 +111,14 @@ export default function VisaTracker() {
       isExtended: false,
     };
 
-    setVisaEntries([...visaEntries, newEntry]);
+    setVisaEntries(prev => [...prev, newEntry]);
     setCurrentEntry(newEntry);
     setEntryDate('');
-  };
+  }, [entryDate, selectedVisaType, t]);
 
-  const extendVisa = (id: string) => {
-    setVisaEntries(visaEntries.map(entry => {
+  // Memoized extend visa handler
+  const extendVisa = useCallback((id: string) => {
+    setVisaEntries(prev => prev.map(entry => {
       if (entry.id === id) {
         return {
           ...entry,
@@ -97,39 +130,58 @@ export default function VisaTracker() {
     }));
     
     if (currentEntry?.id === id) {
-      setCurrentEntry({
-        ...currentEntry,
-        duration: currentEntry.duration + 30,
+      setCurrentEntry(prev => prev ? {
+        ...prev,
+        duration: prev.duration + 30,
         isExtended: true,
-      });
+      } : null);
     }
     
-    Alert.alert('Erfolg', 'Visum wurde um 30 Tage verlängert.');
-  };
+    Alert.alert(t('visa.success'), t('visa.extended'));
+  }, [currentEntry, t]);
 
-  const deleteEntry = (id: string) => {
+  // Memoized delete entry handler
+  const deleteEntry = useCallback((id: string) => {
     Alert.alert(
-      'Löschen',
-      'Möchtest du diesen Eintrag wirklich löschen?',
+      t('visa.delete'),
+      t('visa.deleteConfirm'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('visa.cancel'), style: 'cancel' },
         { 
-          text: 'Löschen', 
+          text: t('visa.delete'), 
           style: 'destructive',
           onPress: () => {
-            const filtered = visaEntries.filter(e => e.id !== id);
-            setVisaEntries(filtered);
-            if (currentEntry?.id === id) {
-              setCurrentEntry(filtered[0] || null);
-            }
+            setVisaEntries(prev => {
+              const filtered = prev.filter(e => e.id !== id);
+              if (currentEntry?.id === id) {
+                setCurrentEntry(filtered[0] || null);
+              }
+              return filtered;
+            });
           }
         },
       ]
     );
-  };
+  }, [currentEntry, t]);
 
-  const daysRemaining = currentEntry ? calculateDaysRemaining(currentEntry) : 0;
-  const expiryDate = currentEntry ? getExpiryDate(currentEntry) : null;
+  // Memoized entry date change handler
+  const handleEntryDateChange = useCallback((text: string) => {
+    setEntryDate(text);
+  }, []);
+
+  // Memoized visa type selection handler
+  const handleVisaTypeSelect = useCallback((type: 'VOA' | 'B211' | 'KITAS') => {
+    setSelectedVisaType(type);
+  }, []);
+
+  // Memoized current values
+  const daysRemaining = useMemo(() => 
+    currentEntry ? calculateDaysRemaining(currentEntry) : 0
+  , [currentEntry, calculateDaysRemaining]);
+  
+  const expiryDate = useMemo(() => 
+    currentEntry ? getExpiryDate(currentEntry) : null
+  , [currentEntry, getExpiryDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -157,21 +209,21 @@ export default function VisaTracker() {
                 {daysRemaining > 0 ? daysRemaining : 0}
               </Text>
               <Text style={styles.daysLabel}>
-                {daysRemaining > 0 ? 'Tage verbleibend' : 'Tage überfällig'}
+                {daysRemaining > 0 ? t('visa.daysRemaining') : t('visa.daysOverdue')}
               </Text>
             </View>
 
             <View style={styles.dateInfo}>
               <View style={styles.dateRow}>
                 <Calendar size={16} color="#6B7280" />
-                <Text style={styles.dateLabel}>Einreise:</Text>
+                <Text style={styles.dateLabel}>{t('visa.entry')}:</Text>
                 <Text style={styles.dateValue}>
                   {new Date(currentEntry.entryDate).toLocaleDateString('de-DE')}
                 </Text>
               </View>
               <View style={styles.dateRow}>
                 <Clock size={16} color="#6B7280" />
-                <Text style={styles.dateLabel}>Ablauf:</Text>
+                <Text style={styles.dateLabel}>{t('visa.expiry')}:</Text>
                 <Text style={styles.dateValue}>
                   {expiryDate?.toLocaleDateString('de-DE')}
                 </Text>
@@ -183,8 +235,8 @@ export default function VisaTracker() {
                 <AlertTriangle size={16} color="#F59E0B" />
                 <Text style={styles.warningText}>
                   {daysRemaining <= 7 
-                    ? '⚠️ Sofort handeln! Visum läuft bald ab!'
-                    : 'Plane deine Verlängerung oder Ausreise.'}
+                    ? t('visa.actNow')
+                    : t('visa.planExtension')}
                 </Text>
               </View>
             )}
@@ -193,7 +245,7 @@ export default function VisaTracker() {
               <View style={styles.dangerBanner}>
                 <AlertTriangle size={16} color="#FF6B6B" />
                 <Text style={styles.dangerText}>
-                  ⛔ OVERSTAY! Strafen: 1 Mio. IDR pro Tag, max. 60 Tage
+                  ⛔ {t('visa.overstayWarning')}
                 </Text>
               </View>
             )}
@@ -203,7 +255,7 @@ export default function VisaTracker() {
                 style={styles.extendButton}
                 onPress={() => extendVisa(currentEntry.id)}
               >
-                <Text style={styles.extendButtonText}>+ 30 Tage verlängern</Text>
+                <Text style={styles.extendButtonText}>+ 30 {t('visa.extendDays')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -211,30 +263,30 @@ export default function VisaTracker() {
 
         {/* Add New Entry */}
         <View style={styles.addCard}>
-          <Text style={styles.addCardTitle}>Neuen Eintrag hinzufügen</Text>
+          <Text style={styles.addCardTitle}>{t('visa.addEntry')}</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Einreisedatum</Text>
+            <Text style={styles.inputLabel}>{t('visa.entryDate')}</Text>
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
               placeholderTextColor="#9CA3AF"
               value={entryDate}
-              onChangeText={setEntryDate}
+              onChangeText={handleEntryDateChange}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Visumtyp</Text>
+            <Text style={styles.inputLabel}>{t('visa.visaType')}</Text>
             <View style={styles.visaTypeSelector}>
-              {(['VOA', 'B211', 'KITAS'] as const).map((type) => (
+              {visaTypes.map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[
                     styles.visaTypeOption,
                     selectedVisaType === type && styles.visaTypeOptionActive,
                   ]}
-                  onPress={() => setSelectedVisaType(type)}
+                  onPress={() => handleVisaTypeSelect(type)}
                 >
                   <Text style={[
                     styles.visaTypeOptionText,
@@ -249,45 +301,41 @@ export default function VisaTracker() {
 
           <View style={styles.visaInfoCard}>
             <Text style={styles.visaInfoTitle}>
-              {selectedVisaType === 'VOA' && 'Visa on Arrival (VoA)'}
-              {selectedVisaType === 'B211' && 'Tourist Visa B211A'}
-              {selectedVisaType === 'KITAS' && 'Temporary Stay Permit'}
+              {visaInfo[selectedVisaType].title}
             </Text>
             <Text style={styles.visaInfoText}>
-              {selectedVisaType === 'VOA' && '• 30 Tage gültig\n• Einmal verlängerbar (+30 Tage)\n• Kosten: 500.000 IDR\n• Kann NICHT in anderes Visum umgewandelt werden'}
-              {selectedVisaType === 'B211' && '• 60 Tage gültig\n• Zweimal verlängerbar (je +30 Tage)\n• Kosten: ~2.000.000 IDR\n• Sozial-/Kulturvisum'}
-              {selectedVisaType === 'KITAS' && '• 6-12 Monate gültig\n• Verlängerbar\n• Kosten: ~8.000.000 IDR\n• Für Arbeit/Rente/Familie'}
+              {visaInfo[selectedVisaType].text}
             </Text>
           </View>
 
           <TouchableOpacity style={styles.addButton} onPress={addVisaEntry}>
             <Plus size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Eintrag hinzufügen</Text>
+            <Text style={styles.addButtonText}>{t('visa.addEntry')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Visa Types Info */}
         <View style={styles.infoSection}>
-          <Text style={styles.infoSectionTitle}>Visumarten für Indonesien</Text>
+          <Text style={styles.infoSectionTitle}>{t('visa.visaTypes')}</Text>
           
           <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>🏖️ Visa on Arrival (VoA)</Text>
+            <Text style={styles.infoCardTitle}>🏖️ {t('visa.voaTitle')}</Text>
             <Text style={styles.infoCardText}>
-              Die beliebteste Option für Backpacker. 30 Tage, einmal verlängerbar.
+              {t('visa.voaInfo')}
             </Text>
           </View>
 
           <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>🛂 B211A Touristenvisum</Text>
+            <Text style={styles.infoCardTitle}>🛂 {t('visa.b211Title')}</Text>
             <Text style={styles.infoCardText}>
-              Für längere Aufenthalte. 60 Tage, zweimal verlängerbar (max. 180 Tage).
+              {t('visa.b211Info')}
             </Text>
           </View>
 
           <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>🏠 KITAS</Text>
+            <Text style={styles.infoCardTitle}>🏠 {t('visa.kitasTitle')}</Text>
             <Text style={styles.infoCardText}>
-              Für längere Aufenthalte. Erforderlich für Arbeit, Studium oder Rente.
+              {t('visa.kitasInfo')}
             </Text>
           </View>
         </View>
@@ -296,20 +344,17 @@ export default function VisaTracker() {
         <View style={styles.penaltiesCard}>
           <AlertTriangle size={24} color="#FF6B6B" />
           <View style={styles.penaltiesContent}>
-            <Text style={styles.penaltiesTitle}>Strafen bei Overstay</Text>
-            <Text style={styles.penaltiesText}>
-              • 1.000.000 IDR pro Tag (ca. 60€){'\n'}
-              • Maximal 60 Tage Overstay erlaubt{'\n'}
-              • Danach: Abschiebung + Einreiseverbot{'\n'}
-              • Flughafen kann gesperrt werden
-            </Text>
+            <Text style={styles.penaltiesTitle}>{t('visa.penalties')}</Text>
+            {penaltiesInfo.map((penalty, index) => (
+              <Text key={index} style={styles.penaltiesText}>• {penalty}</Text>
+            ))}
           </View>
         </View>
 
         {/* History */}
         {visaEntries.length > 1 && (
           <View style={styles.historySection}>
-            <Text style={styles.historyTitle}>Vergangene Aufenthalte</Text>
+            <Text style={styles.historyTitle}>{t('visa.history')}</Text>
             {visaEntries.slice().reverse().map((entry) => {
               const days = calculateDaysRemaining(entry);
               const expired = days <= 0;
@@ -323,7 +368,7 @@ export default function VisaTracker() {
                   </View>
                   <View style={styles.historyStatus}>
                     <Text style={[styles.historyStatusText, { color: expired ? '#FF6B6B' : '#90BE6D' }]}>
-                      {expired ? 'Beendet' : 'Aktiv'}
+                      {expired ? t('visa.ended') : t('visa.active')}
                     </Text>
                     <TouchableOpacity onPress={() => deleteEntry(entry.id)}>
                       <Trash2 size={16} color="#FF6B6B" />
@@ -659,3 +704,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default memo(VisaTracker);

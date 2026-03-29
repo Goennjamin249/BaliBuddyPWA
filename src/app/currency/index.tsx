@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback, memo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { DollarSign, ArrowLeft, Home, RefreshCw, TrendingUp, TrendingDown, Calculator } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 interface ExchangeRates {
   [key: string]: number;
@@ -16,28 +17,29 @@ interface CurrencyData {
 }
 
 const currencies: CurrencyData[] = [
-  { code: 'IDR', name: 'Indonesische Rupiah', symbol: 'Rp', flag: '🇮🇩' },
-  { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
-  { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
-  { code: 'GBP', name: 'Britisches Pfund', symbol: '£', flag: '🇬🇧' },
-  { code: 'AUD', name: 'Australischer Dollar', symbol: 'A$', flag: '🇦🇺' },
-  { code: 'SGD', name: 'Singapur Dollar', symbol: 'S$', flag: '🇸🇬' },
+  { code: 'IDR', name: 'currency.indonesianRupiah', symbol: 'Rp', flag: '🇮🇩' },
+  { code: 'EUR', name: 'currency.euro', symbol: '€', flag: '🇪🇺' },
+  { code: 'USD', name: 'currency.usDollar', symbol: '$', flag: '🇺🇸' },
+  { code: 'GBP', name: 'currency.britishPound', symbol: '£', flag: '🇬🇧' },
+  { code: 'AUD', name: 'currency.australianDollar', symbol: 'A$', flag: '🇦🇺' },
+  { code: 'SGD', name: 'currency.singaporeDollar', symbol: 'S$', flag: '🇸🇬' },
 ];
 
 // Bali 2026 Reference Prices
 const BALI_REFERENCE_PRICES = {
-  'Wasser (1L)': 5000,
-  'Kaffee': 35000,
-  'Mittagessen': 75000,
-  'Abendessen': 150000,
-  'Scooter (Tag)': 100000,
-  'Taxi (10km)': 100000,
-  'Hotel (Nacht)': 500000,
-  'Massage': 150000,
+  'currency.water': 5000,
+  'currency.coffee': 35000,
+  'currency.lunch': 75000,
+  'currency.dinner': 150000,
+  'currency.scooter': 100000,
+  'currency.taxi': 100000,
+  'currency.hotel': 500000,
+  'currency.massage': 150000,
 };
 
-export default function CurrencyScreen() {
+function CurrencyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [amount, setAmount] = useState<string>('1000000');
   const [fromCurrency, setFromCurrency] = useState<string>('IDR');
   const [toCurrency, setToCurrency] = useState<string>('EUR');
@@ -50,8 +52,8 @@ export default function CurrencyScreen() {
   const fetchExchangeRates = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Using ExchangeRate-API (free tier)
-      const response = await fetch(`/api/exchange-rate?from=${fromCurrency}&to=IDR`);
+      // Using Frankfurter API (free, open source, European Central Bank data)
+      const response = await fetch(`https://api.frankfurter.app/latest?from=${fromCurrency}&to=IDR`);
       const data = await response.json();
       
       if (data.rates) {
@@ -140,8 +142,8 @@ export default function CurrencyScreen() {
             <ArrowLeft size={24} color="#0F172A" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>💱 Währungsrechner</Text>
-            <Text style={styles.subtitle}>Live-Kurse für Bali</Text>
+            <Text style={styles.title}>💱 {t('currency.title')}</Text>
+            <Text style={styles.subtitle}>{t('currency.subtitle')}</Text>
           </View>
           <TouchableOpacity 
             style={styles.homeButton}
@@ -154,7 +156,7 @@ export default function CurrencyScreen() {
         {/* Status Banner */}
         {isOffline && (
           <View style={styles.offlineBanner}>
-            <Text style={styles.offlineText}>📴 Offline-Modus (gecachezte Kurse)</Text>
+            <Text style={styles.offlineText}>📴 {t('currency.offlineMode')}</Text>
           </View>
         )}
 
@@ -162,7 +164,7 @@ export default function CurrencyScreen() {
         <View style={styles.converterCard}>
           <View style={styles.converterHeader}>
             <Calculator size={24} color="#00B4D8" />
-            <Text style={styles.converterTitle}>💰 Konvertierung</Text>
+            <Text style={styles.converterTitle}>💰 {t('currency.conversion')}</Text>
             <TouchableOpacity 
               style={styles.refreshButton}
               onPress={fetchExchangeRates}
@@ -174,12 +176,12 @@ export default function CurrencyScreen() {
 
           {/* Amount Input */}
           <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Betrag ({fromCurrency})</Text>
+            <Text style={styles.inputLabel}>{t('currency.amount')} ({fromCurrency})</Text>
             <TextInput
               style={styles.amountInput}
               value={amount}
               onChangeText={setAmount}
-              placeholder="Betrag eingeben"
+              placeholder={t('currency.enterAmount')}
               placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
             />
@@ -187,7 +189,7 @@ export default function CurrencyScreen() {
 
           {/* Currency Selector */}
           <View style={styles.currencySelector}>
-            <Text style={styles.selectorLabel}>Von:</Text>
+            <Text style={styles.selectorLabel}>{t('currency.from')}:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.currencyScroll}>
               {currencies.map((currency) => (
                 <TouchableOpacity
@@ -211,7 +213,7 @@ export default function CurrencyScreen() {
           </View>
 
           <View style={styles.currencySelector}>
-            <Text style={styles.selectorLabel}>Nach:</Text>
+            <Text style={styles.selectorLabel}>{t('currency.to')}:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.currencyScroll}>
               {currencies.map((currency) => (
                 <TouchableOpacity
@@ -236,7 +238,7 @@ export default function CurrencyScreen() {
 
           {/* Result */}
           <View style={styles.resultSection}>
-            <Text style={styles.resultLabel}>Ergebnis:</Text>
+            <Text style={styles.resultLabel}>{t('currency.result')}:</Text>
             <View style={styles.resultContainer}>
               {isLoading ? (
                 <ActivityIndicator size="small" color="#00B4D8" />
@@ -249,7 +251,7 @@ export default function CurrencyScreen() {
             </View>
             {lastUpdate && (
               <Text style={styles.lastUpdate}>
-                Letzte Aktualisierung: {lastUpdate.toLocaleTimeString('de-DE')}
+                {t('currency.lastUpdate')}: {lastUpdate.toLocaleTimeString('de-DE')}
               </Text>
             )}
           </View>
@@ -257,7 +259,7 @@ export default function CurrencyScreen() {
 
         {/* Quick Conversion Buttons */}
         <View style={styles.quickSection}>
-          <Text style={styles.sectionTitle}>⚡ Schnellkonvertierung</Text>
+          <Text style={styles.sectionTitle}>⚡ {t('currency.quickConversion')}</Text>
           <View style={styles.quickButtons}>
             {['100000', '500000', '1000000', '5000000'].map((quickAmount) => (
               <TouchableOpacity
@@ -275,11 +277,11 @@ export default function CurrencyScreen() {
 
         {/* Bali Reference Prices */}
         <View style={styles.referenceSection}>
-          <Text style={styles.sectionTitle}>🏝️ Bali Referenzpreise (2026)</Text>
+          <Text style={styles.sectionTitle}>🏝️ {t('currency.baliReference')}</Text>
           <View style={styles.referenceGrid}>
             {Object.entries(BALI_REFERENCE_PRICES).map(([item, price]) => (
               <View key={item} style={styles.referenceCard}>
-                <Text style={styles.referenceItem}>{item}</Text>
+                <Text style={styles.referenceItem}>{t(item)}</Text>
                 <Text style={styles.referencePrice}>Rp {price.toLocaleString('de-DE')}</Text>
                 <Text style={styles.referenceConverted}>
                   ≈ {calculateConversion(price.toString(), 'IDR', toCurrency)} {toCurrency}
@@ -291,16 +293,16 @@ export default function CurrencyScreen() {
 
         {/* Exchange Rate Info */}
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>📊 Wechselkurs-Info</Text>
+          <Text style={styles.sectionTitle}>📊 {t('currency.exchangeInfo')}</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Aktueller Kurs:</Text>
+              <Text style={styles.infoLabel}>{t('currency.currentRate')}:</Text>
               <Text style={styles.infoValue}>
                 1 {fromCurrency} = {exchangeRates[toCurrency]?.toFixed(6) || '0'} {toCurrency}
               </Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Trend:</Text>
+              <Text style={styles.infoLabel}>{t('currency.trend')}:</Text>
               <View style={styles.trendContainer}>
                 {getRateChange(toCurrency) === 'up' && <TrendingUp size={16} color="#10B981" />}
                 {getRateChange(toCurrency) === 'down' && <TrendingDown size={16} color="#EF4444" />}
@@ -308,7 +310,7 @@ export default function CurrencyScreen() {
                   styles.trendText,
                   { color: getRateChange(toCurrency) === 'up' ? '#10B981' : getRateChange(toCurrency) === 'down' ? '#EF4444' : '#6B7280' }
                 ]}>
-                  {getRateChange(toCurrency) === 'up' ? 'Steigend' : getRateChange(toCurrency) === 'down' ? 'Fallend' : 'Stabil'}
+                  {getRateChange(toCurrency) === 'up' ? t('currency.rising') : getRateChange(toCurrency) === 'down' ? t('currency.falling') : t('currency.stable')}
                 </Text>
               </View>
             </View>
@@ -608,3 +610,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default memo(CurrencyScreen);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -29,22 +29,27 @@ const priceData: PriceItem[] = [
 
 const categories = ['all', 'food', 'drinks', 'transport', 'clothing', 'services', 'attractions'];
 
-export default function BargainingGuide() {
+function BargainingGuide() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const filteredItems = priceData.filter(item => {
-    const matchesSearch = item.item_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Memoized filtered items for performance
+  const filteredItems = useMemo(() => {
+    return priceData.filter(item => {
+      const matchesSearch = item.item_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory]);
 
-  const formatPrice = (price: number) => {
+  // Memoized format price function
+  const formatPrice = useCallback((price: number) => {
     return `Rp ${price.toLocaleString('de-DE')}`;
-  };
+  }, []);
 
-  const getCategoryIcon = (category: string) => {
+  // Memoized category icon function
+  const getCategoryIcon = useCallback((category: string) => {
     switch (category) {
       case 'food': return '🍜';
       case 'drinks': return '🍺';
@@ -54,7 +59,17 @@ export default function BargainingGuide() {
       case 'attractions': return '🏛️';
       default: return '🏷️';
     }
-  };
+  }, []);
+
+  // Memoized category press handler
+  const handleCategoryPress = useCallback((category: string) => {
+    setSelectedCategory(category);
+  }, []);
+
+  // Memoized search handler
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -73,7 +88,7 @@ export default function BargainingGuide() {
             placeholder={t('bargaining.search')}
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
           />
         </View>
 
@@ -86,7 +101,7 @@ export default function BargainingGuide() {
                 styles.categoryChip,
                 selectedCategory === category && styles.categoryChipActive,
               ]}
-              onPress={() => setSelectedCategory(category)}
+              onPress={() => handleCategoryPress(category)}
             >
               <Text
                 style={[
@@ -94,7 +109,7 @@ export default function BargainingGuide() {
                   selectedCategory === category && styles.categoryChipTextActive,
                 ]}
               >
-                {category === 'all' ? 'Alle' : getCategoryIcon(category) + ' ' + category.charAt(0).toUpperCase() + category.slice(1)}
+                {category === 'all' ? t('bargaining.all') : getCategoryIcon(category) + ' ' + category.charAt(0).toUpperCase() + category.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -116,11 +131,11 @@ export default function BargainingGuide() {
 
               <View style={styles.priceContainer}>
                 <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>Min:</Text>
+                  <Text style={styles.priceLabel}>{t('bargaining.min')}:</Text>
                   <Text style={styles.priceValue}>{formatPrice(item.min_price_idr)}</Text>
                 </View>
                 <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>Max:</Text>
+                  <Text style={styles.priceLabel}>{t('bargaining.max')}:</Text>
                   <Text style={styles.priceValue}>{formatPrice(item.max_price_idr)}</Text>
                 </View>
               </View>
@@ -130,7 +145,7 @@ export default function BargainingGuide() {
                   <View style={styles.priceRangeFill} />
                 </View>
                 <Text style={styles.priceRangeText}>
-                  Differenz: {formatPrice(item.max_price_idr - item.min_price_idr)}
+                  {t('bargaining.difference')}: {formatPrice(item.max_price_idr - item.min_price_idr)}
                 </Text>
               </View>
 
@@ -146,15 +161,15 @@ export default function BargainingGuide() {
         <View style={styles.tipsCard}>
           <View style={styles.tipsCardHeader}>
             <Info size={20} color="#00B4D8" />
-            <Text style={styles.tipsCardTitle}>Handelstipps</Text>
+            <Text style={styles.tipsCardTitle}>{t('bargaining.tipsTitle')}</Text>
           </View>
           <View style={styles.tipsList}>
-            <Text style={styles.tipItem}>• Immer mit einem Lächeln handeln</Text>
-            <Text style={styles.tipItem}>• Mit 50% des Angebotspreises beginnen</Text>
-            <Text style={styles.tipItem}>• Bargeld in kleinen Scheinen bereithalten</Text>
-            <Text style={styles.tipItem}>• Bereit wegzugehen (Walking Away Taktik)</Text>
-            <Text style={styles.tipItem}>• Nach dem "Local Price" fragen</Text>
-            <Text style={styles.tipItem}>• Auf Touristenmärkten höher einplanen</Text>
+            <Text style={styles.tipItem}>• {t('bargaining.tip1')}</Text>
+            <Text style={styles.tipItem}>• {t('bargaining.tip2')}</Text>
+            <Text style={styles.tipItem}>• {t('bargaining.tip3')}</Text>
+            <Text style={styles.tipItem}>• {t('bargaining.tip4')}</Text>
+            <Text style={styles.tipItem}>• {t('bargaining.tip5')}</Text>
+            <Text style={styles.tipItem}>• {t('bargaining.tip6')}</Text>
           </View>
         </View>
 
@@ -162,9 +177,9 @@ export default function BargainingGuide() {
         <View style={styles.infoCard}>
           <Tag size={20} color="#F59E0B" />
           <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>Preisübersicht</Text>
+            <Text style={styles.infoTitle}>{t('bargaining.infoTitle')}</Text>
             <Text style={styles.infoText}>
-              Die Preise sind Richtwerte. Marktpreise können variieren. Handeln ist auf Märkten üblich, in Geschäften meist nicht möglich.
+              {t('bargaining.infoText')}
             </Text>
           </View>
         </View>
@@ -391,3 +406,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+export default memo(BargainingGuide);

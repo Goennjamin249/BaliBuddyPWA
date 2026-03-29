@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Shield, Clock, MapPin, Phone, ChevronLeft, Play, Square, CheckCircle, AlertTriangle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
-export default function SafetyScreen() {
+function SafetyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [timerMinutes, setTimerMinutes] = useState(60);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -13,6 +15,64 @@ export default function SafetyScreen() {
   const [checkIns, setCheckIns] = useState<{ time: string; location: string }[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Memoized timer presets
+  const timerPresets = useMemo(() => [
+    { label: t('safety.30min'), minutes: 30 },
+    { label: t('safety.1hour'), minutes: 60 },
+    { label: t('safety.2hours'), minutes: 120 },
+    { label: t('safety.4hours'), minutes: 240 },
+    { label: t('safety.6hours'), minutes: 360 },
+  ], [t]);
+
+  // Memoized format time function
+  const formatTime = useCallback((seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  // Memoized start timer handler
+  const startTimer = useCallback(() => {
+    setTimeRemaining(timerMinutes * 60);
+    setIsRunning(true);
+    setIsAlertSent(false);
+  }, [timerMinutes]);
+
+  // Memoized stop timer handler
+  const stopTimer = useCallback(() => {
+    setIsRunning(false);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  }, []);
+
+  // Memoized check in handler
+  const checkIn = useCallback(() => {
+    const now = new Date();
+    setCheckIns(prevCheckIns => [{
+      time: now.toLocaleTimeString('de-DE'),
+      location: 'GPS: -8.3405, 115.0920 (Bali)',
+    }, ...prevCheckIns]);
+    setTimeRemaining(timerMinutes * 60);
+  }, [timerMinutes]);
+
+  // Memoized reset alert handler
+  const resetAlert = useCallback(() => {
+    setIsAlertSent(false);
+    setTimeRemaining(0);
+    setCheckIns([]);
+  }, []);
+
+  // Memoized preset press handler
+  const handlePresetPress = useCallback((minutes: number) => {
+    setTimerMinutes(minutes);
+  }, []);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  // Timer effect
   useEffect(() => {
     if (isRunning && timeRemaining > 0) {
       intervalRef.current = setInterval(() => {
@@ -32,58 +92,17 @@ export default function SafetyScreen() {
     };
   }, [isRunning]);
 
-  const formatTime = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const startTimer = () => {
-    setTimeRemaining(timerMinutes * 60);
-    setIsRunning(true);
-    setIsAlertSent(false);
-  };
-
-  const stopTimer = () => {
-    setIsRunning(false);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  };
-
-  const checkIn = () => {
-    const now = new Date();
-    setCheckIns([{
-      time: now.toLocaleTimeString('de-DE'),
-      location: 'GPS: -8.3405, 115.0920 (Bali)',
-    }, ...checkIns]);
-    setTimeRemaining(timerMinutes * 60);
-  };
-
-  const resetAlert = () => {
-    setIsAlertSent(false);
-    setTimeRemaining(0);
-    setCheckIns([]);
-  };
-
-  const timerPresets = [
-    { label: '30 Min', minutes: 30 },
-    { label: '1 Stunde', minutes: 60 },
-    { label: '2 Stunden', minutes: 120 },
-    { label: '4 Stunden', minutes: 240 },
-    { label: '6 Stunden', minutes: 360 },
-  ];
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ChevronLeft size={24} color="#1F2937" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>🛡️ Sicherheits-Check-in</Text>
-            <Text style={styles.subtitle}>Timer für Solo-Reisende</Text>
+            <Text style={styles.title}>🛡️ {t('safety.title')}</Text>
+            <Text style={styles.subtitle}>{t('safety.subtitle')}</Text>
           </View>
         </View>
 
@@ -92,16 +111,16 @@ export default function SafetyScreen() {
           <View style={styles.alertBanner}>
             <AlertTriangle size={32} color="#DC2626" />
             <View style={styles.alertContent}>
-              <Text style={styles.alertTitle}>⚠️ ALARM AUSGELÖST!</Text>
+              <Text style={styles.alertTitle}>⚠️ {t('safety.alertTitle')}</Text>
               <Text style={styles.alertText}>
-                Timer abgelaufen! GPS-Standort wurde an Notfallkontakt gesendet.
+                {t('safety.alertText')}
               </Text>
               <Text style={styles.alertLocation}>
                 📍 GPS: -8.3405, 115.0920 (Bali)
               </Text>
             </View>
             <TouchableOpacity style={styles.resetButton} onPress={resetAlert}>
-              <Text style={styles.resetButtonText}>Zurücksetzen</Text>
+              <Text style={styles.resetButtonText}>{t('safety.reset')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -114,7 +133,7 @@ export default function SafetyScreen() {
               {isRunning ? formatTime(timeRemaining) : formatTime(timerMinutes * 60)}
             </Text>
             <Text style={styles.timerLabel}>
-              {isRunning ? 'Verbleibende Zeit' : 'Timer einstellen'}
+              {isRunning ? t('safety.remainingTime') : t('safety.setTimer')}
             </Text>
             
             {!isRunning && (
@@ -126,7 +145,7 @@ export default function SafetyScreen() {
                       styles.presetButton,
                       timerMinutes === preset.minutes && styles.presetButtonActive,
                     ]}
-                    onPress={() => setTimerMinutes(preset.minutes)}
+                    onPress={() => handlePresetPress(preset.minutes)}
                   >
                     <Text style={[
                       styles.presetButtonText,
@@ -142,17 +161,17 @@ export default function SafetyScreen() {
             {!isRunning ? (
               <TouchableOpacity style={styles.startButton} onPress={startTimer}>
                 <Play size={24} color="#FFFFFF" />
-                <Text style={styles.startButtonText}>Timer starten</Text>
+                <Text style={styles.startButtonText}>{t('safety.startTimer')}</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.runningButtons}>
                 <TouchableOpacity style={styles.checkInButton} onPress={checkIn}>
                   <CheckCircle size={20} color="#FFFFFF" />
-                  <Text style={styles.checkInButtonText}>Ich bin sicher!</Text>
+                  <Text style={styles.checkInButtonText}>{t('safety.imSafe')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.stopButton} onPress={stopTimer}>
                   <Square size={20} color="#FFFFFF" />
-                  <Text style={styles.stopButtonText}>Stoppen</Text>
+                  <Text style={styles.stopButtonText}>{t('safety.stop')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -163,9 +182,9 @@ export default function SafetyScreen() {
         <View style={styles.contactCard}>
           <Phone size={24} color="#DC2626" />
           <View style={styles.contactInfo}>
-            <Text style={styles.contactTitle}>Notfallkontakt</Text>
+            <Text style={styles.contactTitle}>{t('safety.emergencyContact')}</Text>
             <Text style={styles.contactText}>
-              Bei Ablauf des Timers wird automatisch eine SMS mit deinem GPS-Standort gesendet.
+              {t('safety.emergencyText')}
             </Text>
             <Text style={styles.contactNumber}>+49 170 1234567</Text>
           </View>
@@ -174,7 +193,7 @@ export default function SafetyScreen() {
         {/* Check-in History */}
         {checkIns.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>✅ Check-in Verlauf</Text>
+            <Text style={styles.sectionTitle}>✅ {t('safety.checkinHistory')}</Text>
             {checkIns.map((checkIn, index) => (
               <View key={index} style={styles.checkInCard}>
                 <CheckCircle size={20} color="#10B981" />
@@ -189,32 +208,32 @@ export default function SafetyScreen() {
 
         {/* Tips */}
         <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>💡 Sicherheitstipps</Text>
-          <Text style={styles.tipText}>• Setze den Timer vor jeder Wanderung</Text>
-          <Text style={styles.tipText}>• Checke regelmäßig ein, um den Timer zurückzusetzen</Text>
-          <Text style={styles.tipText}>• Teile deine Reiseroute mit Vertrauenspersonen</Text>
-          <Text style={styles.tipText}>• Trage immer ein geladenes Handy mit dir</Text>
-          <Text style={styles.tipText}>• Bei Mount Batur: 4+ Stunden Timer empfohlen</Text>
+          <Text style={styles.tipsTitle}>💡 {t('safety.tipsTitle')}</Text>
+          <Text style={styles.tipText}>• {t('safety.tip1')}</Text>
+          <Text style={styles.tipText}>• {t('safety.tip2')}</Text>
+          <Text style={styles.tipText}>• {t('safety.tip3')}</Text>
+          <Text style={styles.tipText}>• {t('safety.tip4')}</Text>
+          <Text style={styles.tipText}>• {t('safety.tip5')}</Text>
         </View>
 
         {/* How it works */}
         <View style={styles.howItWorksCard}>
-          <Text style={styles.howItWorksTitle}>⚙️ So funktioniert es</Text>
+          <Text style={styles.howItWorksTitle}>⚙️ {t('safety.howItWorks')}</Text>
           <View style={styles.stepRow}>
             <Text style={styles.stepNumber}>1.</Text>
-            <Text style={styles.stepText}>Timer für deine Aktivität setzen</Text>
+            <Text style={styles.stepText}>{t('safety.step1')}</Text>
           </View>
           <View style={styles.stepRow}>
             <Text style={styles.stepNumber}>2.</Text>
-            <Text style={styles.stepText}>Timer starten und loslegen</Text>
+            <Text style={styles.stepText}>{t('safety.step2')}</Text>
           </View>
           <View style={styles.stepRow}>
             <Text style={styles.stepNumber}>3.</Text>
-            <Text style={styles.stepText}>Regelmäßig "Ich bin sicher" tippen</Text>
+            <Text style={styles.stepText}>{t('safety.step3')}</Text>
           </View>
           <View style={styles.stepRow}>
             <Text style={styles.stepNumber}>4.</Text>
-            <Text style={styles.stepText}>Bei Timer-Ablauf: GPS-Alarm wird gesendet</Text>
+            <Text style={styles.stepText}>{t('safety.step4')}</Text>
           </View>
         </View>
       </ScrollView>
@@ -494,3 +513,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+export default memo(SafetyScreen);

@@ -1,50 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Calendar, ChevronLeft, ChevronRight, Info, CheckCircle, XCircle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
-export default function CalendarScreen() {
+function CalendarScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [currentDay, setCurrentDay] = useState(1);
 
   // Pawukon cycle is 210 days
   const pawukonCycle = 210;
   const daysRemaining = pawukonCycle - currentDay;
 
-  const templeDos = [
-    { icon: '🧣', text: 'Sarong und Taillenschärpe (Selendang) sind Pflicht' },
-    { icon: '🙏', text: 'Respektvoll und leise verhalten' },
-    { icon: '👟', text: 'Schuhe vor dem Betreten ausziehen' },
-    { icon: '📸', text: 'Fragen bevor du Fotos machst' },
-    { icon: '💰', text: 'Spenden sind willkommen' },
-  ];
+  // Memoized temple dos
+  const templeDos = useMemo(() => [
+    { icon: '🧣', text: t('calendar.templeDo1') },
+    { icon: '🙏', text: t('calendar.templeDo2') },
+    { icon: '👟', text: t('calendar.templeDo3') },
+    { icon: '📸', text: t('calendar.templeDo4') },
+    { icon: '💰', text: t('calendar.templeDo5') },
+  ], [t]);
 
-  const templeDonts = [
-    { icon: '🚫', text: 'Frauen während Menstruation: Eintritt verboten' },
-    { icon: '⬆️', text: 'Niemals höher sitzen als Priester oder Opfergaben' },
-    { icon: '👣', text: 'Canang Sari (Opfergaben) nicht betreten' },
-    { icon: '👕', text: 'Keine unbedeckten Schultern oder kurzen Hosen' },
-    { icon: '🗣️', text: 'Nicht laut sprechen oder lachen' },
-  ];
+  // Memoized temple donts
+  const templeDonts = useMemo(() => [
+    { icon: '🚫', text: t('calendar.templeDont1') },
+    { icon: '⬆️', text: t('calendar.templeDont2') },
+    { icon: '👣', text: t('calendar.templeDont3') },
+    { icon: '👕', text: t('calendar.templeDont4') },
+    { icon: '🗣️', text: t('calendar.templeDont5') },
+  ], [t]);
 
-  const upcomingCeremonies = [
-    { name: 'Galungan', description: 'Feier des Sieges des Guten über das Böse', daysUntil: 45 },
-    { name: 'Kuningan', description: '10 Tage nach Galungan, Ahnenverehrung', daysUntil: 55 },
-    { name: 'Nyepi', description: 'Tag der Stille - ganz Bali schläft', daysUntil: 120 },
-  ];
+  // Memoized upcoming ceremonies
+  const upcomingCeremonies = useMemo(() => [
+    { name: 'Galungan', description: t('calendar.galunganDesc'), daysUntil: 45 },
+    { name: 'Kuningan', description: t('calendar.kuninganDesc'), daysUntil: 55 },
+    { name: 'Nyepi', description: t('calendar.nyepiDesc'), daysUntil: 120 },
+  ], [t]);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ChevronLeft size={24} color="#1F2937" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>📅 Odalan Kalender</Text>
-            <Text style={styles.subtitle}>210-Tage Pawukon-Zyklus</Text>
+            <Text style={styles.title}>📅 {t('calendar.title')}</Text>
+            <Text style={styles.subtitle}>{t('calendar.subtitle')}</Text>
           </View>
         </View>
 
@@ -52,7 +62,7 @@ export default function CalendarScreen() {
         <View style={styles.cycleCard}>
           <View style={styles.cycleHeader}>
             <Calendar size={32} color="#90BE6D" />
-            <Text style={styles.cycleTitle}>Pawukon-Zyklus</Text>
+            <Text style={styles.cycleTitle}>{t('calendar.pawukonCycle')}</Text>
           </View>
           <View style={styles.cycleProgress}>
             <View style={styles.progressBar}>
@@ -61,32 +71,31 @@ export default function CalendarScreen() {
               />
             </View>
             <Text style={styles.progressText}>
-              Tag {currentDay} von {pawukonCycle}
+              {t('calendar.day')} {currentDay} {t('calendar.of')} {pawukonCycle}
             </Text>
           </View>
           <View style={styles.cycleInfo}>
             <View style={styles.cycleStat}>
               <Text style={styles.cycleStatValue}>{daysRemaining}</Text>
-              <Text style={styles.cycleStatLabel}>Tage verbleibend</Text>
+              <Text style={styles.cycleStatLabel}>{t('calendar.daysRemaining')}</Text>
             </View>
             <View style={styles.cycleStat}>
               <Text style={styles.cycleStatValue}>30</Text>
-              <Text style={styles.cycleStatLabel}>Wochen (7-Tage)</Text>
+              <Text style={styles.cycleStatLabel}>{t('calendar.weeks')}</Text>
             </View>
             <View style={styles.cycleStat}>
               <Text style={styles.cycleStatValue}>10</Text>
-              <Text style={styles.cycleStatLabel}>3-Wochen-Zyklen</Text>
+              <Text style={styles.cycleStatLabel}>{t('calendar.threeWeekCycles')}</Text>
             </View>
           </View>
           <Text style={styles.cycleDescription}>
-            Der Pawukon ist ein balinesischer 210-Tage-Kalenderzyklus, der für Tempelzeremonien 
-            (Odalan) verwendet wird. Jeder Tempel feiert sein Odalan alle 210 Tage.
+            {t('calendar.pawukonDescription')}
           </Text>
         </View>
 
         {/* Temple Dos */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>✅ Tempel - Das solltest du tun</Text>
+          <Text style={styles.sectionTitle}>✅ {t('calendar.templeDos')}</Text>
           {templeDos.map((item, index) => (
             <View key={index} style={styles.doCard}>
               <Text style={styles.doIcon}>{item.icon}</Text>
@@ -98,7 +107,7 @@ export default function CalendarScreen() {
 
         {/* Temple Don'ts */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>❌ Tempel - Das darfst du NICHT tun</Text>
+          <Text style={styles.sectionTitle}>❌ {t('calendar.templeDonts')}</Text>
           {templeDonts.map((item, index) => (
             <View key={index} style={styles.dontCard}>
               <Text style={styles.dontIcon}>{item.icon}</Text>
@@ -110,13 +119,13 @@ export default function CalendarScreen() {
 
         {/* Upcoming Ceremonies */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🎉 Kommende Zeremonien</Text>
+          <Text style={styles.sectionTitle}>🎉 {t('calendar.upcomingCeremonies')}</Text>
           {upcomingCeremonies.map((ceremony, index) => (
             <View key={index} style={styles.ceremonyCard}>
               <View style={styles.ceremonyHeader}>
                 <Text style={styles.ceremonyName}>{ceremony.name}</Text>
                 <View style={styles.ceremonyBadge}>
-                  <Text style={styles.ceremonyBadgeText}>in {ceremony.daysUntil} Tagen</Text>
+                  <Text style={styles.ceremonyBadgeText}>{t('calendar.inDays')} {ceremony.daysUntil} {t('calendar.days')}</Text>
                 </View>
               </View>
               <Text style={styles.ceremonyDescription}>{ceremony.description}</Text>
@@ -128,8 +137,7 @@ export default function CalendarScreen() {
         <View style={styles.infoBox}>
           <Info size={20} color="#00B4D8" />
           <Text style={styles.infoText}>
-            Odalan ist die Feier des Jahrestages der Tempelweihe. Jeder Tempel hat sein eigenes 
-            Odalan, das alle 210 Tage im Pawukon-Zyklus gefeiert wird.
+            {t('calendar.odalanInfo')}
           </Text>
         </View>
       </ScrollView>
@@ -333,3 +341,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+export default memo(CalendarScreen);

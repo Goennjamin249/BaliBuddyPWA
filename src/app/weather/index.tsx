@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Sun, Cloud, CloudRain, Wind, Droplets, Thermometer, Eye, ArrowLeft, Home, RefreshCw, AlertTriangle, MapPin } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 interface WeatherData {
   location: string;
@@ -69,37 +70,62 @@ const getWeatherEmoji = (code: number): string => {
   return '🌤️';
 };
 
-// Weather alerts for Bali
-const WEATHER_ALERTS = [
-  {
-    type: 'UV-Index',
-    level: 'Hoch',
-    message: 'UV-Index 8 - Sonnenschutz verwenden!',
-    icon: '☀️',
-    color: '#F59E0B',
-  },
-  {
-    type: 'Regen',
-    level: 'Mittel',
-    message: 'Regenwahrscheinlichkeit am Mittwoch',
-    icon: '🌧️',
-    color: '#3B82F6',
-  },
-];
-
-export default function WeatherScreen() {
+function WeatherScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
+  // Memoized weather alerts
+  const weatherAlerts = useMemo(() => [
+    {
+      type: t('weather.uvIndex'),
+      level: t('weather.high'),
+      message: t('weather.uvAlert'),
+      icon: '☀️',
+      color: '#F59E0B',
+    },
+    {
+      type: t('weather.rain'),
+      level: t('weather.medium'),
+      message: t('weather.rainAlert'),
+      icon: '🌧️',
+      color: '#3B82F6',
+    },
+  ], [t]);
+
+  // Memoized travel tips
+  const travelTips = useMemo(() => [
+    {
+      icon: '🧴',
+      title: t('weather.sunProtection'),
+      text: t('weather.sunProtectionTip'),
+    },
+    {
+      icon: '💧',
+      title: t('weather.hydration'),
+      text: t('weather.hydrationTip'),
+    },
+    {
+      icon: '🌧️',
+      title: t('weather.rainySeason'),
+      text: t('weather.rainySeasonTip'),
+    },
+    {
+      icon: '👕',
+      title: t('weather.clothing'),
+      text: t('weather.clothingTip'),
+    },
+  ], [t]);
+
   // Fetch weather data
   const fetchWeather = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Using local API endpoint for weather data
-      const response = await fetch('/api/weather?lat=-8.4095&lng=115.1889');
+      // Using Open-Meteo API directly (free, no API key required)
+      const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-8.4095&longitude=115.1889&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia/Makassar&forecast_days=5');
       const data = await response.json();
       
       if (data.current) {
@@ -112,7 +138,7 @@ export default function WeatherScreen() {
           visibility: 10, // Default visibility
           uvIndex: Math.round(data.current.uv_index),
           forecast: data.daily ? data.daily.time.slice(0, 5).map((date: string, index: number) => ({
-            day: index === 0 ? 'Heute' : new Date(date).toLocaleDateString('de-DE', { weekday: 'short' }),
+            day: index === 0 ? t('weather.today') : new Date(date).toLocaleDateString('de-DE', { weekday: 'short' }),
             tempMax: Math.round(data.daily.temperature_2m_max[index]),
             tempMin: Math.round(data.daily.temperature_2m_min[index]),
             condition: getWeatherCondition(data.daily.weather_code[index]),
@@ -152,44 +178,59 @@ export default function WeatherScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Fetch weather on mount
   useEffect(() => {
     fetchWeather();
   }, [fetchWeather]);
 
-  // Get weather icon
-  const getWeatherIcon = (condition: string) => {
+  // Memoized get weather icon function
+  const getWeatherIcon = useCallback((condition: string) => {
     if (condition.includes('Sonnig') || condition.includes('sun')) return <Sun size={32} color="#F59E0B" />;
     if (condition.includes('bewölkt') || condition.includes('cloud')) return <Cloud size={32} color="#6B7280" />;
     if (condition.includes('Regen') || condition.includes('rain')) return <CloudRain size={32} color="#3B82F6" />;
     return <Sun size={32} color="#F59E0B" />;
-  };
+  }, []);
 
-  // Get UV level color
-  const getUVLevelColor = (uvIndex: number) => {
+  // Memoized get UV level color function
+  const getUVLevelColor = useCallback((uvIndex: number) => {
     if (uvIndex <= 2) return '#10B981';
     if (uvIndex <= 5) return '#F59E0B';
     if (uvIndex <= 7) return '#F97316';
     if (uvIndex <= 10) return '#EF4444';
     return '#7C3AED';
-  };
+  }, []);
 
-  // Get UV level text
-  const getUVLevelText = (uvIndex: number) => {
-    if (uvIndex <= 2) return 'Niedrig';
-    if (uvIndex <= 5) return 'Mittel';
-    if (uvIndex <= 7) return 'Hoch';
-    if (uvIndex <= 10) return 'Sehr hoch';
-    return 'Extrem';
-  };
+  // Memoized get UV level text function
+  const getUVLevelText = useCallback((uvIndex: number) => {
+    if (uvIndex <= 2) return t('weather.low');
+    if (uvIndex <= 5) return t('weather.medium');
+    if (uvIndex <= 7) return t('weather.high');
+    if (uvIndex <= 10) return t('weather.veryHigh');
+    return t('weather.extreme');
+  }, [t]);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  // Memoized home handler
+  const handleHome = useCallback(() => {
+    router.push('/');
+  }, [router]);
+
+  // Memoized refresh handler
+  const handleRefresh = useCallback(() => {
+    fetchWeather();
+  }, [fetchWeather]);
 
   if (isLoading && !weather) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#00B4D8" />
-        <Text style={styles.loadingText}>Wetter wird geladen...</Text>
+        <Text style={styles.loadingText}>{t('weather.loading')}</Text>
       </View>
     );
   }
@@ -201,17 +242,17 @@ export default function WeatherScreen() {
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={handleBack}
           >
             <ArrowLeft size={24} color="#0F172A" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>🌤️ Wetter</Text>
-            <Text style={styles.subtitle}>Live-Updates für Bali</Text>
+            <Text style={styles.title}>🌤️ {t('weather.title')}</Text>
+            <Text style={styles.subtitle}>{t('weather.subtitle')}</Text>
           </View>
           <TouchableOpacity 
             style={styles.homeButton}
-            onPress={() => router.push('/')}
+            onPress={handleHome}
           >
             <Home size={20} color="#0F172A" />
           </TouchableOpacity>
@@ -220,7 +261,7 @@ export default function WeatherScreen() {
         {/* Status Banner */}
         {isOffline && (
           <View style={styles.offlineBanner}>
-            <Text style={styles.offlineText}>📴 Offline-Modus (gecachezte Daten)</Text>
+            <Text style={styles.offlineText}>📴 {t('weather.offlineMode')}</Text>
           </View>
         )}
 
@@ -232,7 +273,7 @@ export default function WeatherScreen() {
               <Text style={styles.locationText}>{weather.location}</Text>
               <TouchableOpacity 
                 style={styles.refreshButton}
-                onPress={fetchWeather}
+                onPress={handleRefresh}
                 disabled={isLoading}
               >
                 <RefreshCw size={20} color={isLoading ? "#9CA3AF" : "#00B4D8"} />
@@ -251,22 +292,22 @@ export default function WeatherScreen() {
             <View style={styles.weatherDetails}>
               <View style={styles.detailItem}>
                 <Droplets size={16} color="#3B82F6" />
-                <Text style={styles.detailLabel}>Feuchtigkeit</Text>
+                <Text style={styles.detailLabel}>{t('weather.humidity')}</Text>
                 <Text style={styles.detailValue}>{weather.humidity}%</Text>
               </View>
               <View style={styles.detailItem}>
                 <Wind size={16} color="#6B7280" />
-                <Text style={styles.detailLabel}>Wind</Text>
+                <Text style={styles.detailLabel}>{t('weather.wind')}</Text>
                 <Text style={styles.detailValue}>{weather.windSpeed} km/h</Text>
               </View>
               <View style={styles.detailItem}>
                 <Eye size={16} color="#8B5CF6" />
-                <Text style={styles.detailLabel}>Sicht</Text>
+                <Text style={styles.detailLabel}>{t('weather.visibility')}</Text>
                 <Text style={styles.detailValue}>{weather.visibility} km</Text>
               </View>
               <View style={styles.detailItem}>
                 <Thermometer size={16} color="#EF4444" />
-                <Text style={styles.detailLabel}>UV-Index</Text>
+                <Text style={styles.detailLabel}>{t('weather.uvIndex')}</Text>
                 <Text style={[styles.detailValue, { color: getUVLevelColor(weather.uvIndex) }]}>
                   {weather.uvIndex}
                 </Text>
@@ -275,7 +316,7 @@ export default function WeatherScreen() {
 
             {lastUpdate && (
               <Text style={styles.lastUpdate}>
-                Letzte Aktualisierung: {lastUpdate.toLocaleTimeString('de-DE')}
+                {t('weather.lastUpdate')}: {lastUpdate.toLocaleTimeString('de-DE')}
               </Text>
             )}
           </View>
@@ -283,8 +324,8 @@ export default function WeatherScreen() {
 
         {/* Weather Alerts */}
         <View style={styles.alertsSection}>
-          <Text style={styles.sectionTitle}>⚠️ Wetterwarnungen</Text>
-          {WEATHER_ALERTS.map((alert, index) => (
+          <Text style={styles.sectionTitle}>⚠️ {t('weather.alerts')}</Text>
+          {weatherAlerts.map((alert, index) => (
             <View key={index} style={[styles.alertCard, { borderLeftColor: alert.color }]}>
               <View style={styles.alertHeader}>
                 <Text style={styles.alertIcon}>{alert.icon}</Text>
@@ -301,7 +342,7 @@ export default function WeatherScreen() {
         {/* 5-Day Forecast */}
         {weather && (
           <View style={styles.forecastSection}>
-            <Text style={styles.sectionTitle}>📅 5-Tage-Vorhersage</Text>
+            <Text style={styles.sectionTitle}>📅 {t('weather.forecast')}</Text>
             <View style={styles.forecastGrid}>
               {weather.forecast.map((day, index) => (
                 <View key={index} style={styles.forecastCard}>
@@ -320,28 +361,15 @@ export default function WeatherScreen() {
 
         {/* Travel Tips */}
         <View style={styles.tipsSection}>
-          <Text style={styles.sectionTitle}>💡 Reisetipps</Text>
+          <Text style={styles.sectionTitle}>💡 {t('weather.travelTips')}</Text>
           <View style={styles.tipsGrid}>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>🧴</Text>
-              <Text style={styles.tipTitle}>Sonnenschutz</Text>
-              <Text style={styles.tipText}>UV-Index 8 - Verwende Sonnencreme mit LSF 50+</Text>
-            </View>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>💧</Text>
-              <Text style={styles.tipTitle}>Hydration</Text>
-              <Text style={styles.tipText}>Trinke mindestens 3L Wasser pro Tag</Text>
-            </View>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>🌧️</Text>
-              <Text style={styles.tipTitle}>Regenzeit</Text>
-              <Text style={styles.tipText}>Regenschirm für kurze Schauer einpacken</Text>
-            </View>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>👕</Text>
-              <Text style={styles.tipTitle}>Kleidung</Text>
-              <Text style={styles.tipText}>Leichte, atmungsaktive Kleidung tragen</Text>
-            </View>
+            {travelTips.map((tip, index) => (
+              <View key={index} style={styles.tipCard}>
+                <Text style={styles.tipIcon}>{tip.icon}</Text>
+                <Text style={styles.tipTitle}>{tip.title}</Text>
+                <Text style={styles.tipText}>{tip.text}</Text>
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -642,3 +670,5 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
+
+export default memo(WeatherScreen);

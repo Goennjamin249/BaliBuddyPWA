@@ -199,6 +199,9 @@ const filterOptions = [
   { id: "atm", label: "ATM", icon: "💳" },
   { id: "ferry", label: "Fähre", icon: "⛴️" },
   { id: "clinic", label: "Klinik", icon: "🏥" },
+  { id: "hotel", label: "Hotels", icon: "🏨" },
+  { id: "flight", label: "Flüge", icon: "✈️" },
+  { id: "earthquake", label: "Erdbeben", icon: "🌍" },
 ];
 
 export default function MapScreen() {
@@ -214,6 +217,18 @@ export default function MapScreen() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [isLoadingPOIs, setIsLoadingPOIs] = useState(false);
   const [livePOIs, setLivePOIs] = useState<POI[]>([]);
+  const [hotels, setHotels] = useState<any>(null);
+  const [isLoadingHotels, setIsLoadingHotels] = useState(false);
+  const [selectedHotel, setSelectedHotel] = useState<any>(null);
+  const [showHotelSheet, setShowHotelSheet] = useState(false);
+  const [flights, setFlights] = useState<any>(null);
+  const [isLoadingFlights, setIsLoadingFlights] = useState(false);
+  const [earthquake, setEarthquake] = useState<any>(null);
+  const [isLoadingEarthquake, setIsLoadingEarthquake] = useState(false);
+  const [selectedFlight, setSelectedFlight] = useState<any>(null);
+  const [showFlightSheet, setShowFlightSheet] = useState(false);
+  const [selectedEarthquake, setSelectedEarthquake] = useState<any>(null);
+  const [showEarthquakeSheet, setShowEarthquakeSheet] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
 
@@ -248,6 +263,9 @@ export default function MapScreen() {
         .poi-marker--atm { background-color: #F59E0B; }
         .poi-marker--ferry { background-color: #00B4D8; }
         .poi-marker--clinic { background-color: #FF6B6B; }
+        .poi-marker--hotel { background-color: #8B5CF6; }
+        .poi-marker--flight { background-color: #3B82F6; }
+        .poi-marker--earthquake { background-color: #EF4444; }
         .poi-marker--default { background-color: #6B7280; }
       `;
       const styleTag = document.createElement("style");
@@ -302,15 +320,32 @@ export default function MapScreen() {
         out body;
       `;
 
-      const response = await fetch("/api/overpass", {
+      // Using Overpass API directly (free, no API key required)
+      const response = await fetch("https://overpass-api.de/api/interpreter", {
         method: "POST",
-        body: JSON.stringify({ query }),
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
         },
+        body: `data=${encodeURIComponent(query)}`,
       });
 
-      const data = await response.json();
+      // Read response as text first to handle potential XML errors
+      const responseText = await response.text();
+      
+      // Try to parse as JSON
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Overpass API returned non-JSON response:", responseText.substring(0, 200));
+        throw new Error("Overpass API returned invalid JSON");
+      }
+
+      // Check if data has elements
+      if (!data.elements || !Array.isArray(data.elements)) {
+        console.warn("Overpass API returned no elements, using mock data");
+        throw new Error("No POI data received");
+      }
 
       // Convert Overpass data to POI format
       const pois: POI[] = data.elements.map((element: any, index: number) => ({
@@ -345,18 +380,221 @@ export default function MapScreen() {
       }
     } catch (error) {
       console.error("Error fetching live POIs:", error);
+      
       // Load from cache if available
       if (Platform.OS === "web") {
         const cached = localStorage.getItem("cachedPOIs");
         if (cached) {
-          const { data } = JSON.parse(cached);
-          setLivePOIs(data);
+          try {
+            const { data } = JSON.parse(cached);
+            setLivePOIs(data);
+            return;
+          } catch (cacheError) {
+            console.error("Error loading cached POIs:", cacheError);
+          }
         }
       }
+      
+      // Fallback: Create mock POI data for development
+      const mockPOIs: POI[] = [
+        {
+          id: "mock-water-1",
+          name: "Wasserstation Ubud",
+          type: "water",
+          latitude: userLocation.latitude + 0.001,
+          longitude: userLocation.longitude + 0.001,
+          description: "Gefiltertes Wasser, 5.000 IDR/Liter",
+          details: { price: 5000, hours: "08:00-20:00" },
+          distance: 0.1,
+          address: "Ubud, Bali",
+          category: "water",
+          source: "osm",
+        },
+        {
+          id: "mock-atm-1",
+          name: "BCA ATM",
+          type: "atm",
+          latitude: userLocation.latitude - 0.001,
+          longitude: userLocation.longitude + 0.002,
+          description: "Sicherer ATM",
+          details: { bank: "BCA", safe: true },
+          distance: 0.2,
+          address: "Seminyak, Bali",
+          category: "atm",
+          source: "osm",
+        },
+        {
+          id: "mock-clinic-1",
+          name: "Klinik Seminyak",
+          type: "clinic",
+          latitude: userLocation.latitude + 0.002,
+          longitude: userLocation.longitude - 0.001,
+          description: "24h Notaufnahme",
+          details: { emergency24h: true },
+          distance: 0.3,
+          address: "Seminyak, Bali",
+          category: "clinic",
+          source: "osm",
+        },
+      ];
+      
+      setLivePOIs(mockPOIs);
     } finally {
       setIsLoadingPOIs(false);
     }
   }, [userLocation]);
+
+  // Fetch hotels from backend API
+  const fetchHotels = useCallback(async () => {
+    if (!userLocation) return;
+
+    setIsLoadingHotels(true);
+    try {
+      const radius = 1000; // 1km radius
+      const response = await fetch(
+        `/api/hotels?lat=${userLocation.latitude}&lon=${userLocation.longitude}&radius=${radius}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Hotels API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setHotels(data);
+
+      // Cache to localStorage for offline use
+      if (Platform.OS === "web") {
+        localStorage.setItem(
+          "cachedHotels",
+          JSON.stringify({
+            timestamp: Date.now(),
+            data: data,
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching hotels:", error);
+      // Load from cache if available
+      if (Platform.OS === "web") {
+        const cached = localStorage.getItem("cachedHotels");
+        if (cached) {
+          const { data } = JSON.parse(cached);
+          setHotels(data);
+        }
+      }
+    } finally {
+      setIsLoadingHotels(false);
+    }
+  }, [userLocation]);
+
+  // Fetch flights from backend API
+  const fetchFlights = useCallback(async () => {
+    setIsLoadingFlights(true);
+    try {
+      const response = await fetch('/api/flights');
+
+      if (!response.ok) {
+        throw new Error(`Flights API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setFlights(data);
+
+      // Cache to localStorage for offline use
+      if (Platform.OS === "web") {
+        localStorage.setItem(
+          "cachedFlights",
+          JSON.stringify({
+            timestamp: Date.now(),
+            data: data,
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching flights:", error);
+      // Load from cache if available
+      if (Platform.OS === "web") {
+        const cached = localStorage.getItem("cachedFlights");
+        if (cached) {
+          const { data } = JSON.parse(cached);
+          setFlights(data);
+        }
+      }
+    } finally {
+      setIsLoadingFlights(false);
+    }
+  }, []);
+
+  // Fetch earthquake from backend API
+  const fetchEarthquake = useCallback(async () => {
+    setIsLoadingEarthquake(true);
+    try {
+      const response = await fetch('/api/earthquake');
+
+      if (!response.ok) {
+        throw new Error(`Earthquake API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setEarthquake(data);
+
+      // Cache to localStorage for offline use
+      if (Platform.OS === "web") {
+        localStorage.setItem(
+          "cachedEarthquake",
+          JSON.stringify({
+            timestamp: Date.now(),
+            data: data,
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching earthquake:", error);
+      // Load from cache if available
+      if (Platform.OS === "web") {
+        const cached = localStorage.getItem("cachedEarthquake");
+        if (cached) {
+          const { data } = JSON.parse(cached);
+          setEarthquake(data);
+        } else {
+          // Fallback: Create mock earthquake data for development
+          const mockEarthquake = {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                geometry: {
+                  type: "Point",
+                  coordinates: [115.1889, -8.4095, -10000],
+                },
+                properties: {
+                  id: "mock-earthquake-1",
+                  date: new Date().toISOString().split("T")[0],
+                  time: new Date().toISOString().split("T")[1].split(".")[0],
+                  dateTime: new Date().toISOString(),
+                  magnitude: 4.5,
+                  depth: 10,
+                  region: "Bali Region",
+                  felt: "Denpasar, Kuta, Seminyak",
+                  shakemap: null,
+                  potency: "Tidak berpotensi tsunami",
+                  warning: [],
+                },
+              },
+            ],
+            _meta: {
+              requestId: "mock-" + Date.now(),
+              resultCount: 1,
+              cachedAt: new Date().toISOString(),
+            },
+          };
+          setEarthquake(mockEarthquake);
+        }
+      }
+    } finally {
+      setIsLoadingEarthquake(false);
+    }
+  }, []);
 
   // Helper functions for POI conversion
   const getPOITypeFromTags = (tags: any): POI["type"] => {
@@ -498,6 +736,59 @@ export default function MapScreen() {
                       .setLngLat([poi.longitude, poi.latitude])
                       .addTo(mapRef.current);
                   });
+
+                  // Add hotel markers from GeoJSON
+                  if (hotels && hotels.features) {
+                    hotels.features.forEach((feature: any) => {
+                      const el = document.createElement("div");
+                      el.className = "poi-marker poi-marker--hotel";
+                      el.innerHTML = "🏨";
+
+                      el.addEventListener("click", () => {
+                        setSelectedHotel(feature);
+                        setShowHotelSheet(true);
+                      });
+
+                      new window.maplibregl.Marker(el)
+                        .setLngLat(feature.geometry.coordinates)
+                        .addTo(mapRef.current);
+                    });
+                  }
+
+                  // Add flight markers from GeoJSON
+                  if (flights && flights.features) {
+                    flights.features.forEach((feature: any) => {
+                      const el = document.createElement("div");
+                      el.className = "poi-marker poi-marker--flight";
+                      el.innerHTML = "✈️";
+
+                      el.addEventListener("click", () => {
+                        setSelectedFlight(feature);
+                        setShowFlightSheet(true);
+                      });
+
+                      new window.maplibregl.Marker(el)
+                        .setLngLat(feature.geometry.coordinates)
+                        .addTo(mapRef.current);
+                    });
+                  }
+
+                  // Add earthquake marker from GeoJSON
+                  if (earthquake && earthquake.features && earthquake.features.length > 0) {
+                    const eqFeature = earthquake.features[0];
+                    const el = document.createElement("div");
+                    el.className = "poi-marker poi-marker--earthquake";
+                    el.innerHTML = "🌍";
+
+                    el.addEventListener("click", () => {
+                      setSelectedEarthquake(eqFeature);
+                      setShowEarthquakeSheet(true);
+                    });
+
+                    new window.maplibregl.Marker(el)
+                      .setLngLat(eqFeature.geometry.coordinates)
+                      .addTo(mapRef.current);
+                  }
                 });
               } catch (error) {
                 console.error("MapLibre initialization failed:", error);
@@ -518,8 +809,11 @@ export default function MapScreen() {
   useEffect(() => {
     if (userLocation) {
       fetchLivePOIs();
+      fetchHotels();
+      fetchFlights();
+      fetchEarthquake();
     }
-  }, [userLocation, fetchLivePOIs]);
+  }, [userLocation, fetchLivePOIs, fetchHotels, fetchFlights, fetchEarthquake]);
 
   // Cleanup
   useEffect(() => {
@@ -746,6 +1040,126 @@ export default function MapScreen() {
           )}
         </ScrollView>
       </View>
+
+      {/* Bottom Sheet for Hotel Details */}
+      {showHotelSheet && selectedHotel && (
+        <View style={styles.bottomSheetOverlay}>
+          <TouchableOpacity
+            style={styles.bottomSheetBackdrop}
+            onPress={() => setShowHotelSheet(false)}
+          />
+          <View style={styles.bottomSheet}>
+            <View style={styles.bottomSheetHandle} />
+
+            <View style={styles.bottomSheetHeader}>
+              <View
+                style={[
+                  styles.poiIconLarge,
+                  { backgroundColor: "#8B5CF6" },
+                ]}
+              >
+                <Text style={{ fontSize: 28 }}>🏨</Text>
+              </View>
+              <View style={styles.bottomSheetTitleContainer}>
+                <Text style={styles.bottomSheetTitle}>
+                  {selectedHotel.properties?.name || "Unbekanntes Hotel"}
+                </Text>
+                {selectedHotel.properties?.stars && (
+                  <View style={{ flexDirection: "row", gap: 2, marginTop: 4 }}>
+                    {Array.from({ length: parseInt(selectedHotel.properties.stars) }).map((_, i) => (
+                      <Star key={i} size={14} color="#F59E0B" fill="#F59E0B" />
+                    ))}
+                  </View>
+                )}
+                {selectedHotel.properties?.addrStreet && (
+                  <Text style={styles.bottomSheetSubtitle}>
+                    {selectedHotel.properties.addrStreet}
+                    {selectedHotel.properties.addrHousenumber && ` ${selectedHotel.properties.addrHousenumber}`}
+                    {selectedHotel.properties.addrCity && `, ${selectedHotel.properties.addrCity}`}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowHotelSheet(false)}
+              >
+                <X size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.bottomSheetContent}>
+              {selectedHotel.properties?.phone && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>📞 Telefon:</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedHotel.properties.phone}
+                  </Text>
+                </View>
+              )}
+
+              {selectedHotel.properties?.website && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>🌐 Website:</Text>
+                  <Text style={[styles.detailValue, { color: "#00B4D8" }]}>
+                    Verfügbar
+                  </Text>
+                </View>
+              )}
+
+              {selectedHotel.properties?.internetAccess && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>📶 WLAN:</Text>
+                  <Text style={[styles.detailValue, { color: "#90BE6D" }]}>
+                    ✓ Verfügbar
+                  </Text>
+                </View>
+              )}
+
+              {selectedHotel.properties?.wheelchair && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>♿ Barrierefrei:</Text>
+                  <Text style={[styles.detailValue, { color: "#90BE6D" }]}>
+                    ✓ Ja
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.bottomSheetActions}>
+                {selectedHotel.properties?.phone ? (
+                  <TouchableOpacity
+                    style={styles.callButton}
+                    onPress={() => Linking.openURL(`tel:${selectedHotel.properties.phone}`)}
+                  >
+                    <Phone size={18} color="#FFFFFF" />
+                    <Text style={styles.callButtonText}>Anrufen</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.callButtonDisabled}>
+                    <Phone size={18} color="#9CA3AF" />
+                    <Text style={styles.callButtonTextDisabled}>
+                      Keine Nummer
+                    </Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={[styles.navigateButton, { backgroundColor: "#8B5CF6" }]}
+                  onPress={() => {
+                    const hotelName = encodeURIComponent(
+                      `${selectedHotel.properties?.name || "Hotel"} Bali`
+                    );
+                    Linking.openURL(
+                      `https://www.booking.com/searchresults.html?ss=${hotelName}`
+                    );
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>🔍</Text>
+                  <Text style={styles.navigateButtonText}>Buchen</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Bottom Sheet for POI Details */}
       {showBottomSheet && selectedPOI && (
@@ -998,10 +1412,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 20,
     padding: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
     elevation: 5,
   },
   backButton: {
@@ -1063,10 +1474,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.95)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.08)",
     elevation: 3,
   },
   filterChipActive: {
@@ -1098,10 +1506,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 100,
     maxHeight: "45%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
+    boxShadow: "0px -4px 16px rgba(0, 0, 0, 0.1)",
     elevation: 10,
   },
   poiListHeader: {

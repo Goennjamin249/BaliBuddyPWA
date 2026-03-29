@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { AlertTriangle, Shield, MapPin, Star, ChevronLeft, Search, CheckCircle, XCircle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 interface Bar {
   id: string;
@@ -13,18 +14,20 @@ interface Bar {
   description: string;
 }
 
-export default function BarsScreen() {
+function BarsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const verifiedBars: Bar[] = [
+
+  // Memoized verified bars
+  const verifiedBars = useMemo<Bar[]>(() => [
     {
       id: '1',
       name: 'Potato Head Beach Club',
       location: 'Seminyak',
       rating: 4.8,
       verified: true,
-      description: 'Bekannt für hochwertige Getränke und sichere Bar-Praktiken',
+      description: t('bars.potatoHeadDesc'),
     },
     {
       id: '2',
@@ -32,7 +35,7 @@ export default function BarsScreen() {
       location: 'Seminyak',
       rating: 4.6,
       verified: true,
-      description: 'Beliebte Bar mit internationalen Standards',
+      description: t('bars.laFavelaDesc'),
     },
     {
       id: '3',
@@ -40,7 +43,7 @@ export default function BarsScreen() {
       location: 'Canggu',
       rating: 4.5,
       verified: true,
-      description: 'Entspannte Atmosphäre, qualitativ hochwertige Getränke',
+      description: t('bars.oldMansDesc'),
     },
     {
       id: '4',
@@ -48,7 +51,7 @@ export default function BarsScreen() {
       location: 'Uluwatu',
       rating: 4.7,
       verified: true,
-      description: 'Sunset Bar mit exzellentem Ruf',
+      description: t('bars.singleFinDesc'),
     },
     {
       id: '5',
@@ -56,7 +59,7 @@ export default function BarsScreen() {
       location: 'Kuta',
       rating: 4.3,
       verified: true,
-      description: 'Mehrere Etagen, strenge Qualitätskontrolle',
+      description: t('bars.skyGardenDesc'),
     },
     {
       id: '6',
@@ -64,62 +67,86 @@ export default function BarsScreen() {
       location: 'Seminyak',
       rating: 4.4,
       verified: true,
-      description: 'Premium Cocktails, importierte Spirituosen',
+      description: t('bars.mirrorLoungeDesc'),
     },
-  ];
+  ], [t]);
 
-  const dangers = [
+  // Memoized dangers
+  const dangers = useMemo(() => [
     {
       icon: '☠️',
-      title: 'Methanolvergiftung',
-      description: 'Gefälschter Alkohol kann Methanol enthalten - bereits 10ml können tödlich sein!',
+      title: t('bars.methanolPoisoning'),
+      description: t('bars.methanolPoisoningDesc'),
       severity: 'critical',
     },
     {
       icon: '🍺',
-      title: 'Billiger Arak',
-      description: 'Hausgemachter Arak wird oft unter unhygienischen Bedingungen produziert.',
+      title: t('bars.cheapArak'),
+      description: t('bars.cheapArakDesc'),
       severity: 'high',
     },
     {
       icon: '🏷️',
-      title: 'Gefälschte Flaschen',
-      description: 'Markenflaschen werden mit billigem Alkohol nachgefüllt.',
+      title: t('bars.fakeBottles'),
+      description: t('bars.fakeBottlesDesc'),
       severity: 'high',
     },
     {
       icon: '💰',
-      title: 'Zu günstige Drinks',
-      description: 'Wenn ein Cocktail 20.000 IDR kostet, ist das ein Warnsignal!',
+      title: t('bars.tooCheapDrinks'),
+      description: t('bars.tooCheapDrinksDesc'),
       severity: 'medium',
     },
-  ];
+  ], [t]);
 
-  const warningSigns = [
-    'Ungewöhnlich billige Getränke',
-    'Verschwommene Etiketten',
-    'Seltsamer Geschmach oder Geruch',
-    'Kopfschmerzen nach nur 1-2 Drinks',
-    'Übelkeit und Schwindel',
-    'Sehstörungen',
-  ];
+  // Memoized warning signs
+  const warningSigns = useMemo(() => [
+    t('bars.warningSign1'),
+    t('bars.warningSign2'),
+    t('bars.warningSign3'),
+    t('bars.warningSign4'),
+    t('bars.warningSign5'),
+    t('bars.warningSign6'),
+  ], [t]);
 
-  const filteredBars = verifiedBars.filter(bar =>
-    bar.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    bar.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoized safety tips
+  const safetyTips = useMemo(() => [
+    t('bars.safetyTip1'),
+    t('bars.safetyTip2'),
+    t('bars.safetyTip3'),
+    t('bars.safetyTip4'),
+    t('bars.safetyTip5'),
+  ], [t]);
+
+  // Memoized filtered bars
+  const filteredBars = useMemo(() => {
+    return verifiedBars.filter(bar =>
+      bar.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bar.location.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [verifiedBars, searchQuery]);
+
+  // Memoized search handler
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ChevronLeft size={24} color="#1F2937" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>🍸 Sichere Bars</Text>
-            <Text style={styles.subtitle}>Methanol-frei verifiziert</Text>
+            <Text style={styles.title}>🍸 {t('bars.title')}</Text>
+            <Text style={styles.subtitle}>{t('bars.subtitle')}</Text>
           </View>
         </View>
 
@@ -127,17 +154,16 @@ export default function BarsScreen() {
         <View style={styles.criticalWarning}>
           <AlertTriangle size={32} color="#DC2626" />
           <View style={styles.criticalWarningContent}>
-            <Text style={styles.criticalWarningTitle}>⚠️ LEBENSGEFAHR!</Text>
+            <Text style={styles.criticalWarningTitle}>⚠️ {t('bars.lifeThreatening')}</Text>
             <Text style={styles.criticalWarningText}>
-              Methanolvergiftung durch gefälschten Alkohol ist in Südostasien verbreitet. 
-              Jedes Jahr sterben Touristen daran!
+              {t('bars.lifeThreateningText')}
             </Text>
           </View>
         </View>
 
         {/* Dangers Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>☠️ Gefahren</Text>
+          <Text style={styles.sectionTitle}>☠️ {t('bars.dangers')}</Text>
           {dangers.map((danger, index) => (
             <View 
               key={index} 
@@ -158,7 +184,7 @@ export default function BarsScreen() {
 
         {/* Warning Signs */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🚨 Warnsignale</Text>
+          <Text style={styles.sectionTitle}>🚨 {t('bars.warningSigns')}</Text>
           <View style={styles.warningSignsCard}>
             {warningSigns.map((sign, index) => (
               <View key={index} style={styles.warningSignRow}>
@@ -171,14 +197,14 @@ export default function BarsScreen() {
 
         {/* Verified Bars */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>✅ Verifizierte Sichere Bars</Text>
+          <Text style={styles.sectionTitle}>✅ {t('bars.verifiedBars')}</Text>
           <View style={styles.searchRow}>
             <Search size={20} color="#6B7280" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Bar oder Ort suchen..."
+              placeholder={t('bars.searchPlaceholder')}
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              onChangeText={handleSearchChange}
             />
           </View>
           
@@ -190,7 +216,7 @@ export default function BarsScreen() {
                   {bar.verified && (
                     <View style={styles.verifiedBadge}>
                       <CheckCircle size={14} color="#FFFFFF" />
-                      <Text style={styles.verifiedText}>Verifiziert</Text>
+                      <Text style={styles.verifiedText}>{t('bars.verified')}</Text>
                     </View>
                   )}
                 </View>
@@ -212,12 +238,10 @@ export default function BarsScreen() {
         <View style={styles.tipsCard}>
           <Shield size={24} color="#10B981" />
           <View style={styles.tipsContent}>
-            <Text style={styles.tipsTitle}>💡 Sicherheitstipps</Text>
-            <Text style={styles.tipText}>• Trinke nur in etablierten Bars</Text>
-            <Text style={styles.tipText}>• Öffne deine Flasche selbst</Text>
-            <Text style={styles.tipText}>• Vermeide Hausgemachtes (Arak)</Text>
-            <Text style={styles.tipText}>• Bei Verdacht: Sofort Arzt aufsuchen!</Text>
-            <Text style={styles.tipText}>• Notfall: 118 (Krankenwagen)</Text>
+            <Text style={styles.tipsTitle}>💡 {t('bars.safetyTips')}</Text>
+            {safetyTips.map((tip, index) => (
+              <Text key={index} style={styles.tipText}>• {tip}</Text>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -442,3 +466,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+export default memo(BarsScreen);

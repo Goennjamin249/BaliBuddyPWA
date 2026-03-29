@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Users, MapPin, Clock, TrendingUp, ChevronLeft, RefreshCw } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 interface CrowdData {
   id: string;
@@ -15,14 +16,16 @@ interface CrowdData {
   icon: string;
 }
 
-export default function CrowdScreen() {
+function CrowdScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  const crowdData: CrowdData[] = [
+  // Memoized crowd data
+  const crowdData = useMemo<CrowdData[]>(() => [
     {
       id: '1',
-      name: 'Tanah Lot Temple',
+      name: t('crowd.tanahLot'),
       location: 'Tabanan',
       crowdLevel: 'high',
       crowdPercentage: 75,
@@ -32,7 +35,7 @@ export default function CrowdScreen() {
     },
     {
       id: '2',
-      name: 'Tegallalang Rice Terraces',
+      name: t('crowd.tegallalang'),
       location: 'Ubud',
       crowdLevel: 'medium',
       crowdPercentage: 55,
@@ -42,17 +45,17 @@ export default function CrowdScreen() {
     },
     {
       id: '3',
-      name: 'Uluwatu Temple',
+      name: t('crowd.uluwatu'),
       location: 'Uluwatu',
       crowdLevel: 'very-high',
       crowdPercentage: 90,
-      bestTime: '16:00 - 17:00 (vor Kecak)',
+      bestTime: '16:00 - 17:00',
       currentVisitors: 620,
       icon: '🌅',
     },
     {
       id: '4',
-      name: 'Monkey Forest',
+      name: t('crowd.monkeyForest'),
       location: 'Ubud',
       crowdLevel: 'medium',
       crowdPercentage: 60,
@@ -62,7 +65,7 @@ export default function CrowdScreen() {
     },
     {
       id: '5',
-      name: 'Kuta Beach',
+      name: t('crowd.kutaBeach'),
       location: 'Kuta',
       crowdLevel: 'high',
       crowdPercentage: 80,
@@ -72,7 +75,7 @@ export default function CrowdScreen() {
     },
     {
       id: '6',
-      name: 'Tirta Empul',
+      name: t('crowd.tirtaEmpul'),
       location: 'Tampaksiring',
       crowdLevel: 'low',
       crowdPercentage: 30,
@@ -82,7 +85,7 @@ export default function CrowdScreen() {
     },
     {
       id: '7',
-      name: 'Seminyak Beach',
+      name: t('crowd.seminyakBeach'),
       location: 'Seminyak',
       crowdLevel: 'medium',
       crowdPercentage: 50,
@@ -92,7 +95,7 @@ export default function CrowdScreen() {
     },
     {
       id: '8',
-      name: 'Gitgit Waterfall',
+      name: t('crowd.gitgitWaterfall'),
       location: 'Singaraja',
       crowdLevel: 'low',
       crowdPercentage: 25,
@@ -100,9 +103,10 @@ export default function CrowdScreen() {
       currentVisitors: 80,
       icon: '💦',
     },
-  ];
+  ], [t]);
 
-  const getCrowdColor = (level: string) => {
+  // Memoized get crowd color function
+  const getCrowdColor = useCallback((level: string) => {
     switch (level) {
       case 'low': return '#10B981';
       case 'medium': return '#F59E0B';
@@ -110,19 +114,21 @@ export default function CrowdScreen() {
       case 'very-high': return '#DC2626';
       default: return '#6B7280';
     }
-  };
+  }, []);
 
-  const getCrowdLabel = (level: string) => {
+  // Memoized get crowd label function
+  const getCrowdLabel = useCallback((level: string) => {
     switch (level) {
-      case 'low': return 'Niedrig';
-      case 'medium': return 'Mittel';
-      case 'high': return 'Hoch';
-      case 'very-high': return 'Sehr Hoch';
-      default: return 'Unbekannt';
+      case 'low': return t('crowd.low');
+      case 'medium': return t('crowd.medium');
+      case 'high': return t('crowd.high');
+      case 'very-high': return t('crowd.veryHigh');
+      default: return t('crowd.unknown');
     }
-  };
+  }, [t]);
 
-  const getCrowdEmoji = (level: string) => {
+  // Memoized get crowd emoji function
+  const getCrowdEmoji = useCallback((level: string) => {
     switch (level) {
       case 'low': return '😊';
       case 'medium': return '😐';
@@ -130,23 +136,37 @@ export default function CrowdScreen() {
       case 'very-high': return '🤯';
       default: return '❓';
     }
-  };
+  }, []);
 
-  const refresh = () => {
+  // Memoized refresh handler
+  const refresh = useCallback(() => {
     setLastUpdate(new Date());
-  };
+  }, []);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  // Memoized tips
+  const tips = useMemo(() => [
+    t('crowd.tip1'),
+    t('crowd.tip2'),
+    t('crowd.tip3'),
+    t('crowd.tip4'),
+  ], [t]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ChevronLeft size={24} color="#1F2937" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>👥 Crowd-Radar</Text>
-            <Text style={styles.subtitle}>Echtzeit-Besucherzahlen</Text>
+            <Text style={styles.title}>👥 {t('crowd.title')}</Text>
+            <Text style={styles.subtitle}>{t('crowd.subtitle')}</Text>
           </View>
           <TouchableOpacity onPress={refresh}>
             <RefreshCw size={24} color="#00B4D8" />
@@ -155,35 +175,35 @@ export default function CrowdScreen() {
 
         {/* Last Update */}
         <Text style={styles.lastUpdate}>
-          Letzte Aktualisierung: {lastUpdate.toLocaleTimeString('de-DE')}
+          {t('crowd.lastUpdate')}: {lastUpdate.toLocaleTimeString('de-DE')}
         </Text>
 
         {/* Legend */}
         <View style={styles.legendCard}>
-          <Text style={styles.legendTitle}>Crowd-Level Legende:</Text>
+          <Text style={styles.legendTitle}>{t('crowd.legend')}:</Text>
           <View style={styles.legendRow}>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-              <Text style={styles.legendText}>Niedrig</Text>
+              <Text style={styles.legendText}>{t('crowd.low')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
-              <Text style={styles.legendText}>Mittel</Text>
+              <Text style={styles.legendText}>{t('crowd.medium')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#F97316' }]} />
-              <Text style={styles.legendText}>Hoch</Text>
+              <Text style={styles.legendText}>{t('crowd.high')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#DC2626' }]} />
-              <Text style={styles.legendText}>Sehr Hoch</Text>
+              <Text style={styles.legendText}>{t('crowd.veryHigh')}</Text>
             </View>
           </View>
         </View>
 
         {/* Crowd Cards */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📍 Beliebte Orte</Text>
+          <Text style={styles.sectionTitle}>📍 {t('crowd.popularPlaces')}</Text>
           {crowdData.map((place) => (
             <View key={place.id} style={styles.crowdCard}>
               <View style={styles.crowdHeader}>
@@ -221,11 +241,11 @@ export default function CrowdScreen() {
               <View style={styles.crowdDetails}>
                 <View style={styles.crowdDetail}>
                   <Users size={14} color="#6B7280" />
-                  <Text style={styles.crowdDetailText}>{place.currentVisitors} Besucher</Text>
+                  <Text style={styles.crowdDetailText}>{place.currentVisitors} {t('crowd.visitors')}</Text>
                 </View>
                 <View style={styles.crowdDetail}>
                   <Clock size={14} color="#10B981" />
-                  <Text style={styles.crowdDetailText}>Beste Zeit: {place.bestTime}</Text>
+                  <Text style={styles.crowdDetailText}>{t('crowd.bestTime')}: {place.bestTime}</Text>
                 </View>
               </View>
 
@@ -233,7 +253,7 @@ export default function CrowdScreen() {
               {place.crowdLevel === 'high' || place.crowdLevel === 'very-high' ? (
                 <View style={styles.warningBadge}>
                   <Text style={styles.warningText}>
-                    ⚠️ Empfehlung: Früh morgens oder spät nachmittags besuchen
+                    ⚠️ {t('crowd.recommendation')}
                   </Text>
                 </View>
               ) : null}
@@ -245,11 +265,10 @@ export default function CrowdScreen() {
         <View style={styles.tipsCard}>
           <TrendingUp size={20} color="#0369A1" />
           <View style={styles.tipsContent}>
-            <Text style={styles.tipsTitle}>💡 Tipps gegen Menschenmassen</Text>
-            <Text style={styles.tipText}>• Besuche beliebte Orte vor 8:00 Uhr</Text>
-            <Text style={styles.tipText}>• Vermeide Wochenenden und Feiertage</Text>
-            <Text style={styles.tipText}>• Regenzeit = weniger Touristen</Text>
-            <Text style={styles.tipText}>• Geheimtipps statt Mainstream</Text>
+            <Text style={styles.tipsTitle}>💡 {t('crowd.tipsTitle')}</Text>
+            {tips.map((tip, index) => (
+              <Text key={index} style={styles.tipText}>• {tip}</Text>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -457,3 +476,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+export default memo(CrowdScreen);

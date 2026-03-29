@@ -8,7 +8,29 @@
     "scheme": "balibuddy",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/ios/180.png"
+      "icon": "./assets/images/ios/180.png",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.balibuddy.pwa",
+      "infoPlist": {
+        "CFBundleDisplayName": "BaliBuddy",
+        "CFBundleName": "BaliBuddy",
+        "CFBundleShortVersionString": "1.0.0",
+        "CFBundleVersion": "1",
+        "LSRequiresIPhoneOS": true,
+        "UILaunchStoryboardName": "SplashScreen",
+        "UIRequiredDeviceCapabilities": ["armv7"],
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -63,7 +85,9 @@
             "image": "./assets/images/ios/80.png"
           }
         }
-      ]
+      ],
+      "expo-audio",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

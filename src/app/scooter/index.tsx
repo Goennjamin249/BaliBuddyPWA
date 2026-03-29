@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Shield, ArrowLeft, Home, Calculator, MapPin, Phone, Star, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { BALI_PRICES_2026, calculateDynamicPrice, getPriceRange } from '../../constants/bali-prices';
 
 interface ScooterRental {
@@ -17,47 +18,83 @@ interface ScooterRental {
   available: boolean;
 }
 
-const scooterRentals: ScooterRental[] = [
-  {
-    id: '1',
-    name: 'Bali Scooter Rental Seminyak',
-    type: 'scooter',
-    pricePerDay: 80000,
-    includes: ['Helm', 'Versicherung', '24h Support'],
-    rating: 4.8,
-    location: 'Seminyak',
-    phone: '+6281234567890',
-    available: true,
-  },
-  {
-    id: '2',
-    name: 'Kuta Bike Rental',
-    type: 'scooter',
-    pricePerDay: 100000,
-    includes: ['Helm', 'Versicherung', 'Tankfüllung'],
-    rating: 4.5,
-    location: 'Kuta',
-    phone: '+6281234567891',
-    available: true,
-  },
-  {
-    id: '3',
-    name: 'Ubud Scooter Center',
-    type: 'scooter',
-    pricePerDay: 120000,
-    includes: ['Helm', 'Versicherung', 'Lieferung'],
-    rating: 4.9,
-    location: 'Ubud',
-    phone: '+6281234567892',
-    available: false,
-  },
-];
-
-export default function ScooterScreen() {
+function ScooterScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [selectedRental, setSelectedRental] = useState<ScooterRental | null>(null);
   const [days, setDays] = useState<string>('3');
   const [squadSize, setSquadSize] = useState<string>('2');
+
+  // Memoized scooter rentals
+  const scooterRentals = useMemo<ScooterRental[]>(() => [
+    {
+      id: '1',
+      name: 'Bali Scooter Rental Seminyak',
+      type: 'scooter',
+      pricePerDay: 80000,
+      includes: [t('scooter.helmet'), t('scooter.insurance'), t('scooter.support24h')],
+      rating: 4.8,
+      location: 'Seminyak',
+      phone: '+6281234567890',
+      available: true,
+    },
+    {
+      id: '2',
+      name: 'Kuta Bike Rental',
+      type: 'scooter',
+      pricePerDay: 100000,
+      includes: [t('scooter.helmet'), t('scooter.insurance'), t('scooter.fuel')],
+      rating: 4.5,
+      location: 'Kuta',
+      phone: '+6281234567891',
+      available: true,
+    },
+    {
+      id: '3',
+      name: 'Ubud Scooter Center',
+      type: 'scooter',
+      pricePerDay: 120000,
+      includes: [t('scooter.helmet'), t('scooter.insurance'), t('scooter.delivery')],
+      rating: 4.9,
+      location: 'Ubud',
+      phone: '+6281234567892',
+      available: false,
+    },
+  ], [t]);
+
+  // Memoized safety checklist
+  const safetyChecklist = useMemo(() => [
+    t('scooter.check1'),
+    t('scooter.check2'),
+    t('scooter.check3'),
+    t('scooter.check4'),
+    t('scooter.check5'),
+    t('scooter.check6'),
+  ], [t]);
+
+  // Memoized tips
+  const tips = useMemo(() => [
+    {
+      icon: '🛡️',
+      title: t('scooter.insurance'),
+      text: t('scooter.insuranceTip'),
+    },
+    {
+      icon: '📸',
+      title: t('scooter.photos'),
+      text: t('scooter.photosTip'),
+    },
+    {
+      icon: '⛽',
+      title: t('scooter.fuel'),
+      text: t('scooter.fuelTip'),
+    },
+    {
+      icon: '🔒',
+      title: t('scooter.safety'),
+      text: t('scooter.safetyTip'),
+    },
+  ], [t]);
 
   // Calculate total cost with dynamic pricing
   const totalCost = useMemo(() => {
@@ -69,30 +106,57 @@ export default function ScooterScreen() {
     return calculateDynamicPrice(basePrice * dayCount, 'per_person', memberCount);
   }, [selectedRental, days, squadSize]);
 
-  // Handle phone call
-  const handleCall = (phone: string) => {
+  // Memoized handle phone call
+  const handleCall = useCallback((phone: string) => {
     Linking.openURL(`tel:${phone}`);
-  };
+  }, []);
 
-  // Handle booking
-  const handleBook = (rental: ScooterRental) => {
+  // Memoized handle booking
+  const handleBook = useCallback((rental: ScooterRental) => {
     if (!rental.available) {
-      Alert.alert('Nicht verfügbar', 'Diese Option ist derzeit nicht verfügbar.');
+      Alert.alert(t('scooter.notAvailable'), t('scooter.notAvailableText'));
       return;
     }
     
     Alert.alert(
-      'Buchung bestätigen',
-      `${rental.name}\n${days} Tag(e) für ${parseInt(squadSize)} Person(en)\nGesamt: Rp ${totalCost.toLocaleString('de-DE')}`,
+      t('scooter.confirmBooking'),
+      `${rental.name}\n${days} ${t('scooter.days')} ${parseInt(squadSize)} ${t('scooter.persons')}\n${t('scooter.total')}: Rp ${totalCost.toLocaleString('de-DE')}`,
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('scooter.cancel'), style: 'cancel' },
         { 
-          text: 'Anrufen', 
+          text: t('scooter.call'), 
           onPress: () => handleCall(rental.phone)
         },
       ]
     );
-  };
+  }, [days, squadSize, totalCost, handleCall, t]);
+
+  // Memoized rental selection handler
+  const handleRentalSelect = useCallback((rental: ScooterRental) => {
+    if (rental.available) {
+      setSelectedRental(rental);
+    }
+  }, []);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  // Memoized home handler
+  const handleHome = useCallback(() => {
+    router.push('/');
+  }, [router]);
+
+  // Memoized days change handler
+  const handleDaysChange = useCallback((text: string) => {
+    setDays(text);
+  }, []);
+
+  // Memoized squad size change handler
+  const handleSquadSizeChange = useCallback((text: string) => {
+    setSquadSize(text);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -101,17 +165,17 @@ export default function ScooterScreen() {
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={handleBack}
           >
             <ArrowLeft size={24} color="#0F172A" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>🛵 Scooter Check</Text>
-            <Text style={styles.subtitle}>Sicherheitscheck & Miete</Text>
+            <Text style={styles.title}>🛵 {t('scooter.title')}</Text>
+            <Text style={styles.subtitle}>{t('scooter.subtitle')}</Text>
           </View>
           <TouchableOpacity 
             style={styles.homeButton}
-            onPress={() => router.push('/')}
+            onPress={handleHome}
           >
             <Home size={20} color="#0F172A" />
           </TouchableOpacity>
@@ -121,17 +185,10 @@ export default function ScooterScreen() {
         <View style={styles.safetyCard}>
           <View style={styles.safetyHeader}>
             <Shield size={24} color="#10B981" />
-            <Text style={styles.safetyTitle}>🛡️ Sicherheitscheck</Text>
+            <Text style={styles.safetyTitle}>🛡️ {t('scooter.safetyCheck')}</Text>
           </View>
           <View style={styles.checklist}>
-            {[
-              'Helm mit Visier tragen',
-              'Versicherung prüfen',
-              'Bremsen testen',
-              'Licht funktioniert',
-              'Reifendruck prüfen',
-              'Tankfüllung kontrollieren',
-            ].map((item, index) => (
+            {safetyChecklist.map((item, index) => (
               <View key={index} style={styles.checklistItem}>
                 <CheckCircle size={16} color="#10B981" />
                 <Text style={styles.checklistText}>{item}</Text>
@@ -144,27 +201,27 @@ export default function ScooterScreen() {
         <View style={styles.calculatorCard}>
           <View style={styles.calculatorHeader}>
             <Calculator size={24} color="#00B4D8" />
-            <Text style={styles.calculatorTitle}>💰 Preiskalkulator</Text>
+            <Text style={styles.calculatorTitle}>💰 {t('scooter.priceCalculator')}</Text>
           </View>
           
           <View style={styles.inputRow}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Tage:</Text>
+              <Text style={styles.inputLabel}>{t('scooter.days')}:</Text>
               <TextInput
                 style={styles.input}
                 value={days}
-                onChangeText={setDays}
+                onChangeText={handleDaysChange}
                 placeholder="3"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numeric"
               />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Personen:</Text>
+              <Text style={styles.inputLabel}>{t('scooter.persons')}:</Text>
               <TextInput
                 style={styles.input}
                 value={squadSize}
-                onChangeText={setSquadSize}
+                onChangeText={handleSquadSizeChange}
                 placeholder="2"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numeric"
@@ -173,7 +230,7 @@ export default function ScooterScreen() {
           </View>
 
           <View style={styles.priceInfo}>
-            <Text style={styles.priceLabel}>Preis pro Tag:</Text>
+            <Text style={styles.priceLabel}>{t('scooter.pricePerDay')}:</Text>
             <Text style={styles.priceValue}>
               {getPriceRange('transport', 'scooter')}
             </Text>
@@ -181,11 +238,11 @@ export default function ScooterScreen() {
 
           {selectedRental && (
             <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Gesamtkosten:</Text>
+              <Text style={styles.totalLabel}>{t('scooter.totalCost')}:</Text>
               <Text style={styles.totalValue}>Rp {totalCost.toLocaleString('de-DE')}</Text>
               {parseInt(squadSize) >= 3 && (
                 <Text style={styles.discountBadge}>
-                  🎉 Gruppenrabatt: {parseInt(squadSize) >= 5 ? '15%' : '10%'}
+                  🎉 {t('scooter.groupDiscount')}: {parseInt(squadSize) >= 5 ? '15%' : '10%'}
                 </Text>
               )}
             </View>
@@ -194,7 +251,7 @@ export default function ScooterScreen() {
 
         {/* Rental Options */}
         <View style={styles.rentalsSection}>
-          <Text style={styles.sectionTitle}>🛵 Mietoptionen</Text>
+          <Text style={styles.sectionTitle}>🛵 {t('scooter.rentalOptions')}</Text>
           {scooterRentals.map((rental) => (
             <TouchableOpacity
               key={rental.id}
@@ -203,7 +260,7 @@ export default function ScooterScreen() {
                 selectedRental?.id === rental.id && styles.rentalCardSelected,
                 !rental.available && styles.rentalCardUnavailable,
               ]}
-              onPress={() => rental.available && setSelectedRental(rental)}
+              onPress={() => handleRentalSelect(rental)}
               disabled={!rental.available}
             >
               <View style={styles.rentalHeader}>
@@ -220,7 +277,7 @@ export default function ScooterScreen() {
                   <Text style={styles.rentalPriceValue}>
                     Rp {rental.pricePerDay.toLocaleString('de-DE')}
                   </Text>
-                  <Text style={styles.rentalPriceUnit}>/Tag</Text>
+                  <Text style={styles.rentalPriceUnit}>/{t('scooter.day')}</Text>
                 </View>
               </View>
 
@@ -236,7 +293,7 @@ export default function ScooterScreen() {
               {!rental.available && (
                 <View style={styles.unavailableBadge}>
                   <AlertTriangle size={14} color="#DC2626" />
-                  <Text style={styles.unavailableText}>Nicht verfügbar</Text>
+                  <Text style={styles.unavailableText}>{t('scooter.notAvailable')}</Text>
                 </View>
               )}
 
@@ -246,7 +303,7 @@ export default function ScooterScreen() {
                   onPress={() => handleBook(rental)}
                 >
                   <Phone size={16} color="#FFFFFF" />
-                  <Text style={styles.bookButtonText}>Jetzt anrufen</Text>
+                  <Text style={styles.bookButtonText}>{t('scooter.callNow')}</Text>
                 </TouchableOpacity>
               )}
             </TouchableOpacity>
@@ -255,28 +312,15 @@ export default function ScooterScreen() {
 
         {/* Tips */}
         <View style={styles.tipsSection}>
-          <Text style={styles.sectionTitle}>💡 Tipps</Text>
+          <Text style={styles.sectionTitle}>💡 {t('scooter.tips')}</Text>
           <View style={styles.tipsGrid}>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>🛡️</Text>
-              <Text style={styles.tipTitle}>Versicherung</Text>
-              <Text style={styles.tipText}>Immer Vollkasko wählen</Text>
-            </View>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>📸</Text>
-              <Text style={styles.tipTitle}>Fotos</Text>
-              <Text style={styles.tipText}>Schäden vorher fotografieren</Text>
-            </View>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>⛽</Text>
-              <Text style={styles.tipTitle}>Tanken</Text>
-              <Text style={styles.tipText}>Voll zurückgeben</Text>
-            </View>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>🔒</Text>
-              <Text style={styles.tipTitle}>Sicherheit</Text>
-              <Text style={styles.tipText}>Helm immer tragen</Text>
-            </View>
+            {tips.map((tip, index) => (
+              <View key={index} style={styles.tipCard}>
+                <Text style={styles.tipIcon}>{tip.icon}</Text>
+                <Text style={styles.tipTitle}>{tip.title}</Text>
+                <Text style={styles.tipText}>{tip.text}</Text>
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -618,3 +662,5 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
+
+export default memo(ScooterScreen);

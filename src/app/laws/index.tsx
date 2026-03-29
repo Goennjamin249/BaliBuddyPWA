@@ -1,90 +1,100 @@
-import React from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { AlertTriangle, Shield, Car, Calendar, Camera, ChevronLeft } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
-export default function LawsScreen() {
+function LawsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
-  const laws = [
+  // Memoized laws data
+  const laws = useMemo(() => [
     {
       id: 'drugs',
       icon: '💊',
-      title: 'Drogen - Absolute Null-Toleranz',
+      title: t('laws.drugsTitle'),
       severity: 'critical',
       details: [
-        'Besitz führt zu langen Haftstrafen',
-        'Schmuggel führt zur Todesstrafe',
-        'Auch geringste Mengen sind illegal',
-        'Keine Ausnahmen für Touristen',
+        t('laws.drugsDetail1'),
+        t('laws.drugsDetail2'),
+        t('laws.drugsDetail3'),
+        t('laws.drugsDetail4'),
       ],
     },
     {
       id: 'traffic',
       icon: '🛵',
-      title: 'Verkehrsstrafen',
+      title: t('laws.trafficTitle'),
       severity: 'high',
       details: [
-        'Fahren ohne Helm: 250.000 IDR Strafe',
-        'Fahren ohne Internationalen Führerschein: bis zu 1.000.000 IDR',
-        'Ohne gültigen Führerschein: Krankenversicherung ungültig!',
-        'Motorrad-Klasse muss im Führerschein eingetragen sein',
+        t('laws.trafficDetail1'),
+        t('laws.trafficDetail2'),
+        t('laws.trafficDetail3'),
+        t('laws.trafficDetail4'),
       ],
     },
     {
       id: 'visa',
       icon: '📄',
-      title: 'Visum-Überschreitung',
+      title: t('laws.visaTitle'),
       severity: 'high',
       details: [
-        'Kosten: genau 1.000.000 IDR pro Tag',
-        'Sofortige Abschiebung möglich',
-        'Einreiseverbot kann verhängt werden',
-        'Visum rechtzeitig verlängern!',
+        t('laws.visaDetail1'),
+        t('laws.visaDetail2'),
+        t('laws.visaDetail3'),
+        t('laws.visaDetail4'),
       ],
     },
     {
       id: 'sacred',
       icon: '🛕',
-      title: 'Heilige Stätten',
+      title: t('laws.sacredTitle'),
       severity: 'critical',
       details: [
-        'Nacktfotos an heiligen Bäumen = sofortige Verhaftung',
-        'Nacktfotos an Tempeln = sofortige Abschiebung',
-        'Respektlose Kleidung ist verboten',
-        'Opfergaben (Canang Sari) nicht betreten',
+        t('laws.sacredDetail1'),
+        t('laws.sacredDetail2'),
+        t('laws.sacredDetail3'),
+        t('laws.sacredDetail4'),
       ],
     },
-  ];
+  ], [t]);
 
-  const getSeverityColor = (severity: string) => {
+  // Memoized severity color function
+  const getSeverityColor = useCallback((severity: string) => {
     switch (severity) {
       case 'critical': return '#DC2626';
       case 'high': return '#F59E0B';
       default: return '#6B7280';
     }
-  };
+  }, []);
 
-  const getSeverityBg = (severity: string) => {
+  // Memoized severity background function
+  const getSeverityBg = useCallback((severity: string) => {
     switch (severity) {
       case 'critical': return '#FEF2F2';
       case 'high': return '#FEF3C7';
       default: return '#F3F4F6';
     }
-  };
+  }, []);
+
+  // Memoized back handler
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ChevronLeft size={24} color="#1F2937" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>⚖️ Bali Gesetze & Etikette</Text>
-            <Text style={styles.subtitle}>Wichtige Regeln für deinen Aufenthalt</Text>
+            <Text style={styles.title}>⚖️ {t('laws.title')}</Text>
+            <Text style={styles.subtitle}>{t('laws.subtitle')}</Text>
           </View>
         </View>
 
@@ -92,9 +102,9 @@ export default function LawsScreen() {
         <View style={styles.warningBanner}>
           <AlertTriangle size={24} color="#DC2626" />
           <View style={styles.warningTextContainer}>
-            <Text style={styles.warningTitle}>⚠️ Wichtige Warnung</Text>
+            <Text style={styles.warningTitle}>⚠️ {t('laws.warningTitle')}</Text>
             <Text style={styles.warningText}>
-              Indonesische Gesetze werden streng durchgesetzt. Als Tourist bist du nicht ausgenommen!
+              {t('laws.warningText')}
             </Text>
           </View>
         </View>
@@ -111,7 +121,7 @@ export default function LawsScreen() {
                 <Text style={styles.lawTitle}>{law.title}</Text>
                 <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(law.severity) }]}>
                   <Text style={styles.severityText}>
-                    {law.severity === 'critical' ? 'KRITISCH' : 'HOCH'}
+                    {law.severity === 'critical' ? t('laws.critical') : t('laws.high')}
                   </Text>
                 </View>
               </View>
@@ -131,10 +141,9 @@ export default function LawsScreen() {
         <View style={styles.emergencyCard}>
           <Shield size={24} color="#00B4D8" />
           <View style={styles.emergencyInfo}>
-            <Text style={styles.emergencyTitle}>Bei Problemen</Text>
+            <Text style={styles.emergencyTitle}>{t('laws.emergencyTitle')}</Text>
             <Text style={styles.emergencyText}>
-              Touristenpolizei: 0361-224111{'\n'}
-              Botschaft/Konsulat deines Landes kontaktieren
+              {t('laws.emergencyText')}
             </Text>
           </View>
         </View>
@@ -280,3 +289,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+export default memo(LawsScreen);

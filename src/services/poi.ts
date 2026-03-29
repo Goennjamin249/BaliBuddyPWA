@@ -27,7 +27,7 @@ const POI_CACHE_KEY = 'balibuddy_poi_cache';
 const POI_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 class POIService {
-  private overpassUrl = 'https://overpass-api.de/api/interpreter';
+  private overpassUrl = '/api/overpass';
 
   // Build Overpass QL query for POIs around a location
   private buildOverpassQuery(lat: number, lon: number, radius: number): string {

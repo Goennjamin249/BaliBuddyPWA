@@ -3,7 +3,7 @@
  * Allows users to switch between Light, Dark, and System themes
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Sun, Moon, Monitor } from 'lucide-react-native';
 import { useTheme, ThemeMode } from '@/hooks/useTheme';
@@ -16,7 +16,7 @@ interface ThemeOptionProps {
   onPress: () => void;
 }
 
-function ThemeOption({ mode, icon, label, isSelected, onPress }: ThemeOptionProps) {
+function ThemeOptionComponent({ mode, icon, label, isSelected, onPress }: ThemeOptionProps) {
   const { colors, isDark } = useTheme();
   
   const getIconColor = () => {
@@ -67,7 +67,9 @@ function ThemeOption({ mode, icon, label, isSelected, onPress }: ThemeOptionProp
   );
 }
 
-export function ThemeToggle() {
+const ThemeOption = memo(ThemeOptionComponent);
+
+function ThemeToggleComponent() {
   const { mode, setThemeMode, isDark, effectiveTheme } = useTheme();
   
   const themeOptions: { mode: ThemeMode; icon: React.ReactNode; label: string }[] = [
@@ -150,6 +152,8 @@ export function ThemeToggle() {
     </View>
   );
 }
+
+export const ThemeToggle = memo(ThemeToggleComponent);
 
 const styles = StyleSheet.create({
   container: {

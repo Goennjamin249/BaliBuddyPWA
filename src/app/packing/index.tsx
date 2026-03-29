@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +54,7 @@ const defaultPackingList: PackingItem[] = [
 
 const categories = [...new Set(defaultPackingList.map(item => item.category))];
 
-export default function PackingList() {
+function PackingList() {
   const { t } = useTranslation();
   const router = useRouter();
   const [items, setItems] = useState<PackingItem[]>(defaultPackingList);
@@ -63,15 +63,17 @@ export default function PackingList() {
   const [selectedCategory, setSelectedCategory] = useState('Kleidung');
   const [filter, setFilter] = useState<'all' | 'packed' | 'unpacked'>('all');
 
-  const togglePacked = (id: string) => {
-    setItems(items.map(item => 
+  // Memoized toggle packed handler
+  const togglePacked = useCallback((id: string) => {
+    setItems(prevItems => prevItems.map(item => 
       item.id === id ? { ...item, isPacked: !item.isPacked } : item
     ));
-  };
+  }, []);
 
-  const addItem = () => {
+  // Memoized add item handler
+  const addItem = useCallback(() => {
     if (!newItemName.trim()) {
-      Alert.alert('Fehler', 'Bitte gib einen Namen ein');
+      Alert.alert(t('packing.error'), t('packing.enterName'));
       return;
     }
 
@@ -85,45 +87,60 @@ export default function PackingList() {
       activityBased: '',
     };
 
-    setItems([...items, newItem]);
+    setItems(prevItems => [...prevItems, newItem]);
     setNewItemName('');
     setShowAddForm(false);
-  };
+  }, [newItemName, selectedCategory, t]);
 
-  const deleteItem = (id: string) => {
+  // Memoized delete item handler
+  const deleteItem = useCallback((id: string) => {
     Alert.alert(
-      'Löschen',
-      'Möchtest du diesen Artikel wirklich löschen?',
+      t('packing.delete'),
+      t('packing.deleteConfirm'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('packing.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('packing.delete'),
           style: 'destructive',
           onPress: () => {
-            setItems(items.filter(item => item.id !== id));
+            setItems(prevItems => prevItems.filter(item => item.id !== id));
           },
         },
       ]
     );
-  };
+  }, [t]);
 
-  const filteredItems = items.filter(item => {
-    if (filter === 'packed') return item.isPacked;
-    if (filter === 'unpacked') return !item.isPacked;
-    return true;
-  });
+  // Memoized filtered items
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      if (filter === 'packed') return item.isPacked;
+      if (filter === 'unpacked') return !item.isPacked;
+      return true;
+    });
+  }, [items, filter]);
 
-  const packedCount = items.filter(item => item.isPacked).length;
+  // Memoized counts
+  const packedCount = useMemo(() => items.filter(item => item.isPacked).length, [items]);
   const totalCount = items.length;
   const progress = totalCount > 0 ? (packedCount / totalCount) * 100 : 0;
 
-  const getCategoryIcon = (category: string) => {
+  // Memoized category icon function
+  const getCategoryIcon = useCallback((category: string) => {
     switch (category) {
       case 'Kleidung': return <Shirt size={16} color="#00B4D8" />;
       case 'Toilettenartikel': return <Package size={16} color="#90BE6D" />;
       default: return <Package size={16} color="#6B7280" />;
     }
-  };
+  }, []);
+
+  // Memoized filter handlers
+  const handleFilterAll = useCallback(() => setFilter('all'), []);
+  const handleFilterUnpacked = useCallback(() => setFilter('unpacked'), []);
+  const handleFilterPacked = useCallback(() => setFilter('packed'), []);
+  const handleShowAddForm = useCallback(() => setShowAddForm(true), []);
+  const handleHideAddForm = useCallback(() => setShowAddForm(false), []);
+  const handleCategorySelect = useCallback((category: string) => setSelectedCategory(category), []);
+  const handleNewItemNameChange = useCallback((text: string) => setNewItemName(text), []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -137,74 +154,74 @@ export default function PackingList() {
             <ArrowLeft size={24} color="#1F2937" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>{t('packing.title', 'Packliste')}</Text>
-            <Text style={styles.subtitle}>{t('packing.subtitle', 'Wetter- & aktivitätsbasiert')}</Text>
+            <Text style={styles.title}>{t('packing.title')}</Text>
+            <Text style={styles.subtitle}>{t('packing.subtitle')}</Text>
           </View>
         </View>
 
         {/* Progress Card */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Fortschritt</Text>
+            <Text style={styles.progressTitle}>{t('packing.progress')}</Text>
             <Text style={styles.progressText}>{packedCount}/{totalCount}</Text>
           </View>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
-          <Text style={styles.progressPercent}>{Math.round(progress)}% eingepackt</Text>
+          <Text style={styles.progressPercent}>{Math.round(progress)}% {t('packing.packed')}</Text>
         </View>
 
         {/* Filter Buttons */}
         <View style={styles.filterContainer}>
           <TouchableOpacity
             style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
-            onPress={() => setFilter('all')}
+            onPress={handleFilterAll}
           >
             <Text style={[styles.filterButtonText, filter === 'all' && styles.filterButtonTextActive]}>
-              Alle ({items.length})
+              {t('packing.all')} ({items.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterButton, filter === 'unpacked' && styles.filterButtonActive]}
-            onPress={() => setFilter('unpacked')}
+            onPress={handleFilterUnpacked}
           >
             <Text style={[styles.filterButtonText, filter === 'unpacked' && styles.filterButtonTextActive]}>
-              Einzupacken ({items.length - packedCount})
+              {t('packing.toPack')} ({items.length - packedCount})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterButton, filter === 'packed' && styles.filterButtonActive]}
-            onPress={() => setFilter('packed')}
+            onPress={handleFilterPacked}
           >
             <Text style={[styles.filterButtonText, filter === 'packed' && styles.filterButtonTextActive]}>
-              Eingepackt ({packedCount})
+              {t('packing.packed')} ({packedCount})
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Weather Tips */}
-            <View style={styles.weatherTips}>
-              <View style={styles.weatherTip}>
-                <Sun size={20} color="#F59E0B" />
-                <Text style={styles.weatherTipText}>
-                  Sonnig: Sonnencreme & Hut einpacken
-                </Text>
-              </View>
-              <View style={styles.weatherTip}>
-                <CloudRain size={20} color="#00B4D8" />
-                <Text style={styles.weatherTipText}>
-                  Regenzeit: Regenjacke nicht vergessen
-                </Text>
-              </View>
-            </View>
+        <View style={styles.weatherTips}>
+          <View style={styles.weatherTip}>
+            <Sun size={20} color="#F59E0B" />
+            <Text style={styles.weatherTipText}>
+              {t('packing.sunnyTip')}
+            </Text>
+          </View>
+          <View style={styles.weatherTip}>
+            <CloudRain size={20} color="#00B4D8" />
+            <Text style={styles.weatherTipText}>
+              {t('packing.rainyTip')}
+            </Text>
+          </View>
+        </View>
 
         {/* Add Item Button */}
         <TouchableOpacity 
           style={styles.addButton}
-          onPress={() => setShowAddForm(true)}
+          onPress={handleShowAddForm}
         >
           <Plus size={20} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Artikel hinzufügen</Text>
+          <Text style={styles.addButtonText}>{t('packing.addItem')}</Text>
         </TouchableOpacity>
 
         {/* Add Form */}
@@ -212,13 +229,13 @@ export default function PackingList() {
           <View style={styles.addForm}>
             <TextInput
               style={styles.input}
-              placeholder="Artikelname"
+              placeholder={t('packing.itemName')}
               placeholderTextColor="#9CA3AF"
               value={newItemName}
-              onChangeText={setNewItemName}
+              onChangeText={handleNewItemNameChange}
             />
             
-            <Text style={styles.formLabel}>Kategorie:</Text>
+            <Text style={styles.formLabel}>{t('packing.category')}:</Text>
             <View style={styles.categorySelector}>
               {categories.map((category) => (
                 <TouchableOpacity
@@ -227,7 +244,7 @@ export default function PackingList() {
                     styles.categoryChip,
                     selectedCategory === category && styles.categoryChipActive,
                   ]}
-                  onPress={() => setSelectedCategory(category)}
+                  onPress={() => handleCategorySelect(category)}
                 >
                   <Text style={[
                     styles.categoryChipText,
@@ -242,12 +259,12 @@ export default function PackingList() {
             <View style={styles.formButtons}>
               <TouchableOpacity 
                 style={styles.cancelButton}
-                onPress={() => setShowAddForm(false)}
+                onPress={handleHideAddForm}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>{t('packing.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveButton} onPress={addItem}>
-                <Text style={styles.saveButtonText}>Hinzufügen</Text>
+                <Text style={styles.saveButtonText}>{t('packing.add')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -287,7 +304,7 @@ export default function PackingList() {
                       {item.weatherBased && (
                         <View style={styles.weatherTag}>
                           <Cloud size={10} color="#00B4D8" />
-                          <Text style={styles.weatherTagText}>Wetter</Text>
+                          <Text style={styles.weatherTagText}>{t('packing.weather')}</Text>
                         </View>
                       )}
                       {item.activityBased && (
@@ -311,13 +328,13 @@ export default function PackingList() {
 
         {/* Tips */}
         <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>💡 Pack-Tipps</Text>
+          <Text style={styles.tipsTitle}>💡 {t('packing.tipsTitle')}</Text>
           <View style={styles.tipsList}>
-            <Text style={styles.tipItem}>• Leichte Kleidung für tropisches Klima</Text>
-            <Text style={styles.tipItem}>• Sarong für Tempelbesuche</Text>
-            <Text style={styles.tipItem}>• Regenschutz in der Regenzeit (Okt-März)</Text>
-            <Text style={styles.tipItem}>• Bequeme Schuhe für Wanderungen</Text>
-            <Text style={styles.tipItem}>• Kopfbedeckung gegen Sonne</Text>
+            <Text style={styles.tipItem}>• {t('packing.tip1')}</Text>
+            <Text style={styles.tipItem}>• {t('packing.tip2')}</Text>
+            <Text style={styles.tipItem}>• {t('packing.tip3')}</Text>
+            <Text style={styles.tipItem}>• {t('packing.tip4')}</Text>
+            <Text style={styles.tipItem}>• {t('packing.tip5')}</Text>
           </View>
         </View>
       </ScrollView>
@@ -656,3 +673,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
+export default memo(PackingList);

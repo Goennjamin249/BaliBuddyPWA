@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Dimensions } from 'react-native';
 import { Download, X, Share, Plus, Smartphone } from 'lucide-react-native';
 
@@ -19,7 +19,7 @@ declare global {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-export default function InstallPrompt() {
+function InstallPromptComponent() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showIOSModal, setShowIOSModal] = useState(false);
@@ -69,7 +69,7 @@ export default function InstallPrompt() {
     };
   }, []);
 
-  const handleInstallClick = async () => {
+  const handleInstallClick = useCallback(async () => {
     if (!deferredPrompt) return;
 
     try {
@@ -87,12 +87,21 @@ export default function InstallPrompt() {
     } catch (error) {
       console.error('Error during install prompt:', error);
     }
-  };
+  }, [deferredPrompt]);
 
-  const handleIOSModalClose = () => {
+  const handleIOSModalClose = useCallback(() => {
     setShowIOSModal(false);
     localStorage.setItem('balibuddy_ios_prompt_shown', 'true');
-  };
+  }, []);
+
+  const handleDismissButton = useCallback(() => {
+    setShowInstallButton(false);
+  }, []);
+
+  const handleDontShowAgain = useCallback(() => {
+    localStorage.setItem('balibuddy_ios_prompt_shown', 'true');
+    handleIOSModalClose();
+  }, [handleIOSModalClose]);
 
   // Don't show anything if already installed
   if (isStandalone) {
@@ -114,7 +123,7 @@ export default function InstallPrompt() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.dismissButton}
-            onPress={() => setShowInstallButton(false)}
+            onPress={handleDismissButton}
           >
             <X size={16} color="#64748B" />
           </TouchableOpacity>
@@ -214,22 +223,21 @@ export default function InstallPrompt() {
               <Text style={styles.closeButtonText}>Später erinnern</Text>
             </TouchableOpacity>
 
-            {/* Don't show again */}
-            <TouchableOpacity
-              style={styles.dontShowButton}
-              onPress={() => {
-                localStorage.setItem('balibuddy_ios_prompt_shown', 'true');
-                handleIOSModalClose();
-              }}
-            >
-              <Text style={styles.dontShowButtonText}>Nicht mehr anzeigen</Text>
-            </TouchableOpacity>
+        {/* Don't show again */}
+        <TouchableOpacity
+          style={styles.dontShowButton}
+          onPress={handleDontShowAgain}
+        >
+          <Text style={styles.dontShowButtonText}>Nicht mehr anzeigen</Text>
+        </TouchableOpacity>
           </View>
         </View>
       </Modal>
     </>
   );
 }
+
+export default memo(InstallPromptComponent);
 
 const styles = StyleSheet.create({
   // Install Button Styles

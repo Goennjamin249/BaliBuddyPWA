@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 interface OCRResult {
   text: string;
@@ -19,15 +19,32 @@ interface UseOCRWorkerReturn {
   isReady: boolean;
 }
 
+// Isolated state types for better performance
+interface WorkerState {
+  isProcessing: boolean;
+  progress: OCRProgress | null;
+  error: string | null;
+  isReady: boolean;
+}
+
 export function useOCRWorker(): UseOCRWorkerReturn {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState<OCRProgress | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  // Isolated state updates for better performance
+  const [workerState, setWorkerState] = useState<WorkerState>({
+    isProcessing: false,
+    progress: null,
+    error: null,
+    isReady: false
+  });
   
   const workerRef = useRef<Worker | null>(null);
   const resolveRef = useRef<((result: OCRResult) => void) | null>(null);
   const rejectRef = useRef<((error: Error) => void) | null>(null);
+
+  // Memoized state selectors for performance
+  const isProcessing = useMemo(() => workerState.isProcessing, [workerState.isProcessing]);
+  const progress = useMemo(() => workerState.progress, [workerState.progress]);
+  const error = useMemo(() => workerState.error, [workerState.error]);
+  const isReady = useMemo(() => workerState.isReady, [workerState.isReady]);
 
   // Initialize worker
   useEffect(() => {
@@ -40,18 +57,15 @@ export function useOCRWorker(): UseOCRWorkerReturn {
           
           switch (type) {
             case 'ready':
-              setIsReady(true);
-              setError(null);
+              setWorkerState(prev => ({ ...prev, isReady: true, error: null }));
               break;
               
             case 'progress':
-              setProgress({ progress: progressValue, status });
+              setWorkerState(prev => ({ ...prev, progress: { progress: progressValue, status } }));
               break;
               
             case 'result':
-              setIsProcessing(false);
-              setProgress(null);
-              setError(null);
+              setWorkerState(prev => ({ ...prev, isProcessing: false, progress: null, error: null }));
               
               if (resolveRef.current) {
                 resolveRef.current({ text, confidence, timestamp });
@@ -61,9 +75,7 @@ export function useOCRWorker(): UseOCRWorkerReturn {
               break;
               
             case 'error':
-              setIsProcessing(false);
-              setProgress(null);
-              setError(workerError);
+              setWorkerState(prev => ({ ...prev, isProcessing: false, progress: null, error: workerError }));
               
               if (rejectRef.current) {
                 rejectRef.current(new Error(workerError));
@@ -75,9 +87,7 @@ export function useOCRWorker(): UseOCRWorkerReturn {
         };
         
         workerRef.current.onerror = (error) => {
-          setIsProcessing(false);
-          setProgress(null);
-          setError(`Worker error: ${error.message}`);
+          setWorkerState(prev => ({ ...prev, isProcessing: false, progress: null, error: `Worker error: ${error.message}` }));
           
           if (rejectRef.current) {
             rejectRef.current(new Error(`Worker error: ${error.message}`));
@@ -87,10 +97,10 @@ export function useOCRWorker(): UseOCRWorkerReturn {
         };
         
       } catch (err) {
-        setError(`Failed to create worker: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setWorkerState(prev => ({ ...prev, error: `Failed to create worker: ${err instanceof Error ? err.message : 'Unknown error'}` }));
       }
     } else {
-      setError('Web Workers are not supported in this browser');
+      setWorkerState(prev => ({ ...prev, error: 'Web Workers are not supported in this browser' }));
     }
     
     // Cleanup on unmount
@@ -116,9 +126,7 @@ export function useOCRWorker(): UseOCRWorkerReturn {
         return;
       }
       
-      setIsProcessing(true);
-      setError(null);
-      setProgress({ progress: 0, status: 'Starting...' });
+      setWorkerState(prev => ({ ...prev, isProcessing: true, error: null, progress: { progress: 0, status: 'Starting...' } }));
       
       resolveRef.current = resolve;
       rejectRef.current = reject;
@@ -133,8 +141,7 @@ export function useOCRWorker(): UseOCRWorkerReturn {
           });
         };
         reader.onerror = () => {
-          setIsProcessing(false);
-          setError('Failed to read image file');
+          setWorkerState(prev => ({ ...prev, isProcessing: false, error: 'Failed to read image file' }));
           reject(new Error('Failed to read image file'));
         };
         reader.readAsDataURL(imageData);
