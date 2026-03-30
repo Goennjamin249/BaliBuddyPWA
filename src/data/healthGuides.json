@@ -1,0 +1,356 @@
+{
+  "baliBelly": {
+    "id": "bali-belly",
+    "title": {
+      "de": "Bali Belly - Durchfall auf Bali",
+      "en": "Bali Belly - Diarrhea in Bali"
+    },
+    "description": {
+      "de": "Bali Belly ist eine häufige Reisekrankheit, die durch verunreinigtes Essen oder Wasser verursacht wird.",
+      "en": "Bali Belly is a common travel illness caused by contaminated food or water."
+    },
+    "symptoms": [
+      {
+        "de": "Wässriger Durchfall",
+        "en": "Watery diarrhea"
+      },
+      {
+        "de": "Bauchkrämpfe",
+        "en": "Abdominal cramps"
+      },
+      {
+        "de": "Übelkeit und Erbrechen",
+        "en": "Nausea and vomiting"
+      },
+      {
+        "de": "Fieber",
+        "en": "Fever"
+      },
+      {
+        "de": "Kopfschmerzen",
+        "en": "Headache"
+      }
+    ],
+    "treatment": [
+      {
+        "de": "Viel Wasser trinken (abgekocht oder Flaschenwasser)",
+        "en": "Drink plenty of water (boiled or bottled)"
+      },
+      {
+        "de": "Elektrolytlösungen einnehmen",
+        "en": "Take electrolyte solutions"
+      },
+      {
+        "de": "Leichte Kost essen (Reis, Bananen, Toast)",
+        "en": "Eat bland food (rice, bananas, toast)"
+      },
+      {
+        "de": "Loperamid (Imodium) für symptomatische Linderung",
+        "en": "Loperamide (Imodium) for symptomatic relief"
+      },
+      {
+        "de": "Bei schwerem Verlauf: Antibiotika vom Arzt",
+        "en": "For severe cases: antibiotics from doctor"
+      }
+    ],
+    "prevention": [
+      {
+        "de": "Nur abgekochtes oder Flaschenwasser trinken",
+        "en": "Drink only boiled or bottled water"
+      },
+      {
+        "de": "Keine Eiswürfel in Getränken",
+        "en": "No ice cubes in drinks"
+      },
+      {
+        "de": "Hände regelmäßig waschen",
+        "en": "Wash hands regularly"
+      },
+      {
+        "de": "Nur gut durchgegartes Essen essen",
+        "en": "Eat only well-cooked food"
+      },
+      {
+        "de": "Obst selbst schälen",
+        "en": "Peel fruit yourself"
+      }
+    ],
+    "whenToSeeDoctor": [
+      {
+        "de": "Durchfall länger als 3 Tage",
+        "en": "Diarrhea lasting more than 3 days"
+      },
+      {
+        "de": "Hohes Fieber (>38.5°C)",
+        "en": "High fever (>38.5°C)"
+      },
+      {
+        "de": "Blut im Stuhl",
+        "en": "Blood in stool"
+      },
+      {
+        "de": "Starke Dehydrierung",
+        "en": "Severe dehydration"
+      }
+    ],
+    "emergencyContacts": [
+      {
+        "name": "SOS Medika Clinic",
+        "phone": "+62 361 710505",
+        "location": "Denpasar"
+      },
+      {
+        "name": "BIMC Hospital",
+        "phone": "+62 361 761263",
+        "location": "Kuta/Nusa Dua"
+      },
+      {
+        "name": "Notruf",
+        "phone": "118",
+        "location": "Indonesia"
+      }
+    ]
+  },
+  "rabies": {
+    "id": "rabies",
+    "title": {
+      "de": "Tollwut - Lebensgefahr!",
+      "en": "Rabies - Life Threatening!"
+    },
+    "description": {
+      "de": "Tollwut ist eine tödliche Viruserkrankung, die durch Tierbisse übertragen wird. Bali ist ein Tollwut-Gebiet!",
+      "en": "Rabies is a fatal viral disease transmitted through animal bites. Bali is a rabies-endemic area!"
+    },
+    "symptoms": [
+      {
+        "de": "Fieber und Kopfschmerzen",
+        "en": "Fever and headache"
+      },
+      {
+        "de": "Schmerzen an der Bissstelle",
+        "en": "Pain at bite site"
+      },
+      {
+        "de": "Angstzustände und Verwirrung",
+        "en": "Anxiety and confusion"
+      },
+      {
+        "de": "Schluckbeschwerden",
+        "en": "Difficulty swallowing"
+      },
+      {
+        "de": "Wasserscheu",
+        "en": "Fear of water (hydrophobia)"
+      }
+    ],
+    "treatment": [
+      {
+        "de": "SOFORT: Wunde 15 Minuten mit Wasser und Seife waschen",
+        "en": "IMMEDIATELY: Wash wound for 15 minutes with water and soap"
+      },
+      {
+        "de": "Desinfektionsmittel auftragen",
+        "en": "Apply antiseptic"
+      },
+      {
+        "de": "SOFORT ins Krankenhaus für Post-Expositions-Prophylaxe (PEP)",
+        "en": "GO TO HOSPITAL IMMEDIATELY for Post-Exposure Prophylaxis (PEP)"
+      },
+      {
+        "de": "Impfserie: 4-5 Impfungen über 28 Tage",
+        "en": "Vaccine series: 4-5 shots over 28 days"
+      },
+      {
+        "de": "Bei schweren Bissen: Tollwut-Immunglobulin",
+        "en": "For severe bites: Rabies Immunoglobulin"
+      }
+    ],
+    "prevention": [
+      {
+        "de": "Keine wilden oder streunenden Tiere anfassen",
+        "en": "Do not touch wild or stray animals"
+      },
+      {
+        "de": "Besonders vorsichtig mit Affen (Uluwatu, Padangtegal)",
+        "en": "Be extra careful with monkeys (Uluwatu, Padangtegal)"
+      },
+      {
+        "de": "Keine Fütterung von Tieren",
+        "en": "Do not feed animals"
+      },
+      {
+        "de": "Vor Reiseantritt impfen lassen (3 Impfungen)",
+        "en": "Get vaccinated before travel (3 shots)"
+      },
+      {
+        "de": "Kinder besonders überwachen",
+        "en": "Supervise children closely"
+      }
+    ],
+    "whenToSeeDoctor": [
+      {
+        "de": "NACH JEDEM Tierkontakt mit Hautverletzung SOFORT!",
+        "en": "After ANY animal contact with skin injury IMMEDIATELY!"
+      },
+      {
+        "de": "Auch bei kleinen Kratzern",
+        "en": "Even for small scratches"
+      },
+      {
+        "de": "Auch wenn keine Blutung sichtbar ist",
+        "en": "Even if no bleeding is visible"
+      }
+    ],
+    "importantNote": {
+      "de": "ACHTUNG: Einmal ausgebrochen ist Tollwut zu 100% tödlich! Warten Sie nicht auf Symptome!",
+      "en": "WARNING: Once symptoms appear, rabies is 100% fatal! Do not wait for symptoms!"
+    },
+    "emergencyContacts": [
+      {
+        "name": "SOS Medika Clinic (24/7)",
+        "phone": "+62 361 710505",
+        "location": "Denpasar"
+      },
+      {
+        "name": "BIMC Hospital (24/7)",
+        "phone": "+62 361 761263",
+        "location": "Kuta"
+      },
+      {
+        "name": "Casablanca Clinic",
+        "phone": "+62 361 8474452",
+        "location": "Sanur"
+      }
+    ]
+  },
+  "methanol": {
+    "id": "methanol",
+    "title": {
+      "de": "Methanol-Vergiftung - Gefälschter Alkohol",
+      "en": "Methanol Poisoning - Fake Alcohol"
+    },
+    "description": {
+      "de": "Methanol-Vergiftung durch verunreinigten Alkohol ist auf Bali lebensgefährlich. Symptome können 12-24 Stunden verzögert auftreten.",
+      "en": "Methanol poisoning from contaminated alcohol is life-threatening in Bali. Symptoms can be delayed 12-24 hours."
+    },
+    "symptoms": [
+      {
+        "de": "Starke Kopfschmerzen",
+        "en": "Severe headache"
+      },
+      {
+        "de": "Schwindel und Verwirrung",
+        "en": "Dizziness and confusion"
+      },
+      {
+        "de": "Übelkeit und Erbrechen",
+        "en": "Nausea and vomiting"
+      },
+      {
+        "de": "Bauchschmerzen",
+        "en": "Abdominal pain"
+      },
+      {
+        "de": "Sehstörungen (verschwommenes Sehen, Blindheit)",
+        "en": "Vision problems (blurred vision, blindness)"
+      },
+      {
+        "de": "Atembeschwerden",
+        "en": "Breathing difficulties"
+      },
+      {
+        "de": "Bewusstlosigkeit",
+        "en": "Unconsciousness"
+      }
+    ],
+    "treatment": [
+      {
+        "de": "SOFORT ins Krankenhaus - Zeit ist kritisch!",
+        "en": "GO TO HOSPITAL IMMEDIATELY - time is critical!"
+      },
+      {
+        "de": "Gegenmittel: Fomepizol oder Ethanol-Infusion",
+        "en": "Antidote: Fomepizole or ethanol infusion"
+      },
+      {
+        "de": "Hämodialyse zur Entgiftung",
+        "en": "Hemodialysis for detoxification"
+      },
+      {
+        "de": "Unterstützende Intensivpflege",
+        "en": "Supportive intensive care"
+      }
+    ],
+    "prevention": [
+      {
+        "de": "Nur Alkohol in original verschlossenen Flaschen trinken",
+        "en": "Only drink alcohol in originally sealed bottles"
+      },
+      {
+        "de": "Keine selbstgemachten Cocktails oder lokale Schnäpse",
+        "en": "No homemade cocktails or local spirits"
+      },
+      {
+        "de": "Vorsicht bei zu günstigen Drinks",
+        "en": "Be careful with too-cheap drinks"
+      },
+      {
+        "de": "Nur in etablierten Bars trinken",
+        "en": "Drink only in established bars"
+      },
+      {
+        "de": "Bei verdächtigem Geruch/Geschmack: Nicht trinken!",
+        "en": "If suspicious smell/taste: Do not drink!"
+      }
+    ],
+    "whenToSeeDoctor": [
+      {
+        "de": "Bei ANY Symptomen nach Alkoholkonsum SOFORT!",
+        "en": "At ANY symptoms after alcohol consumption IMMEDIATELY!"
+      },
+      {
+        "de": "Auch bei nur leichtem Unwohlsein",
+        "en": "Even with slight discomfort"
+      },
+      {
+        "de": "Jede Minute zählt - nicht warten!",
+        "en": "Every minute counts - do not wait!"
+      }
+    ],
+    "importantNote": {
+      "de": "ACHTUNG: Methanol-Vergiftung kann innerhalb von Stunden tödlich sein oder zu permanenter Blindheit führen. Zögern Sie nicht!",
+      "en": "WARNING: Methanol poisoning can be fatal within hours or cause permanent blindness. Do not hesitate!"
+    },
+    "safeBars": [
+      {
+        "name": "Established bars in Seminyak",
+        "area": "Seminyak"
+      },
+      {
+        "name": "Reputable clubs in Kuta",
+        "area": "Kuta"
+      },
+      {
+        "name": "Hotel bars",
+        "area": "All areas"
+      }
+    ],
+    "emergencyContacts": [
+      {
+        "name": "SOS Medika Clinic (24/7)",
+        "phone": "+62 361 710505",
+        "location": "Denpasar"
+      },
+      {
+        "name": "BIMC Hospital (24/7)",
+        "phone": "+62 361 761263",
+        "location": "Kuta"
+      },
+      {
+        "name": "Notruf",
+        "phone": "118",
+        "location": "Indonesia"
+      }
+    ]
+  }
+}

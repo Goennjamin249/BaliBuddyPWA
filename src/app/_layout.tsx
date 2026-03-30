@@ -1,88 +1,96 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import React, { useEffect } from 'react';
-import { useColorScheme, Platform } from 'react-native';
-import '../i18n';
-import '../lib/nativeWindInterop'; // NativeWind v5 Interop Configuration
-import InstallPrompt from '../components/InstallPrompt';
-import { SpeedInsights } from '@vercel/speed-insights/react';
-import { Analytics } from '@vercel/analytics/react';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Stack } from "expo-router";
+import React, { useEffect } from "react";
+import { useColorScheme } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import InstallPrompt from "../components/InstallPrompt";
+import "../global.css"; // NativeWind v5 CSS with @theme
+import "../i18n";
+import { initSentry } from "../lib/sentry";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
 
-  // Register Service Worker
+  // Initialize Sentry for error tracking
   useEffect(() => {
-    if (Platform.OS === 'web' && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+    initSentry();
+  }, []);
+
+  // Register Service Worker - Web only
+  useEffect(() => {
+    // Using web-specific check without Platform.OS
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
           .then((registration) => {
-            console.log('Service Worker registered:', registration.scope);
-            
+            console.log("Service Worker registered:", registration.scope);
+
             // Check for updates
-            registration.addEventListener('updatefound', () => {
+            registration.addEventListener("updatefound", () => {
               const newWorker = registration.installing;
               if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.addEventListener("statechange", () => {
+                  if (
+                    newWorker.state === "installed" &&
+                    navigator.serviceWorker.controller
+                  ) {
                     // New version available
-                    console.log('New version available!');
+                    console.log("New version available!");
                   }
                 });
               }
             });
           })
           .catch((error) => {
-            console.error('Service Worker registration failed:', error);
+            console.error("Service Worker registration failed:", error);
           });
       });
     }
   }, []);
 
+  const isDark = colorScheme === "dark";
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
       <Stack
         screenOptions={{
           headerShown: false,
+          contentStyle: {
+            // Explicit light/dark mode styling
+            backgroundColor: isDark ? "#0F172A" : "#F8FAFC",
+          },
         }}
       >
+        {/* Main App Entry - Redirects to Tabs */}
         <Stack.Screen name="index" />
-        <Stack.Screen name="explore" />
-        <Stack.Screen name="currency/index" />
-        <Stack.Screen name="phrasebook/index" />
-        <Stack.Screen name="map/index" />
-        <Stack.Screen name="visa/index" />
-        <Stack.Screen name="bargaining/index" />
-        <Stack.Screen name="itinerary/index" />
-        <Stack.Screen name="packing/index" />
-        <Stack.Screen name="ferries/index" />
+
+        {/* 5-Tab Consolidated Navigation */}
+        <Stack.Screen name="(tabs)" />
+
+        {/* Feature Screens */}
         <Stack.Screen name="scanner/index" />
-        <Stack.Screen name="fare/index" />
-        <Stack.Screen name="bars/index" />
-        <Stack.Screen name="calendar/index" />
-        <Stack.Screen name="crowd/index" />
-        <Stack.Screen name="expenses/index" />
-        <Stack.Screen name="rideshare/index" />
-        <Stack.Screen name="safety/index" />
-        <Stack.Screen name="laws/index" />
-        <Stack.Screen name="weather/index" />
-        <Stack.Screen name="radar/index" />
-        <Stack.Screen name="accommodations/index" />
-        <Stack.Screen name="scanner-live/index" />
-        <Stack.Screen name="atm/index" />
-        <Stack.Screen name="water-refill/index" />
-        <Stack.Screen name="laundry/index" />
-        <Stack.Screen name="media-demo/index" />
+        <Stack.Screen name="scooter-check/index" />
+        <Stack.Screen name="ocr-scanner/index" />
+        <Stack.Screen name="dictionary/index" />
+        <Stack.Screen name="law-hub/index" />
       </Stack>
-      
+
       {/* PWA Install Prompt */}
       <InstallPrompt />
-      
+
       {/* Vercel Speed Insights - Web only */}
-      {Platform.OS === 'web' && <SpeedInsights />}
-      
+      {typeof window !== "undefined" && <SpeedInsights />}
+
       {/* Vercel Analytics - Web only */}
-      {Platform.OS === 'web' && <Analytics />}
+      {typeof window !== "undefined" && <Analytics />}
     </ThemeProvider>
   );
 }

@@ -1,0 +1,350 @@
+{
+  "categories": [
+    {
+      "id": "food",
+      "name": {
+        "de": "Essen & Trinken",
+        "en": "Food & Drinks"
+      },
+      "items": [
+        {
+          "id": "nasi-goreng",
+          "name": {
+            "de": "Nasi Goreng (gebratener Reis)",
+            "en": "Nasi Goreng (fried rice)"
+          },
+          "prices": {
+            "street": { "min": 15000, "max": 25000 },
+            "warung": { "min": 20000, "max": 35000 },
+            "restaurant": { "min": 35000, "max": 75000 }
+          },
+          "tips": {
+            "de": "Straßenstände sind am günstigsten, Warungs sind authentisch",
+            "en": "Street stalls are cheapest, Warungs are authentic"
+          }
+        },
+        {
+          "id": "mie-goreng",
+          "name": {
+            "de": "Mie Goreng (gebratene Nudeln)",
+            "en": "Mie Goreng (fried noodles)"
+          },
+          "prices": {
+            "street": { "min": 15000, "max": 25000 },
+            "warung": { "min": 20000, "max": 35000 },
+            "restaurant": { "min": 35000, "max": 75000 }
+          },
+          "tips": {
+            "de": "Ähnlich wie Nasi Goreng, gute Alternative",
+            "en": "Similar to Nasi Goreng, good alternative"
+          }
+        },
+        {
+          "id": "satay",
+          "name": {
+            "de": "Sate Ayam (Hähnchenspieße)",
+            "en": "Sate Ayam (chicken skewers)"
+          },
+          "prices": {
+            "street": { "min": 20000, "max": 35000 },
+            "warung": { "min": 30000, "max": 50000 },
+            "restaurant": { "min": 50000, "max": 90000 }
+          },
+          "tips": {
+            "de": "Preis pro Portion (5-10 Spieße)",
+            "en": "Price per portion (5-10 skewers)"
+          }
+        },
+        {
+          "id": "bintang",
+          "name": {
+            "de": "Bintang Bier (0.625L)",
+            "en": "Bintang Beer (0.625L)"
+          },
+          "prices": {
+            "minimarket": { "min": 25000, "max": 35000 },
+            "warung": { "min": 35000, "max": 50000 },
+            "bar": { "min": 50000, "max": 100000 }
+          },
+          "tips": {
+            "de": "In Bars oft Happy Hour prüfen",
+            "en": "Check happy hour in bars"
+          }
+        },
+        {
+          "id": "coconut",
+          "name": {
+            "de": "Kelapa Muda (frische Kokosnuss)",
+            "en": "Kelapa Muda (fresh coconut)"
+          },
+          "prices": {
+            "street": { "min": 15000, "max": 25000 },
+            "beach": { "min": 25000, "max": 40000 },
+            "restaurant": { "min": 35000, "max": 60000 }
+          },
+          "tips": {
+            "de": "Am Strand etwas teurer, aber erfrischend",
+            "en": "Slightly pricier at beach, but refreshing"
+          }
+        }
+      ]
+    },
+    {
+      "id": "transport",
+      "name": {
+        "de": "Transport",
+        "en": "Transport"
+      },
+      "items": [
+        {
+          "id": "gojek-short",
+          "name": {
+            "de": "Gojek/Grab (kurze Strecke)",
+            "en": "Gojek/Grab (short distance)"
+          },
+          "prices": {
+            "motorbike": { "min": 10000, "max": 25000 },
+            "car": { "min": 25000, "max": 50000 }
+          },
+          "tips": {
+            "de": "Günstigste Option, App erforderlich",
+            "en": "Cheapest option, app required"
+          }
+        },
+        {
+          "id": "taxi-meter",
+          "name": {
+            "de": "Taxi (mit Taxameter)",
+            "en": "Taxi (with meter)"
+          },
+          "prices": {
+            "per_km": { "min": 7000, "max": 10000 },
+            "flagfall": { "min": 7000, "max": 10000 }
+          },
+          "tips": {
+            "de": "Nur Bluebird oder Express Group verwenden",
+            "en": "Only use Bluebird or Express Group"
+          }
+        },
+        {
+          "id": "scooter-rental",
+          "name": {
+            "de": "Roller mieten (pro Tag)",
+            "en": "Scooter rental (per day)"
+          },
+          "prices": {
+            "daily": { "min": 50000, "max": 100000 },
+            "weekly": { "min": 300000, "max": 500000 },
+            "monthly": { "min": 800000, "max": 1500000 }
+          },
+          "tips": {
+            "de": "Internationaler Führerschein erforderlich!",
+            "en": "International driving license required!"
+          }
+        }
+      ]
+    },
+    {
+      "id": "accommodation",
+      "name": {
+        "de": "Unterkunft",
+        "en": "Accommodation"
+      },
+      "items": [
+        {
+          "id": "hostel-bed",
+          "name": {
+            "de": "Hostel Bett (Schlafsaal)",
+            "en": "Hostel Bed (dormitory)"
+          },
+          "prices": {
+            "budget": { "min": 50000, "max": 100000 },
+            "mid": { "min": 100000, "max": 200000 }
+          },
+          "tips": {
+            "de": "AC und Frühstück prüfen",
+            "en": "Check AC and breakfast included"
+          }
+        },
+        {
+          "id": "guesthouse",
+          "name": {
+            "de": "Guesthouse/Guesthouse (DZ)",
+            "en": "Guesthouse (double room)"
+          },
+          "prices": {
+            "budget": { "min": 150000, "max": 300000 },
+            "mid": { "min": 300000, "max": 600000 },
+            "high": { "min": 600000, "max": 1500000 }
+          },
+          "tips": {
+            "de": "Verhandeln bei längerem Aufenthalt",
+            "en": "Negotiate for longer stays"
+          }
+        },
+        {
+          "id": "villa",
+          "name": {
+            "de": "Privatvilla (pro Nacht)",
+            "en": "Private Villa (per night)"
+          },
+          "prices": {
+            "1bedroom": { "min": 500000, "max": 1500000 },
+            "2bedroom": { "min": 1000000, "max": 3000000 },
+            "3bedroom": { "min": 2000000, "max": 5000000 }
+          },
+          "tips": {
+            "de": "Pool und Frühstück oft inklusive",
+            "en": "Pool and breakfast often included"
+          }
+        }
+      ]
+    },
+    {
+      "id": "activities",
+      "name": {
+        "de": "Aktivitäten",
+        "en": "Activities"
+      },
+      "items": [
+        {
+          "id": "temple-donation",
+          "name": {
+            "de": "Tempel Eintritt/Spende",
+            "en": "Temple entrance/donation"
+          },
+          "prices": {
+            "small": { "min": 10000, "max": 25000 },
+            "large": { "min": 30000, "max": 75000 }
+          },
+          "tips": {
+            "de": "Sarong oft erforderlich (mieten ~10k)",
+            "en": "Sarong often required (rent ~10k)"
+          }
+        },
+        {
+          "id": "massage",
+          "name": {
+            "de": "Balinesische Massage (1 Std)",
+            "en": "Balinese Massage (1 hour)"
+          },
+          "prices": {
+            "street": { "min": 60000, "max": 100000 },
+            "spa": { "min": 100000, "max": 250000 },
+            "luxury": { "min": 300000, "max": 800000 }
+          },
+          "tips": {
+            "de": "Hygiene und Bewertungen prüfen",
+            "en": "Check hygiene and reviews"
+          }
+        },
+        {
+          "id": "surf-lesson",
+          "name": {
+            "de": "Surfkurs (2 Std)",
+            "en": "Surf lesson (2 hours)"
+          },
+          "prices": {
+            "group": { "min": 200000, "max": 350000 },
+            "private": { "min": 400000, "max": 700000 }
+          },
+          "tips": {
+            "de": "Board und Transport oft inklusive",
+            "en": "Board and transport often included"
+          }
+        },
+        {
+          "id": "diving",
+          "name": {
+            "de": "Tauchgang (1 Tank)",
+            "en": "Dive (1 tank)"
+          },
+          "prices": {
+            "certified": { "min": 500000, "max": 900000 },
+            "discovery": { "min": 800000, "max": 1500000 }
+          },
+          "tips": {
+            "de": "PADI/SSI Zertifizierung prüfen",
+            "en": "Check PADI/SSI certification"
+          }
+        }
+      ]
+    },
+    {
+      "id": "shopping",
+      "name": {
+        "de": "Einkaufen",
+        "en": "Shopping"
+      },
+      "items": [
+        {
+          "id": "sarong",
+          "name": {
+            "de": "Sarong",
+            "en": "Sarong"
+          },
+          "prices": {
+            "market": { "min": 25000, "max": 75000 },
+            "shop": { "min": 75000, "max": 200000 }
+          },
+          "tips": {
+            "de": "Handeln auf 30-50% des Anfangspreises",
+            "en": "Bargain to 30-50% of initial price"
+          }
+        },
+        {
+          "id": "wood-carving",
+          "name": {
+            "de": "Holzschnitzerei (klein)",
+            "en": "Wood carving (small)"
+          },
+          "prices": {
+            "market": { "min": 50000, "max": 200000 },
+            "gallery": { "min": 200000, "max": 1000000 }
+          },
+          "tips": {
+            "de": "In Mas (Ubud) direkt kaufen",
+            "en": "Buy directly in Mas (Ubud)"
+          }
+        },
+        {
+          "id": "silver-jewelry",
+          "name": {
+            "de": "Silberschmuck (pro Gramm)",
+            "en": "Silver jewelry (per gram)"
+          },
+          "prices": {
+            "market": { "min": 8000, "max": 15000 },
+            "shop": { "min": 15000, "max": 30000 }
+          },
+          "tips": {
+            "de": "In Celuk (Bali) am günstigsten",
+            "en": "Cheapest in Celuk village"
+          }
+        }
+      ]
+    }
+  ],
+  "bargainingTips": {
+    "de": [
+      "Immer freundlich bleiben",
+      "Bei 30-50% des Anfangspreises beginnen",
+      "Bei mehreren Artikeln besseren Preis verhandeln",
+      "Bereit sein wegzugehen",
+      "Nicht handeln in Supermärkten oder Restaurants",
+      "Kleingeld für genaue Zahlung dabei haben"
+    ],
+    "en": [
+      "Always stay friendly",
+      "Start at 30-50% of initial price",
+      "Ask for better price when buying multiple items",
+      "Be willing to walk away",
+      "Don't bargain in supermarkets or restaurants",
+      "Have small change for exact payment"
+    ]
+  },
+  "priceWarning": {
+    "de": "Preise sind Richtwerte (IDR). Touristenpreise können höher sein. Immer Taxameter oder App-Preise bevorzugen!",
+    "en": "Prices are guidelines (IDR). Tourist prices may be higher. Always prefer meter or app prices!"
+  }
+}

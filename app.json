@@ -18,7 +18,9 @@
         "CFBundleVersion": "1",
         "LSRequiresIPhoneOS": true,
         "UILaunchStoryboardName": "SplashScreen",
-        "UIRequiredDeviceCapabilities": ["armv7"],
+        "UIRequiredDeviceCapabilities": [
+          "armv7"
+        ],
         "UISupportedInterfaceOrientations": [
           "UIInterfaceOrientationPortrait",
           "UIInterfaceOrientationLandscapeLeft",
@@ -87,7 +89,9 @@
         }
       ],
       "expo-audio",
-      "expo-video"
+      "expo-video",
+      "@sentry/react-native",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,25 +1,12 @@
-import { schemaMigrations } from '@nozbe/watermelondb/Schema/migrations';
+// WatermelonDB Migrations for BaliBuddy
+// Currently empty - migrations will be added as schema evolves
 
-export default schemaMigrations({
-  migrations: [
-    // Add future migrations here
-    // Example:
-    // {
-    //   toVersion: 2,
-    //   steps: [
-    //     createTable({
-    //       name: 'new_table',
-    //       columns: [
-    //         { name: 'column_name', type: 'string' },
-    //       ],
-    //     }),
-    //     addColumns({
-    //       table: 'existing_table',
-    //       columns: [
-    //         { name: 'new_column', type: 'string' },
-    //       ],
-    //     }),
-    //   ],
-    // },
-  ],
-});
+export default {
+  // Migrations will be defined here as needed
+  // Example:
+  // 2: (schema) => schema
+  //   .table('posts')
+  //   .columns((addColumn) => {
+  //     addColumn('subtitle', 'subtitle', { type: 'string', isOptional: true })
+  //   }),
+};

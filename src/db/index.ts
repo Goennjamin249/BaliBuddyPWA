@@ -1,29 +1,29 @@
-import { Database, Q } from '@nozbe/watermelondb';
-import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs';
+import { Database, Q } from "@nozbe/watermelondb";
+import LokiJSAdapter from "@nozbe/watermelondb/adapters/lokijs";
 
-import schema from './schema';
-import migrations from './migrations';
+import { allModels } from "./models";
+import schema from "./schema";
 
 // Create LokiJS adapter for web (IndexedDB)
 const adapter = new LokiJSAdapter({
   schema,
-  migrations,
+  // Migrations will be added as schema evolves
   useWebWorker: false,
   useIncrementalIndexedDB: true,
 });
 
-// Create database instance
+// Create database instance with all models
 const database = new Database({
   adapter,
-  modelClasses: [
-    // Models will be imported here as they are created
-  ],
+  modelClasses: allModels,
 });
 
 // Optimized batch write helper for performance
-export async function batchWrite(operations: Array<() => Promise<any>>): Promise<void> {
+export async function batchWrite(
+  operations: Array<() => Promise<any>>,
+): Promise<void> {
   await database.write(async () => {
-    const records = await Promise.all(operations.map(op => op()));
+    const records = await Promise.all(operations.map((op) => op()));
     await database.batch(...records);
   });
 }
@@ -31,7 +31,7 @@ export async function batchWrite(operations: Array<() => Promise<any>>): Promise
 // Optimized query helper with caching
 export async function cachedQuery<T>(
   tableName: string,
-  query?: (collection: any) => any
+  query?: (collection: any) => any,
 ): Promise<T[]> {
   const collection = database.get(tableName);
   if (query) {
@@ -43,14 +43,14 @@ export async function cachedQuery<T>(
 // Batch insert helper for bulk operations
 export async function batchInsert<T>(
   tableName: string,
-  items: Partial<T>[]
+  items: Partial<T>[],
 ): Promise<void> {
   const collection = database.get(tableName);
   await database.write(async () => {
-    const operations = items.map(item => 
-      collection.prepareCreate(record => {
+    const operations = items.map((item) =>
+      collection.prepareCreate((record) => {
         Object.assign(record, item);
-      })
+      }),
     );
     await database.batch(...operations);
   });
@@ -59,13 +59,13 @@ export async function batchInsert<T>(
 // Batch update helper
 export async function batchUpdate<T>(
   records: any[],
-  updates: Partial<T>
+  updates: Partial<T>,
 ): Promise<void> {
   await database.write(async () => {
-    const operations = records.map(record =>
+    const operations = records.map((record) =>
       record.prepareUpdate(() => {
         Object.assign(record, updates);
-      })
+      }),
     );
     await database.batch(...operations);
   });
