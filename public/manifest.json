@@ -4,8 +4,8 @@
   "description": "Dein smarter Offline-Reise-Companion für Backpacker in Bali. Finde Wasser, Wäschereien, ATMs, Kliniken und Fähren - auch ohne Internet!",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#00B4D8",
+  "background_color": "#0F172A",
+  "theme_color": "#FF9D6C",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "de",
@@ -13,40 +13,22 @@
   "categories": ["travel", "utilities", "lifestyle"],
   "icons": [
     {
-      "src": "/assets/images/android/launchericon-48x48.png",
-      "sizes": "48x48",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/assets/images/android/launchericon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/assets/images/android/launchericon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/assets/images/android/launchericon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/assets/images/android/launchericon-192x192.png",
+      "src": "/assets/images/ios/192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/assets/images/android/launchericon-512x512.png",
+      "src": "/assets/images/ios/512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/ios/1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/assets/images/ios/180.png",
@@ -71,12 +53,6 @@
       "sizes": "120x120",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/assets/images/ios/76.png",
-      "sizes": "76x76",
-      "type": "image/png",
-      "purpose": "any"
     }
   ],
   "screenshots": [],
@@ -87,11 +63,11 @@
       "name": "Karte öffnen",
       "short_name": "Karte",
       "description": "Öffne die interaktive Bali-Karte",
-      "url": "/map",
+      "url": "/smart-map",
       "icons": [
         {
-          "src": "/assets/images/android/launchericon-96x96.png",
-          "sizes": "96x96"
+          "src": "/assets/images/ios/192.png",
+          "sizes": "192x192"
         }
       ]
     },
@@ -99,11 +75,11 @@
       "name": "Notfall",
       "short_name": "Notfall",
       "description": "Notfall-Informationen und Kliniken",
-      "url": "/emergency",
+      "url": "/sos-hub",
       "icons": [
         {
-          "src": "/assets/images/android/launchericon-96x96.png",
-          "sizes": "96x96"
+          "src": "/assets/images/ios/192.png",
+          "sizes": "192x192"
         }
       ]
     },
@@ -111,23 +87,23 @@
       "name": "Währungsrechner",
       "short_name": "Währung",
       "description": "IDR Währungsrechner mit Live-Kursen",
-      "url": "/currency",
+      "url": "/wallet",
       "icons": [
         {
-          "src": "/assets/images/android/launchericon-96x96.png",
-          "sizes": "96x96"
+          "src": "/assets/images/ios/192.png",
+          "sizes": "192x192"
         }
       ]
     },
     {
-      "name": "Sprachführer",
-      "short_name": "Sprache",
-      "description": "Bahasa Indonesia Sprachführer",
-      "url": "/phrasebook",
+      "name": "Survival Guide",
+      "short_name": "Guide",
+      "description": "Reisetipps und Gesetze für Bali",
+      "url": "/survival",
       "icons": [
         {
-          "src": "/assets/images/android/launchericon-96x96.png",
-          "sizes": "96x96"
+          "src": "/assets/images/ios/192.png",
+          "sizes": "192x192"
         }
       ]
     }

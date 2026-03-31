@@ -1,80 +1,209 @@
-import React, { memo, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { Image } from 'expo-image';
+import React, { memo, useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  useWindowDimensions,
+} from 'react-native';
+import { Image, ImageErrorEventData, ImageSource } from 'expo-image';
+import { useUIStore } from '../stores/uiStore';
+import { RefreshCw } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface OptimizedImageProps {
-  source: { uri: string } | number;
+  /** Image source - URI string or local asset (require) */
+  source: ImageSource | string | number;
+  /** Alternative text for accessibility */
   alt?: string;
+  /** Fixed width (px) - overrides aspectRatio if set */
   width?: number;
+  /** Fixed height (px) - overrides aspectRatio if set */
   height?: number;
+  /** Aspect ratio (width/height) - used if width/height not set */
+  aspectRatio?: number;
+  /** Additional Tailwind/NativeWind classes */
   className?: string;
+  /** Callback when image loads successfully */
   onLoad?: () => void;
-  onError?: () => void;
+  /** Callback when image fails to load */
+  onError?: (error: ImageErrorEventData) => void;
+  /** Custom placeholder image source */
+  placeholder?: ImageSource | number;
+  /** Whether to show retry button on error (default: true) */
+  allowRetry?: boolean;
+  /** Whether to show loading indicator (default: true) */
+  showLoader?: boolean;
+  /** Image content fit mode (default: 'cover') */
+  contentFit?: 'cover' | 'contain' | 'fill' | 'none';
+  /** Border radius in px (default: 12) */
+  borderRadius?: number;
+  /** Fallback image source when main image fails */
+  fallbackSource?: ImageSource | string | number;
 }
 
-/**
- * Optimized Image component using expo-image
- * Provides lazy loading, caching, and placeholder support
- */
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+
 function OptimizedImage({
   source,
   alt = '',
-  width = 300,
-  height = 200,
+  width,
+  height,
+  aspectRatio = 4 / 3,
   className = '',
   onLoad,
   onError,
+  placeholder,
+  allowRetry = true,
+  showLoader = true,
+  contentFit = 'cover',
+  borderRadius = 12,
+  fallbackSource,
 }: OptimizedImageProps) {
+  const { t } = useTranslation();
+  const { isDark } = useUIStore();
+  const { width: screenWidth } = useWindowDimensions();
+
+  // State
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [currentSource, setCurrentSource] = useState(source);
 
-  const handleLoad = () => {
+  // Calculate dimensions
+  const computedWidth = width ?? screenWidth - 32; // Default: screen width minus padding
+  const computedHeight = height ?? computedWidth / aspectRatio;
+
+  // Resolve image source (handle string URIs)
+  const resolvedSource: ImageSource | number = typeof currentSource === 'string'
+    ? { uri: currentSource }
+    : currentSource;
+
+  // Handlers
+  const handleLoad = useCallback(() => {
     setIsLoading(false);
+    setHasError(false);
     onLoad?.();
-  };
+  }, [onLoad]);
 
-  const handleError = () => {
-    setIsLoading(false);
-    setHasError(true);
-    onError?.();
-  };
+  const handleError = useCallback(
+    (event: ImageErrorEventData) => {
+      setIsLoading(false);
+      setHasError(true);
+      onError?.(event);
 
-  // Error state
-  if (hasError) {
+      // Try fallback source if available and not already using it
+      if (fallbackSource && currentSource !== fallbackSource) {
+        setCurrentSource(fallbackSource);
+        setHasError(false);
+        setIsLoading(true);
+      }
+    },
+    [onError, fallbackSource, currentSource],
+  );
+
+  const handleRetry = useCallback(() => {
+    setRetryCount((prev) => prev + 1);
+    setIsLoading(true);
+    setHasError(false);
+    setCurrentSource(source); // Reset to original source
+  }, [source]);
+
+  // Error State with Retry
+  if (hasError && !fallbackSource) {
     return (
-      <View style={[styles.errorContainer, { width, height }]}>
-        <Text style={styles.errorText}>Bild konnte nicht geladen werden</Text>
+      <View
+        style={[
+          styles.errorContainer,
+          { width: computedWidth, height: computedHeight, borderRadius },
+        ]}
+        className={`${isDark ? 'bg-slate-800 ' : ''}${className ?? ''}`}
+        accessibilityRole="image"
+        accessibilityLabel={t('image.error', 'Bild konnte nicht geladen werden')}
+      >
+        <Text
+          style={[styles.errorText, isDark && styles.errorTextDark]}
+          className="text-center"
+        >
+          {t('image.loadError', 'Bild konnte nicht geladen werden')}
+        </Text>
+
+        {allowRetry && (
+          <TouchableOpacity
+            style={[styles.retryButton, isDark && styles.retryButtonDark]}
+            onPress={handleRetry}
+            accessibilityRole="button"
+            accessibilityLabel={t('image.retry', 'Erneut versuchen')}
+            accessibilityHint={t('image.retryHint', 'Bild erneut laden')}
+          >
+            <RefreshCw size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+            <Text
+              style={[styles.retryText, isDark && styles.retryTextDark]}
+            >
+              {t('image.retry', 'Erneut versuchen')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { width, height }]}>
+    <View
+      style={[
+        styles.container,
+        { width: computedWidth, height: computedHeight, borderRadius },
+      ]}
+      className={className ?? ''}
+      accessibilityRole="image"
+      accessibilityLabel={alt || t('image.defaultAlt', 'Bild')}
+    >
       <Image
-        source={source}
-        style={styles.image}
+        source={resolvedSource}
+        style={[styles.image, { borderRadius }]}
         alt={alt}
         onLoad={handleLoad}
         onError={handleError}
-        placeholder={require('../../assets/images/icon.png')}
-        contentFit="cover"
+        placeholder={placeholder}
+        contentFit={contentFit}
         transition={300}
+        cachePolicy="memory-disk"
+        recyclingKey={`${typeof currentSource === 'string' ? currentSource : 'local'}-${retryCount}`}
       />
-      
-      {/* Loading overlay */}
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color="#00B4D8" />
+
+      {/* Loading Overlay */}
+      {isLoading && showLoader && (
+        <View
+          style={[
+            styles.loadingOverlay,
+            { borderRadius },
+            isDark && styles.loadingOverlayDark,
+          ]}
+          accessibilityRole="progressbar"
+          accessibilityLabel={t('image.loading', 'Bild wird geladen')}
+        >
+          <ActivityIndicator size="small" color={isDark ? '#60A5FA' : '#00B4D8'} />
         </View>
       )}
     </View>
   );
 }
 
+// ============================================================================
+// STYLES
+// ============================================================================
+
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    borderRadius: 12,
     backgroundColor: '#F1F5F9',
   },
   image: {
@@ -89,20 +218,50 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(241, 245, 249, 0.8)',
+    backgroundColor: 'rgba(241, 245, 249, 0.85)',
+  },
+  loadingOverlayDark: {
+    backgroundColor: 'rgba(30, 41, 59, 0.85)',
   },
   errorContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    padding: 16,
+    gap: 12,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
-    padding: 16,
+  },
+  errorTextDark: {
+    color: '#94A3B8',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 8,
+  },
+  retryButtonDark: {
+    backgroundColor: '#334155',
+  },
+  retryText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  retryTextDark: {
+    color: '#94A3B8',
   },
 });
+
+// ============================================================================
+// EXPORT
+// ============================================================================
 
 export default memo(OptimizedImage);

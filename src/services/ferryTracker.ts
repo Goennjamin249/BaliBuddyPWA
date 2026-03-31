@@ -162,7 +162,7 @@ export const mockFerrySchedule: Ferry[] = [
 export class FerryTrackerService {
   private ws: WebSocket | null = null;
   private subscribers: ((data: any) => void)[] = [];
-  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connected: boolean = false;
 
   // Connect to aisstream.io WebSocket

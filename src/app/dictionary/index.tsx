@@ -156,13 +156,12 @@ export default function DictionaryScreen() {
 
         {/* Dictionary List */}
         {results.length > 0 ? (
-          <FlashList
-            data={results}
-            estimatedItemSize={150}
-            keyExtractor={(item) => item.id}
-            renderItem={renderEntry}
-            contentContainerStyle={styles.listContent}
-          />
+        <FlashList
+          data={results}
+          keyExtractor={(item) => item.id}
+          renderItem={renderEntry}
+          contentContainerStyle={styles.listContent}
+        />
         ) : (
           <View style={styles.emptyState}>
             <Book size={48} color="#94A3B8" />

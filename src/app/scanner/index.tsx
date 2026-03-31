@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
+  StyleSheet,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
+import { useRouter } from "expo-router";
 import {
   Camera,
   Scan,
@@ -20,8 +21,12 @@ import {
   Utensils,
   ArrowLeft,
   Shield,
-} from 'lucide-react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+  X,
+} from "lucide-react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Haptics from "expo-haptics";
+
+import { useTheme } from "../../theme/ThemeContext";
 
 // Types
 interface MenuItem {
@@ -31,7 +36,7 @@ interface MenuItem {
   price: string;
   allergens: string[];
   isSafe: boolean;
-  riskLevel: 'low' | 'medium' | 'high';
+  riskLevel: "low" | "medium" | "high";
 }
 
 interface AllergenInfo {
@@ -42,30 +47,19 @@ interface AllergenInfo {
 }
 
 // Constants
-const COLORS = {
-  primary: '#00B4D8',
-  success: '#90BE6D',
-  warning: '#FF6B6B',
-  background: '#F8FAFC',
-  card: '#FFFFFF',
-  text: '#1E293B',
-  textMuted: '#64748B',
-  border: '#E2E8F0',
-} as const;
-
 const RISK_COLORS = {
-  low: COLORS.success,
-  medium: COLORS.warning,
-  high: '#EF4444',
+  low: "#90BE6D",
+  medium: "#F59E0B",
+  high: "#EF4444",
 } as const;
 
 const DEFAULT_ALLERGENS: AllergenInfo[] = [
-  { id: 'gluten', name: 'Gluten', icon: '🌾', selected: false },
-  { id: 'dairy', name: 'Milchprodukte', icon: '🥛', selected: false },
-  { id: 'nuts', name: 'Nüsse', icon: '🥜', selected: false },
-  { id: 'shellfish', name: 'Meeresfrüchte', icon: '🦐', selected: false },
-  { id: 'eggs', name: 'Eier', icon: '🥚', selected: false },
-  { id: 'soy', name: 'Soja', icon: '🫘', selected: false },
+  { id: "gluten", name: "Gluten", icon: "🌾", selected: false },
+  { id: "dairy", name: "Milch", icon: "🥛", selected: false },
+  { id: "nuts", name: "Nüsse", icon: "🥜", selected: false },
+  { id: "shellfish", name: "Meeresfr.", icon: "🦐", selected: false },
+  { id: "eggs", name: "Eier", icon: "🥚", selected: false },
+  { id: "soy", name: "Soja", icon: "🫘", selected: false },
 ];
 
 // Sub-components
@@ -74,40 +68,60 @@ interface AllergenSelectorProps {
   onToggle: (id: string) => void;
 }
 
-const AllergenSelector: React.FC<AllergenSelectorProps> = React.memo(({ allergens, onToggle }) => (
-  <View className="mb-6">
-    <Text className="text-lg font-semibold text-gray-800 mb-3">
-      Deine Allergien
-    </Text>
-    <View className="flex-row flex-wrap gap-2">
-      {allergens.map((allergen) => (
-        <TouchableOpacity
-          key={allergen.id}
-          onPress={() => onToggle(allergen.id)}
-          className={`flex-row items-center px-4 py-2 rounded-full border ${
-            allergen.selected
-              ? 'bg-primary-100 border-primary-500'
-              : 'bg-white border-gray-200'
-          }`}
-          accessibilityLabel={`${allergen.name} ${allergen.selected ? 'ausgewählt' : 'nicht ausgewählt'}`}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: allergen.selected }}
-        >
-          <Text className="mr-2">{allergen.icon}</Text>
-          <Text
-            className={`text-sm ${
-              allergen.selected ? 'text-primary-700 font-medium' : 'text-gray-600'
-            }`}
-          >
-            {allergen.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  </View>
-));
+const AllergenSelector: React.FC<AllergenSelectorProps> = React.memo(
+  ({ allergens, onToggle }) => {
+    const { colors } = useTheme();
 
-AllergenSelector.displayName = 'AllergenSelector';
+    return (
+      <View style={styles.allergenSection}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Deine Allergien
+        </Text>
+        <View style={styles.allergenChips}>
+          {allergens.map((allergen) => (
+            <TouchableOpacity
+              key={allergen.id}
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onToggle(allergen.id);
+              }}
+              style={[
+                styles.allergenChip,
+                allergen.selected
+                  ? {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    }
+                  : {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+              ]}
+              accessibilityLabel={`${allergen.name} ${allergen.selected ? "ausgewählt" : "nicht ausgewählt"}`}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: allergen.selected }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.allergenIcon}>{allergen.icon}</Text>
+              <Text
+                style={[
+                  styles.allergenText,
+                  allergen.selected
+                    ? { color: "#FFFFFF", fontWeight: "600" }
+                    : { color: colors.textMuted },
+                ]}
+              >
+                {allergen.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  },
+);
+
+AllergenSelector.displayName = "AllergenSelector";
 
 interface CameraSectionProps {
   hasPermission: boolean | null;
@@ -118,118 +132,166 @@ interface CameraSectionProps {
 
 const CameraSection: React.FC<CameraSectionProps> = React.memo(
   ({ hasPermission, isScanning, onScan, onRequestPermission }) => {
-    const { t } = useTranslation();
+    const { colors } = useTheme();
 
     if (hasPermission === null) {
       return (
-        <View className="h-64 bg-gray-100 rounded-2xl items-center justify-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-gray-500">Kamera wird geladen...</Text>
+        <View
+          style={[
+            styles.cameraContainer,
+            { backgroundColor: colors.cardMuted },
+          ]}
+        >
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.cameraLoadingText, { color: colors.textMuted }]}>
+            Kamera wird geladen...
+          </Text>
         </View>
       );
     }
 
     if (hasPermission === false) {
       return (
-        <View className="h-64 bg-gray-100 rounded-2xl items-center justify-center p-6">
-          <Camera size={48} color={COLORS.textMuted} />
-          <Text className="mt-4 text-gray-600 text-center">
+        <View
+          style={[
+            styles.cameraContainer,
+            { backgroundColor: colors.cardMuted },
+          ]}
+        >
+          <Camera size={48} color={colors.textMuted} />
+          <Text
+            style={[styles.cameraPermissionText, { color: colors.textMuted }]}
+          >
             Kamera-Zugriff erforderlich
           </Text>
           <TouchableOpacity
             onPress={onRequestPermission}
-            className="mt-4 bg-primary-500 px-6 py-3 rounded-xl"
+            style={[
+              styles.permissionButton,
+              { backgroundColor: colors.primary },
+            ]}
             accessibilityLabel="Kamera-Zugriff erlauben"
+            activeOpacity={0.7}
           >
-            <Text className="text-white font-semibold">Zugriff erlauben</Text>
+            <Text style={styles.permissionButtonText}>Zugriff erlauben</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
     return (
-      <View className="h-64 bg-gray-900 rounded-2xl overflow-hidden relative">
-        <CameraView className="flex-1" facing="back">
-          <View className="flex-1 items-center justify-center">
-            <View className="w-48 h-48 border-2 border-white/50 rounded-2xl" />
+      <View style={styles.cameraWrapper}>
+        <CameraView style={styles.camera} facing="back">
+          <View style={styles.cameraOverlay}>
+            {/* Glass-morphic scan frame */}
+            <View style={styles.scanFrame}>
+              <View style={styles.cornerTopLeft} />
+              <View style={styles.cornerTopRight} />
+              <View style={styles.cornerBottomLeft} />
+              <View style={styles.cornerBottomRight} />
+            </View>
+            <Text style={styles.scanGuideText}>
+              Speisekarte hier positionieren
+            </Text>
           </View>
         </CameraView>
+
+        {/* Glass-morphic scan button */}
         <TouchableOpacity
           onPress={onScan}
           disabled={isScanning}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white px-6 py-3 rounded-full flex-row items-center"
+          style={[styles.scanButton, isScanning && styles.scanButtonDisabled]}
           accessibilityLabel="Speisekarte scannen"
+          activeOpacity={0.7}
         >
           {isScanning ? (
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <>
-              <Scan size={20} color={COLORS.primary} />
-              <Text className="ml-2 text-primary-600 font-semibold">
-                {t('scanner.scan', 'Scannen')}
-              </Text>
+              <Scan size={20} color={colors.primary} />
+              <Text style={styles.scanButtonText}>Scannen</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
     );
-  }
+  },
 );
 
-CameraSection.displayName = 'CameraSection';
+CameraSection.displayName = "CameraSection";
 
 interface MenuItemCardProps {
   item: MenuItem;
 }
 
-const MenuItemCard: React.FC<MenuItemCardProps> = React.memo(({ item }) => (
-  <View
-    className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100"
-    accessibilityLabel={`${item.name}, ${item.price}, ${item.isSafe ? 'sicher' : 'Vorsicht'}`}
-  >
-    <View className="flex-row justify-between items-start">
-      <View className="flex-1 mr-3">
-        <Text className="text-lg font-semibold text-gray-800">{item.name}</Text>
-        <Text className="text-gray-500 text-sm mt-1">{item.description}</Text>
-      </View>
-      <View className="items-end">
-        <Text className="text-lg font-bold text-primary-600">{item.price}</Text>
-        <View
-          className="flex-row items-center mt-2 px-3 py-1 rounded-full"
-          style={{ backgroundColor: `${RISK_COLORS[item.riskLevel]}20` }}
-        >
-          {item.isSafe ? (
-            <CheckCircle size={16} color={RISK_COLORS[item.riskLevel]} />
-          ) : (
-            <AlertTriangle size={16} color={RISK_COLORS[item.riskLevel]} />
-          )}
+const MenuItemCard: React.FC<MenuItemCardProps> = React.memo(({ item }) => {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.menuItemCard,
+        { backgroundColor: colors.card, borderColor: colors.border },
+      ]}
+      accessibilityLabel={`${item.name}, ${item.price}, ${item.isSafe ? "sicher" : "Vorsicht"}`}
+    >
+      <View style={styles.menuItemHeader}>
+        <View style={styles.menuItemInfo}>
+          <Text style={[styles.menuItemName, { color: colors.text }]}>
+            {item.name}
+          </Text>
           <Text
-            className="ml-1 text-xs font-medium"
-            style={{ color: RISK_COLORS[item.riskLevel] }}
+            style={[styles.menuItemDescription, { color: colors.textMuted }]}
           >
-            {item.isSafe ? 'Sicher' : 'Vorsicht'}
+            {item.description}
           </Text>
         </View>
-      </View>
-    </View>
-    {item.allergens.length > 0 && (
-      <View className="flex-row flex-wrap mt-3 gap-1">
-        {item.allergens.map((allergen, index) => (
-          <View key={index} className="bg-red-50 px-2 py-1 rounded-md">
-            <Text className="text-xs text-red-600">{allergen}</Text>
+        <View style={styles.menuItemMeta}>
+          <Text style={[styles.menuItemPrice, { color: colors.primary }]}>
+            {item.price}
+          </Text>
+          <View
+            style={[
+              styles.safetyBadge,
+              { backgroundColor: `${RISK_COLORS[item.riskLevel]}20` },
+            ]}
+          >
+            {item.isSafe ? (
+              <CheckCircle size={16} color={RISK_COLORS[item.riskLevel]} />
+            ) : (
+              <AlertTriangle size={16} color={RISK_COLORS[item.riskLevel]} />
+            )}
+            <Text
+              style={[
+                styles.safetyBadgeText,
+                { color: RISK_COLORS[item.riskLevel] },
+              ]}
+            >
+              {item.isSafe ? "Sicher" : "Vorsicht"}
+            </Text>
           </View>
-        ))}
+        </View>
       </View>
-    )}
-  </View>
-));
+      {item.allergens.length > 0 && (
+        <View style={styles.allergenTags}>
+          {item.allergens.map((allergen, index) => (
+            <View key={index} style={styles.allergenTag}>
+              <Text style={styles.allergenTagText}>{allergen}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+});
 
-MenuItemCard.displayName = 'MenuItemCard';
+MenuItemCard.displayName = "MenuItemCard";
 
 // Main Component
 export default function ScannerScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
 
   // State
@@ -239,13 +301,15 @@ export default function ScannerScreen() {
   const [showResults, setShowResults] = useState(false);
 
   // Handlers
-  const handleToggleAllergen = useCallback((id: string) => {
+  const handleToggleAllergen = useCallback(async (id: string) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setAllergens((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, selected: !a.selected } : a))
+      prev.map((a) => (a.id === id ? { ...a, selected: !a.selected } : a)),
     );
   }, []);
 
   const handleScan = useCallback(async () => {
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsScanning(true);
 
     // Simulate OCR processing
@@ -254,31 +318,31 @@ export default function ScannerScreen() {
     // Mock scanned menu items
     const mockItems: MenuItem[] = [
       {
-        id: '1',
-        name: 'Nasi Goreng',
-        description: 'Gebratener Reis mit Gemüse und Ei',
-        price: '45.000 IDR',
-        allergens: ['Eier', 'Soja'],
+        id: "1",
+        name: "Nasi Goreng",
+        description: "Gebratener Reis mit Gemüse und Ei",
+        price: "45.000 IDR",
+        allergens: ["Eier", "Soja"],
         isSafe: true,
-        riskLevel: 'low',
+        riskLevel: "low",
       },
       {
-        id: '2',
-        name: 'Mie Goreng',
-        description: 'Gebratene Nudeln mit Garnelen',
-        price: '50.000 IDR',
-        allergens: ['Meeresfrüchte', 'Gluten'],
+        id: "2",
+        name: "Mie Goreng",
+        description: "Gebratene Nudeln mit Garnelen",
+        price: "50.000 IDR",
+        allergens: ["Meeresfrüchte", "Gluten"],
         isSafe: false,
-        riskLevel: 'high',
+        riskLevel: "high",
       },
       {
-        id: '3',
-        name: 'Gado-Gado',
-        description: 'Gemüsesalat mit Erdnusssauce',
-        price: '35.000 IDR',
-        allergens: ['Nüsse'],
+        id: "3",
+        name: "Gado-Gado",
+        description: "Gemüsesalat mit Erdnusssauce",
+        price: "35.000 IDR",
+        allergens: ["Nüsse"],
         isSafe: false,
-        riskLevel: 'medium',
+        riskLevel: "medium",
       },
     ];
 
@@ -287,38 +351,54 @@ export default function ScannerScreen() {
     setIsScanning(false);
   }, []);
 
-  const handleReset = useCallback(() => {
+  const handleReset = useCallback(async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowResults(false);
     setScannedItems([]);
   }, []);
 
   // Render
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.card, borderBottomColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
-          className="p-2"
+          style={styles.headerButton}
           accessibilityLabel="Zurück"
+          activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color={COLORS.text} />
+          <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-800">
-          {t('scanner.title', 'Speisekarten-Scanner')}
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {t("scanner.title", "Speisekarten-Scanner")}
         </Text>
-        <View className="w-10" />
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView className="flex-1 px-4 py-6">
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {!showResults ? (
           <>
             {/* Allergen Selection */}
-            <AllergenSelector allergens={allergens} onToggle={handleToggleAllergen} />
+            <AllergenSelector
+              allergens={allergens}
+              onToggle={handleToggleAllergen}
+            />
 
             {/* Camera Section */}
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-800 mb-3">
+            <View style={styles.cameraSection}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
                 Speisekarte scannen
               </Text>
               <CameraSection
@@ -330,14 +410,21 @@ export default function ScannerScreen() {
             </View>
 
             {/* Info Card */}
-            <View className="bg-blue-50 rounded-2xl p-4 mb-6">
-              <View className="flex-row items-start">
-                <Shield size={24} color={COLORS.primary} />
-                <View className="flex-1 ml-3">
-                  <Text className="text-blue-800 font-medium mb-1">
+            <View
+              style={[styles.infoCard, { backgroundColor: colors.cardMuted }]}
+            >
+              <View style={styles.infoCardContent}>
+                <Shield size={24} color={colors.primary} />
+                <View style={styles.infoCardText}>
+                  <Text style={[styles.infoCardTitle, { color: colors.text }]}>
                     Wie funktioniert der Scanner?
                   </Text>
-                  <Text className="text-blue-600 text-sm">
+                  <Text
+                    style={[
+                      styles.infoCardDescription,
+                      { color: colors.textMuted },
+                    ]}
+                  >
                     Fotografiere eine Speisekarte und der Scanner erkennt
                     automatisch Allergene und warnt dich vor potenziell
                     gefährlichen Gerichten.
@@ -349,39 +436,84 @@ export default function ScannerScreen() {
         ) : (
           <>
             {/* Results Header */}
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-lg font-semibold text-gray-800">
+            <View style={styles.resultsHeader}>
+              <Text style={[styles.resultsTitle, { color: colors.text }]}>
                 Scan-Ergebnisse
               </Text>
               <TouchableOpacity
                 onPress={handleReset}
-                className="bg-gray-100 px-4 py-2 rounded-full"
+                style={[
+                  styles.resetButton,
+                  { backgroundColor: colors.cardMuted },
+                ]}
                 accessibilityLabel="Erneut scannen"
+                activeOpacity={0.7}
               >
-                <Text className="text-gray-600 font-medium">Erneut scannen</Text>
+                <Text
+                  style={[styles.resetButtonText, { color: colors.textMuted }]}
+                >
+                  Erneut scannen
+                </Text>
               </TouchableOpacity>
             </View>
 
             {/* Summary */}
-            <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-              <View className="flex-row justify-around">
-                <View className="items-center">
-                  <Text className="text-2xl font-bold text-gray-800">
+            <View
+              style={[styles.summaryCard, { backgroundColor: colors.card }]}
+            >
+              <View style={styles.summaryStats}>
+                <View style={styles.summaryStat}>
+                  <Text
+                    style={[styles.summaryStatValue, { color: colors.text }]}
+                  >
                     {scannedItems.length}
                   </Text>
-                  <Text className="text-gray-500 text-sm">Gerichte</Text>
+                  <Text
+                    style={[
+                      styles.summaryStatLabel,
+                      { color: colors.textMuted },
+                    ]}
+                  >
+                    Gerichte
+                  </Text>
                 </View>
-                <View className="items-center">
-                  <Text className="text-2xl font-bold text-green-600">
+                <View
+                  style={[
+                    styles.summaryStatDivider,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
+                <View style={styles.summaryStat}>
+                  <Text style={styles.summaryStatValueSuccess}>
                     {scannedItems.filter((i) => i.isSafe).length}
                   </Text>
-                  <Text className="text-gray-500 text-sm">Sicher</Text>
+                  <Text
+                    style={[
+                      styles.summaryStatLabel,
+                      { color: colors.textMuted },
+                    ]}
+                  >
+                    Sicher
+                  </Text>
                 </View>
-                <View className="items-center">
-                  <Text className="text-2xl font-bold text-red-600">
+                <View
+                  style={[
+                    styles.summaryStatDivider,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
+                <View style={styles.summaryStat}>
+                  <Text style={styles.summaryStatValueWarning}>
                     {scannedItems.filter((i) => !i.isSafe).length}
                   </Text>
-                  <Text className="text-gray-500 text-sm">Vorsicht</Text>
+                  <Text
+                    style={[
+                      styles.summaryStatLabel,
+                      { color: colors.textMuted },
+                    ]}
+                  >
+                    Vorsicht
+                  </Text>
                 </View>
               </View>
             </View>
@@ -396,3 +528,326 @@ export default function ScannerScreen() {
     </SafeAreaView>
   );
 }
+
+// Styles
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 140,
+  },
+  allergenSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  allergenChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  allergenChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+  },
+  allergenIcon: {
+    fontSize: 16,
+  },
+  allergenText: {
+    fontSize: 13,
+  },
+  cameraSection: {
+    marginBottom: 20,
+  },
+  cameraContainer: {
+    height: 280,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cameraLoadingText: {
+    fontSize: 14,
+    marginTop: 12,
+  },
+  cameraPermissionText: {
+    fontSize: 14,
+    marginTop: 12,
+    textAlign: "center",
+  },
+  permissionButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  permissionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  cameraWrapper: {
+    height: 280,
+    borderRadius: 24,
+    overflow: "hidden",
+    position: "relative",
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanFrame: {
+    width: 220,
+    height: 220,
+    position: "relative",
+  },
+  cornerTopLeft: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderColor: "#FFFFFF",
+    borderTopLeftRadius: 12,
+  },
+  cornerTopRight: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderColor: "#FFFFFF",
+    borderTopRightRadius: 12,
+  },
+  cornerBottomLeft: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderColor: "#FFFFFF",
+    borderBottomLeftRadius: 12,
+  },
+  cornerBottomRight: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderColor: "#FFFFFF",
+    borderBottomRightRadius: 12,
+  },
+  scanGuideText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    marginTop: 16,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  scanButton: {
+    position: "absolute",
+    bottom: 16,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 28,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+  },
+  scanButtonDisabled: {
+    opacity: 0.7,
+  },
+  scanButtonText: {
+    color: "#00B4D8",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  infoCard: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 20,
+  },
+  infoCardContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  infoCardText: {
+    flex: 1,
+  },
+  infoCardTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  infoCardDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  resultsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  resultsTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  resetButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  resetButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  summaryCard: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+  },
+  summaryStats: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  summaryStat: {
+    alignItems: "center",
+  },
+  summaryStatDivider: {
+    width: 1,
+    height: 40,
+  },
+  summaryStatValue: {
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  summaryStatValueSuccess: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#90BE6D",
+  },
+  summaryStatValueWarning: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#EF4444",
+  },
+  summaryStatLabel: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  menuItemCard: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  menuItemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  menuItemInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  menuItemMeta: {
+    alignItems: "flex-end",
+  },
+  menuItemName: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  menuItemDescription: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+  menuItemPrice: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  safetyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    marginTop: 8,
+    gap: 4,
+  },
+  safetyBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  allergenTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 12,
+  },
+  allergenTag: {
+    backgroundColor: "rgba(239,68,68,0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  allergenTagText: {
+    fontSize: 11,
+    color: "#EF4444",
+    fontWeight: "600",
+  },
+});

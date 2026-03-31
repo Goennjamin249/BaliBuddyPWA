@@ -1,9 +1,6 @@
 {
-  "editor.codeActionsOnSave": {
-    "source.fixAll": "explicit",
-    "source.organizeImports": "explicit",
-    "source.sortMembers": "explicit"
-  },
-  "vue3snippets.insertPragma": true,
-  "jdk.project.jdkhome": "jdk.jdkhome",
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "editor.formatOnSave": true
 }

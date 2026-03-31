@@ -9,8 +9,7 @@
 // Import sync handler
 import syncHandler from "../../../api/sync";
 
-// Route mapping - only sync handler for now
-// Other handlers can be added as needed
+// Route mapping for catch-all API routes
 const routeHandlers: Record<string, (req: any, res: any) => Promise<void>> = {
   sync: syncHandler,
 };
@@ -103,10 +102,10 @@ export function DELETE(
 
 async function handleRequest(
   request: Request,
-  params: { slug: string[] },
+  params: { slug: string[] } | undefined,
   method: string,
 ) {
-  const slug = params.slug;
+  const slug = params?.slug || [];
   const route = slug[0] || "";
 
   // Check if route exists

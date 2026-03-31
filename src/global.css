@@ -1,3 +1,5 @@
+/* Mapbox GL CSS for web map rendering - MUST BE FIRST */
+@import url('https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css');
 @import "tailwindcss";
 
 @theme {
@@ -5,27 +7,31 @@
   --color-primary: #00B4D8;
   --color-primary-light: #4DD0E1;
   --color-primary-dark: #0097A7;
-  
+
   --color-success: #90BE6D;
   --color-success-light: #AED581;
   --color-success-dark: #7CB342;
-  
+
   --color-warning: #F59E0B;
   --color-warning-light: #FBBF24;
   --color-warning-dark: #D97706;
-  
+
   --color-danger: #FF6B6B;
   --color-danger-light: #FF8A8A;
   --color-danger-dark: #E53935;
-  
+
   /* Neutral Colors */
   --color-background: #F8FAFC;
+  --color-background-muted: #F1F5F9;
   --color-surface: #FFFFFF;
+  --color-surface-dark: #0F172A;
+  --color-surface-muted: #334155;
   --color-text-primary: #0F172A;
   --color-text-secondary: #64748B;
   --color-text-muted: #94A3B8;
   --color-border: #E2E8F0;
-  
+  --color-border-dark: #334155;
+
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -33,24 +39,28 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
-  
+
   /* Border Radius */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
+  --radius-4xl: 32px;
   --radius-full: 9999px;
-  
-  /* Shadows */
+
+  /* Shadows - NativeWind v5 boxShadow compatible */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-none: 0 0 #0000;
+
   /* Typography */
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
-  
+
   /* Font Sizes */
   --text-xs: 12px;
   --text-sm: 14px;
@@ -60,19 +70,19 @@
   --text-2xl: 24px;
   --text-3xl: 30px;
   --text-4xl: 36px;
-  
+
   /* Font Weights */
   --font-normal: 400;
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
   --font-extrabold: 800;
-  
+
   /* Line Heights */
   --leading-tight: 1.25;
   --leading-normal: 1.5;
   --leading-relaxed: 1.625;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 300ms ease;
@@ -84,14 +94,23 @@
   * {
     @apply border-border;
   }
-  
+
   body {
-    @apply bg-background text-text-primary font-sans;
+    @apply bg-background text-text-primary font-sans min-h-screen w-full flex flex-col;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
+  .root-container {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
   /* Focus styles for accessibility */
   *:focus-visible {
     @apply outline-2 outline-primary outline-offset-2;
@@ -100,46 +119,60 @@
 
 /* Component Styles */
 @layer components {
-  /* Card Component */
+
+  /* Card Component - Premium iOS Style */
   .card {
-    @apply bg-surface rounded-lg shadow-md p-md;
+    @apply bg-white/70 backdrop-blur-2xl rounded-4xl border border-white/20 shadow-xl p-md;
   }
-  
+
   .card-elevated {
-    @apply bg-surface rounded-xl shadow-lg p-lg;
+    @apply bg-white/70 backdrop-blur-2xl rounded-4xl border border-white/20 shadow-xl p-lg;
   }
-  
-  /* Button Components */
-  .btn {
-    @apply inline-flex items-center justify-center rounded-md font-semibold transition-all;
+
+  /* Button Components - Premium iOS Style */
+  .btn-primary {
+    @apply inline-flex items-center justify-center h-14 rounded-2xl font-semibold transition-all shadow-lg;
     @apply focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(to right, #FF9D6C, #BB4E75);
+    @apply text-white active:scale-95;
   }
-  
-  .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary-dark active:bg-primary-dark;
-  }
-  
+
   .btn-secondary {
-    @apply btn bg-surface text-text-primary border border-border hover:bg-background;
+    @apply inline-flex items-center justify-center h-14 rounded-2xl font-semibold transition-all shadow-lg;
+    @apply focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-white/70 backdrop-blur-2xl border border-white/20 text-text-primary active:scale-95;
   }
-  
+
   .btn-danger {
-    @apply btn bg-danger text-white hover:bg-danger-dark active:bg-danger-dark;
+    @apply inline-flex items-center justify-center h-14 rounded-2xl font-semibold transition-all shadow-lg;
+    @apply focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-danger text-white active:scale-95;
   }
-  
+
   .btn-sm {
     @apply px-sm py-xs text-sm;
   }
-  
+
   .btn-md {
     @apply px-md py-sm text-base;
   }
-  
+
   .btn-lg {
     @apply px-lg py-md text-lg;
   }
-  
+
+  /* Map Button - Responsive sizing for Web/Native */
+  .map-button {
+    @apply h-10 w-10 md:h-12 md:w-12;
+  }
+
+  .map-button-icon {
+    @apply h-5 w-5 md:h-6 md:w-6;
+  }
+
   /* Input Components */
   .input {
     @apply w-full rounded-md border border-border bg-surface px-md py-sm text-text-primary;
@@ -147,86 +180,101 @@
     @apply focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  
+
   /* Badge Component */
-  .badge {
-    @apply inline-flex items-center rounded-full px-sm py-xs text-xs font-medium;
-  }
-  
   .badge-primary {
-    @apply badge bg-primary/10 text-primary;
+    @apply inline-flex items-center rounded-full px-sm py-xs text-xs font-medium bg-primary/10 text-primary;
   }
-  
+
   .badge-success {
-    @apply badge bg-success/10 text-success-dark;
+    @apply inline-flex items-center rounded-full px-sm py-xs text-xs font-medium bg-success/10 text-success-dark;
   }
-  
+
   .badge-warning {
-    @apply badge bg-warning/10 text-warning-dark;
+    @apply inline-flex items-center rounded-full px-sm py-xs text-xs font-medium bg-warning/10 text-warning-dark;
   }
-  
+
   .badge-danger {
-    @apply badge bg-danger/10 text-danger-dark;
+    @apply inline-flex items-center rounded-full px-sm py-xs text-xs font-medium bg-danger/10 text-danger-dark;
   }
-  
+
   /* Chip Component */
   .chip {
-    @apply inline-flex items-center rounded-full px-md py-sm text-sm font-medium;
-    @apply bg-background border border-border;
-    @apply transition-all duration-fast;
+    @apply inline-flex items-center rounded-full px-md py-sm text-sm font-medium bg-background border border-border;
+    transition-duration: 150ms;
+    transition-timing-function: ease;
   }
-  
+
   .chip-selected {
-    @apply chip bg-primary text-white border-primary;
+    @apply inline-flex items-center rounded-full px-md py-sm text-sm font-medium bg-primary text-white border-primary;
   }
-  
-  /* Glass Effect */
-  .glass {
-    @apply bg-white/80 backdrop-blur-md;
+
+  /* Depth Effect - Pressable Depth System (replaces glass effect) */
+  .depth-pressable {
+    @apply bg-emerald-600 rounded-2xl border-b-4 border-emerald-800 transition-all;
   }
-  
-  .glass-dark {
-    @apply bg-black/50 backdrop-blur-md;
+
+  .depth-pressable:active {
+    @apply border-b-0 translate-y-1;
   }
-  
+
+  .depth-card {
+    @apply bg-white rounded-xl shadow-md;
+    transition-duration: 150ms;
+    transition-timing-function: ease;
+  }
+
+  .depth-card:hover {
+    @apply shadow-lg;
+  }
+
+  .depth-card:active {
+    @apply shadow-sm scale-[0.98];
+  }
+
   /* Bento Grid */
   .bento-grid {
     @apply grid grid-cols-2 gap-md;
   }
-  
+
   .bento-card {
     @apply bg-surface rounded-xl shadow-md p-md;
-    @apply transition-all duration-normal;
+    transition-duration: 300ms;
+    transition-timing-function: ease;
   }
-  
+
   .bento-card:hover {
     @apply shadow-lg scale-[1.02];
   }
-  
-  /* Floating Elements */
+
+  /* Floating Elements - Depth System (no glass effect) */
   .floating-header {
     @apply absolute top-15 left-5 right-5 z-50;
-    @apply bg-surface/95 backdrop-blur-md rounded-2xl p-md;
+    @apply bg-surface rounded-2xl p-md;
     @apply shadow-lg;
   }
-  
+
   .floating-filter {
     @apply absolute top-30 left-0 right-0 z-40;
     @apply px-md;
   }
-  
+
   .floating-list {
-    @apply absolute bottom-0 left-0 right-0 z-30;
-    @apply bg-surface/98 rounded-t-3xl pt-5 px-5 pb-25;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    @apply bg-surface rounded-t-3xl pt-5 px-5 pb-25;
     @apply max-h-[45%] shadow-xl;
   }
-  
+
   /* Bottom Sheet */
   .bottom-sheet {
     @apply bg-surface rounded-t-3xl pt-3 px-6 pb-10;
     @apply max-h-[60%];
   }
-  
+
   .bottom-sheet-handle {
     @apply w-10 h-1 bg-border rounded-full mx-auto mb-5;
   }
@@ -234,55 +282,56 @@
 
 /* Utility Styles */
 @layer utilities {
+
   /* Text Shadows */
   .text-shadow-sm {
     text-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
   }
-  
+
   .text-shadow-md {
     text-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
   }
-  
+
   .text-shadow-lg {
     text-shadow: 0 4px 8px rgb(0 0 0 / 0.2);
   }
-  
+
   /* Safe Area */
   .safe-area-top {
     padding-top: env(safe-area-inset-top);
   }
-  
+
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .safe-area-left {
     padding-left: env(safe-area-inset-left);
   }
-  
+
   .safe-area-right {
     padding-right: env(safe-area-inset-right);
   }
-  
+
   /* Scrollbar Hide */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
+
   /* Animation Utilities */
   .animate-fade-in {
     animation: fadeIn var(--transition-normal) ease-out;
   }
-  
+
   .animate-slide-up {
     animation: slideUp var(--transition-normal) ease-out;
   }
-  
+
   .animate-scale-in {
     animation: scaleIn var(--transition-fast) ease-out;
   }
@@ -293,6 +342,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -303,6 +353,7 @@
     transform: translateY(20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -314,6 +365,7 @@
     transform: scale(0.95);
     opacity: 0;
   }
+
   to {
     transform: scale(1);
     opacity: 1;
@@ -322,48 +374,53 @@
 
 /* Platform-specific styles */
 @layer utilities {
+
+  /* Web-specific: Normalize font-size to match Native (14px base) */
+  @media web {
+    :root {
+      font-size: 14px !important;
+    }
+
+    .web\:cursor-pointer {
+      cursor: pointer;
+    }
+
+    .web\:select-none {
+      user-select: none;
+    }
+  }
+
   /* iOS-specific */
   @media (ios) {
     .ios\:shadow-none {
       box-shadow: none;
     }
-    
+
     .ios\:bg-transparent {
       background-color: transparent;
     }
   }
-  
+
   /* Android-specific */
   @media (android) {
     .android\:elevation-4 {
       elevation: 4;
     }
-    
+
     .android\:ripple {
       android_ripple: true;
     }
   }
-  
+
   /* Native-specific */
   @media (native) {
     .native\:font-system {
       font-family: system;
     }
   }
-  
-  /* Web-specific */
-  @media (web) {
-    .web\:cursor-pointer {
-      cursor: pointer;
-    }
-    
-    .web\:select-none {
-      user-select: none;
-    }
-  }
 }
 
-/* Dark Mode Support */
+/* Dark Mode Support - Global Theme */
 @media (prefers-color-scheme: dark) {
   :root {
     --color-background: #0F172A;
@@ -372,6 +429,33 @@
     --color-text-secondary: #94A3B8;
     --color-text-muted: #64748B;
     --color-border: #334155;
+  }
+
+  /* Glassmorphism for Dark Mode */
+  .glass-card {
+    background-color: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-button {
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Glassmorphism Utilities - Light & Dark */
+.glass-floating {
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass-floating {
+    background-color: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -386,6 +470,7 @@
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

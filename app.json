@@ -4,7 +4,7 @@
     "slug": "balibuddy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/ios/1024.png",
     "scheme": "balibuddy",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -36,21 +36,21 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android/launchericon-512x512.png",
-        "backgroundImage": "./assets/images/android/launchericon-512x512.png",
-        "monochromeImage": "./assets/images/android/launchericon-512x512.png"
+        "backgroundColor": "#0F172A",
+        "foregroundImage": "./assets/images/ios/512.png",
+        "backgroundImage": "./assets/images/ios/512.png",
+        "monochromeImage": "./assets/images/ios/512.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/windows/Square150x150Logo.scale-200.png",
+      "output": "server",
+      "favicon": "./assets/images/ios/32.png",
       "name": "BaliBuddy - Offline Reise-Companion",
       "shortName": "BaliBuddy",
       "description": "Dein smarter Offline-Reise-Companion für Backpacker in Bali",
-      "themeColor": "#00B4D8",
-      "backgroundColor": "#FFFFFF",
+      "themeColor": "#FF9D6C",
+      "backgroundColor": "#0F172A",
       "display": "standalone",
       "orientation": "portrait",
       "scope": "/",
@@ -58,18 +58,22 @@
       "manifest": "./public/manifest.json",
       "meta": {
         "apple-mobile-web-app-capable": "yes",
-        "apple-mobile-web-app-status-bar-style": "default",
+        "apple-mobile-web-app-status-bar-style": "light",
         "apple-mobile-web-app-title": "BaliBuddy",
         "mobile-web-app-capable": "yes",
-        "msapplication-TileColor": "#00B4D8",
+        "msapplication-TileColor": "#FF9D6C",
         "msapplication-tap-highlight": "no",
-        "theme-color": "#00B4D8"
+        "theme-color": "#FF9D6C",
+        "viewport": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
       },
       "icons": {
-        "apple": "./assets/images/ios/180.png"
+        "apple": "./assets/images/ios/180.png",
+        "shortcut": "./assets/images/ios/192.png",
+        "icon": "./assets/images/ios/512.png"
       },
       "splash": {
-        "backgroundColor": "#E0F2FE",
+        "backgroundColor": "#0F172A",
+        "image": "./assets/images/ios/1024.png",
         "resizeMode": "contain"
       }
     },
@@ -78,20 +82,22 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0F172A",
+          "image": "./assets/images/ios/1024.png",
+          "imageWidth": 180,
           "android": {
-            "image": "./assets/images/android/launchericon-96x96.png",
-            "imageWidth": 76
+            "image": "./assets/images/ios/512.png",
+            "imageWidth": 150
           },
           "ios": {
-            "image": "./assets/images/ios/80.png"
+            "image": "./assets/images/ios/180.png"
           }
         }
       ],
       "expo-audio",
       "expo-video",
-      "@sentry/react-native",
-      "expo-image"
+      "expo-image",
+      "expo-camera"
     ],
     "experiments": {
       "typedRoutes": true,

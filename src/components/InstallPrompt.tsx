@@ -1,11 +1,19 @@
-import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Dimensions } from 'react-native';
-import { Download, X, Share, Plus, Smartphone } from 'lucide-react-native';
+import React, { useState, useEffect, memo, useCallback, useMemo } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  Modal,
+  Dimensions,
+} from "react-native";
+import { Download, X, Share, Plus, Smartphone } from "lucide-react-native";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed';
+    outcome: "accepted" | "dismissed";
     platform: string;
   }>;
   prompt(): Promise<void>;
@@ -17,10 +25,11 @@ declare global {
   }
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 function InstallPromptComponent() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -32,8 +41,9 @@ function InstallPromptComponent() {
     setIsIOS(iOS);
 
     // Check if already installed (standalone mode)
-    const standalone = window.matchMedia('(display-mode: standalone)').matches ||
-                      (window.navigator as any).standalone === true;
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
     setIsStandalone(standalone);
 
     // Listen for beforeinstallprompt (Android/Chrome/Edge)
@@ -43,29 +53,42 @@ function InstallPromptComponent() {
       setShowInstallButton(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     // Check if should show iOS prompt
     if (iOS && !standalone) {
-      const hasShownIOSPrompt = localStorage.getItem('balibuddy_ios_prompt_shown');
-      const promptCount = parseInt(localStorage.getItem('balibuddy_ios_prompt_count') || '0');
-      
+      const hasShownIOSPrompt = localStorage.getItem(
+        "balibuddy_ios_prompt_shown",
+      );
+      const promptCount = parseInt(
+        localStorage.getItem("balibuddy_ios_prompt_count") || "0",
+      );
+
       if (!hasShownIOSPrompt && promptCount < 3) {
         // Show iOS prompt after a delay
         const timer = setTimeout(() => {
           setShowIOSModal(true);
-          localStorage.setItem('balibuddy_ios_prompt_count', String(promptCount + 1));
+          localStorage.setItem(
+            "balibuddy_ios_prompt_count",
+            String(promptCount + 1),
+          );
         }, 5000);
-        
+
         return () => {
           clearTimeout(timer);
-          window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+          window.removeEventListener(
+            "beforeinstallprompt",
+            handleBeforeInstallPrompt,
+          );
         };
       }
     }
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
     };
   }, []);
 
@@ -75,23 +98,23 @@ function InstallPromptComponent() {
     try {
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      
-      if (outcome === 'accepted') {
-        console.log('User accepted the install prompt');
+
+      if (outcome === "accepted") {
+        console.log("User accepted the install prompt");
         setShowInstallButton(false);
       } else {
-        console.log('User dismissed the install prompt');
+        console.log("User dismissed the install prompt");
       }
-      
+
       setDeferredPrompt(null);
     } catch (error) {
-      console.error('Error during install prompt:', error);
+      console.error("Error during install prompt:", error);
     }
   }, [deferredPrompt]);
 
   const handleIOSModalClose = useCallback(() => {
     setShowIOSModal(false);
-    localStorage.setItem('balibuddy_ios_prompt_shown', 'true');
+    localStorage.setItem("balibuddy_ios_prompt_shown", "true");
   }, []);
 
   const handleDismissButton = useCallback(() => {
@@ -99,7 +122,7 @@ function InstallPromptComponent() {
   }, []);
 
   const handleDontShowAgain = useCallback(() => {
-    localStorage.setItem('balibuddy_ios_prompt_shown', 'true');
+    localStorage.setItem("balibuddy_ios_prompt_shown", "true");
     handleIOSModalClose();
   }, [handleIOSModalClose]);
 
@@ -111,7 +134,7 @@ function InstallPromptComponent() {
   return (
     <>
       {/* Android/Chrome/Edge Install Button */}
-      {showInstallButton && Platform.OS === 'web' && !isIOS && (
+      {showInstallButton && Platform.OS === "web" && !isIOS && (
         <View style={styles.installButtonContainer}>
           <TouchableOpacity
             style={styles.installButton}
@@ -153,14 +176,16 @@ function InstallPromptComponent() {
             {/* Instructions */}
             <View style={styles.instructionsContainer}>
               <Text style={styles.instructionsTitle}>So geht's:</Text>
-              
+
               <View style={styles.instructionStep}>
                 <View style={styles.stepNumber}>
                   <Text style={styles.stepNumberText}>1</Text>
                 </View>
                 <View style={styles.stepContent}>
                   <Text style={styles.stepText}>
-                    Tippe auf das <Text style={styles.boldText}>Teilen-Symbol</Text> unten in der Mitte
+                    Tippe auf das{" "}
+                    <Text style={styles.boldText}>Teilen-Symbol</Text> unten in
+                    der Mitte
                   </Text>
                   <View style={styles.shareIconContainer}>
                     <Share size={24} color="#00B4D8" />
@@ -174,7 +199,8 @@ function InstallPromptComponent() {
                 </View>
                 <View style={styles.stepContent}>
                   <Text style={styles.stepText}>
-                    Scrolle nach unten und tippe auf <Text style={styles.boldText}>"Zum Home-Bildschirm"</Text>
+                    Scrolle nach unten und tippe auf{" "}
+                    <Text style={styles.boldText}>"Zum Home-Bildschirm"</Text>
                   </Text>
                   <View style={styles.plusIconContainer}>
                     <Plus size={24} color="#00B4D8" />
@@ -188,7 +214,8 @@ function InstallPromptComponent() {
                 </View>
                 <View style={styles.stepContent}>
                   <Text style={styles.stepText}>
-                    Tippe oben rechts auf <Text style={styles.boldText}>"Hinzufügen"</Text>
+                    Tippe oben rechts auf{" "}
+                    <Text style={styles.boldText}>"Hinzufügen"</Text>
                   </Text>
                 </View>
               </View>
@@ -199,7 +226,9 @@ function InstallPromptComponent() {
               <Text style={styles.benefitsTitle}>Vorteile:</Text>
               <View style={styles.benefitItem}>
                 <Text style={styles.benefitIcon}>✓</Text>
-                <Text style={styles.benefitText}>Funktioniert komplett offline</Text>
+                <Text style={styles.benefitText}>
+                  Funktioniert komplett offline
+                </Text>
               </View>
               <View style={styles.benefitItem}>
                 <Text style={styles.benefitIcon}>✓</Text>
@@ -223,13 +252,13 @@ function InstallPromptComponent() {
               <Text style={styles.closeButtonText}>Später erinnern</Text>
             </TouchableOpacity>
 
-        {/* Don't show again */}
-        <TouchableOpacity
-          style={styles.dontShowButton}
-          onPress={handleDontShowAgain}
-        >
-          <Text style={styles.dontShowButtonText}>Nicht mehr anzeigen</Text>
-        </TouchableOpacity>
+            {/* Don't show again */}
+            <TouchableOpacity
+              style={styles.dontShowButton}
+              onPress={handleDontShowAgain}
+            >
+              <Text style={styles.dontShowButtonText}>Nicht mehr anzeigen</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -242,90 +271,87 @@ export default memo(InstallPromptComponent);
 const styles = StyleSheet.create({
   // Install Button Styles
   installButtonContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 100,
     left: 20,
     right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
     borderRadius: 20,
     padding: 12,
     paddingLeft: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
+    boxShadow: "0 8px 20px rgba(0, 0, 0, 0.15)",
     elevation: 10,
-    backdropFilter: 'blur(20px)',
+    backdropFilter: "blur(20px)",
     zIndex: 1000,
   },
   installButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
-    backgroundColor: '#00B4D8',
+    backgroundColor: "#00B4D8",
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 16,
   },
   installButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   dismissButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 12,
   },
 
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 28,
     padding: 32,
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
     maxHeight: screenHeight * 0.85,
   },
   modalHeader: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 28,
   },
   iconContainer: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E0F2FE",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: "800",
+    color: "#0F172A",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalSubtitle: {
     fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
+    color: "#64748B",
+    textAlign: "center",
     lineHeight: 22,
   },
 
@@ -335,12 +361,12 @@ const styles = StyleSheet.create({
   },
   instructionsTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 16,
   },
   instructionStep: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 16,
     gap: 12,
   },
@@ -348,100 +374,100 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#00B4D8',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#00B4D8",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 2,
   },
   stepNumberText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   stepContent: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   stepText: {
     flex: 1,
     fontSize: 15,
-    color: '#334155',
+    color: "#334155",
     lineHeight: 22,
   },
   boldText: {
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
   },
   shareIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E0F2FE",
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 12,
   },
   plusIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E0F2FE",
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 12,
   },
 
   // Benefits Styles
   benefitsContainer: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
   },
   benefitsTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 12,
   },
   benefitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     marginBottom: 8,
   },
   benefitIcon: {
     fontSize: 16,
-    color: '#90BE6D',
-    fontWeight: '700',
+    color: "#90BE6D",
+    fontWeight: "700",
   },
   benefitText: {
     fontSize: 14,
-    color: '#334155',
+    color: "#334155",
   },
 
   // Button Styles
   closeButton: {
-    backgroundColor: '#00B4D8',
+    backgroundColor: "#00B4D8",
     paddingVertical: 16,
     borderRadius: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 12,
   },
   closeButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   dontShowButton: {
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   dontShowButtonText: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

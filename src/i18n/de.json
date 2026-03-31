@@ -1,4 +1,12 @@
 {
+  "image": {
+    "error": "Bild konnte nicht geladen werden",
+    "loadError": "Bild konnte nicht geladen werden",
+    "retry": "Erneut versuchen",
+    "retryHint": "Bild erneut laden",
+    "defaultAlt": "Bild",
+    "loading": "Bild wird geladen"
+  },
   "common": {
     "loading": "Laden...",
     "error": "Fehler",

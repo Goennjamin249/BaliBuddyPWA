@@ -238,7 +238,6 @@ export default function ScooterCheckScreen() {
           </Text>
           <FlashList
             data={checklist}
-            estimatedItemSize={60}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.checklistItem}>

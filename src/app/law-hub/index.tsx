@@ -108,7 +108,6 @@ export default function LawHubScreen() {
             </Text>
             <FlashList
               data={lawCategories}
-              estimatedItemSize={80}
               keyExtractor={(item) => item.id}
               renderItem={renderCategory}
               contentContainerStyle={styles.listContent}
@@ -131,7 +130,6 @@ export default function LawHubScreen() {
             {categoryLaws.length > 0 ? (
               <FlashList
                 data={categoryLaws}
-                estimatedItemSize={100}
                 keyExtractor={(item) => item.id}
                 renderItem={renderLaw}
                 contentContainerStyle={styles.listContent}
