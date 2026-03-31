@@ -282,26 +282,57 @@ export default function SOSHubScreen() {
     return () => clearInterval(interval);
   }, [checkInActive, checkInTimer]);
 
-  // Fetch Weather Data (Feature 14) - Using serverless API proxy
+  // Fetch Weather Data (Feature 14) - Using OpenWeatherMap API
   const fetchWeather = useCallback(async () => {
     setLoadingWeather(true);
     try {
-      // Use our serverless API proxy to avoid CORS issues
-      // Default to Bali coordinates
-      const response = await fetch("/api/weather?lat=-8.4095&lon=115.1889");
+      const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
+
+      // If no API key, use fallback immediately
+      if (!API_KEY) {
+        console.warn("Weather API key not configured - using fallback");
+        setWeather({
+          temperature: 29,
+          feelsLike: 33,
+          humidity: 75,
+          windSpeed: 12,
+          condition: "Sunny",
+          icon: "☀️",
+          location: "Bali, Indonesien",
+        });
+        setLoadingWeather(false);
+        return;
+      }
+
+      // Use OpenWeatherMap API directly with 2s timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=-8.4095&lon=115.1889&appid=${API_KEY}&units=metric&lang=de`;
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error("Weather API error");
+        throw new Error(`Weather API error: ${response.status}`);
       }
 
       const data = await response.json();
 
       // Validate data structure
-      if (!data || typeof data.temperature !== "number") {
+      if (!data.main || !data.weather) {
         throw new Error("Invalid weather data");
       }
 
-      setWeather(data);
+      setWeather({
+        temperature: Math.round(data.main.temp),
+        feelsLike: Math.round(data.main.feels_like),
+        humidity: data.main.humidity,
+        windSpeed: Math.round(data.wind?.speed || 0),
+        condition: data.weather[0].description,
+        icon: "☀️",
+        location: `${data.name}, ${data.sys?.country || "ID"}`,
+      });
     } catch (error) {
       // Silent fallback - no error shown to user
       setWeather({

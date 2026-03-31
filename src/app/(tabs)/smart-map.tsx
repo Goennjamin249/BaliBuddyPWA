@@ -44,32 +44,25 @@ import { AnimatedView, Chip } from "../../components/ui";
 import { useTheme } from "../../theme/ThemeContext";
 import Header from "../../components/Header";
 
-// Mapbox Access Token - Vercel Environment Injection
-// This variable MUST be prefixed with EXPO_PUBLIC_ to be exposed to client
-const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+// Mapbox Access Token - Direct injection for development
+// In production, use: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN
+const MAPBOX_TOKEN =
+  "pk.eyJ1IjoiZ29lbm5qYW1pbiIsImEiOiJjbW40djU4ZDkwMHJoMnNzNnRlanliMXoyIn0.qMUR9VGXLEHJ1aCU2iwlMg";
 
-// Safe token check - only set if token exists and is valid length
-if (MAPBOX_TOKEN && MAPBOX_TOKEN.length > 20) {
-  mapboxgl.accessToken = MAPBOX_TOKEN;
-} else {
-  console.warn(
-    "Mapbox Token not found in build environment. Using CartoDB fallback.",
-  );
-}
+// Set token
+mapboxgl.accessToken = MAPBOX_TOKEN;
 
-// Check if we have a valid Mapbox token
-const HAS_MAPBOX_TOKEN = MAPBOX_TOKEN && MAPBOX_TOKEN.length > 20;
+// Map styles - always use Mapbox
+const MAP_STYLES = {
+  light: "mapbox://styles/mapbox/streets-v12",
+  dark: "mapbox://styles/mapbox/dark-v11",
+};
 
-// Map Styles - Mapbox (requires token) or CartoDB fallback (free, no token)
-const MAP_STYLES = HAS_MAPBOX_TOKEN
-  ? {
-      light: "mapbox://styles/mapbox/streets-v12",
-      dark: "mapbox://styles/mapbox/dark-v11",
-    }
-  : {
-      light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-      dark: "https://basemaps.cartocdn.com/gl/darkmatter-gl-style/style.json",
-    };
+// Fallback styles if Mapbox is blocked (using CartoDB - no token required)
+const FALLBACK_STYLES = {
+  light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+  dark: "https://basemaps.cartocdn.com/gl/darkmatter-gl-style/style.json",
+};
 
 // ==================== TYPES ====================
 interface POI {
@@ -335,38 +328,61 @@ export default function SmartMapScreen() {
     }
   }, [themeMode]);
 
-  // Initialize Mapbox map
+  // Initialize Map with fallback support
   useEffect(() => {
     if (!mapContainer.current || mapInstance.current) return;
 
-    const initMap = () => {
+    console.log("[Map] Starting initialization...");
+    console.log("[Map] Token set:", !!mapboxgl.accessToken);
+    console.log("[Map] Container exists:", !!mapContainer.current);
+
+    let loadTimeout: NodeJS.Timeout;
+
+    const initMap = (useFallback = false) => {
       if (!mapContainer.current) {
+        console.log("[Map] Container not ready, retrying...");
         setTimeout(initMap, 100);
         return;
       }
 
-      // CRITICAL: Do not attempt to render map if token is undefined/invalid
-      // This prevents "Circular Structure" and token errors
-      if (HAS_MAPBOX_TOKEN && !mapboxgl.accessToken) {
-        console.error("Mapbox access token not set. Map cannot initialize.");
-        setIsMapLoading(false);
-        return;
-      }
-
       try {
+        const styleUrl = useFallback
+          ? FALLBACK_STYLES[mapStyle]
+          : MAP_STYLES[mapStyle];
+
+        console.log("[Map] Creating map with style:", styleUrl);
+
         const map = new mapboxgl.Map({
           container: mapContainer.current,
-          style: MAP_STYLES[mapStyle],
+          style: styleUrl,
           center: userLocation
             ? [userLocation.longitude, userLocation.latitude]
             : BALI_CENTER,
           zoom: 12,
           attributionControl: false,
+          collectResourceTiming: false,
         });
+
+        console.log("[Map] Map instance created successfully");
 
         map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
+        // Timeout for map loading (10 seconds)
+        loadTimeout = setTimeout(() => {
+          if (!map.isStyleLoaded()) {
+            console.warn("[Map] Style load timeout, switching to fallback...");
+            if (!useFallback) {
+              initMap(true); // Retry with fallback
+            } else {
+              console.error("[Map] Fallback also failed, showing error");
+              setIsMapLoading(false);
+            }
+          }
+        }, 10000);
+
         map.on("load", () => {
+          console.log("[Map] Map loaded successfully");
+          clearTimeout(loadTimeout);
           mapInstance.current = map;
           setIsMapLoading(false);
 
@@ -504,10 +520,20 @@ export default function SmartMapScreen() {
         });
 
         map.on("error", (e) => {
-          console.error("Mapbox error:", e.error?.message || "Map error");
+          const errorMsg = e.error?.message || "Map error";
+          console.error("Map error:", errorMsg);
+
+          // If it's a 504 or network error, try fallback
+          if (errorMsg.includes("504") || errorMsg.includes("network")) {
+            console.warn("[Map] Network error, switching to fallback...");
+            initMap(true);
+          } else {
+            setIsMapLoading(false);
+          }
         });
 
         return () => {
+          clearTimeout(loadTimeout);
           if (mapInstance.current) {
             mapInstance.current.remove();
             mapInstance.current = null;
@@ -519,6 +545,8 @@ export default function SmartMapScreen() {
         };
       } catch (error) {
         console.error("Failed to initialize Mapbox:", error);
+        // Stop loading state on error
+        setIsMapLoading(false);
       }
     };
 
@@ -959,6 +987,62 @@ const styles = StyleSheet.create({
   skeletonText: {
     fontSize: 14,
     fontWeight: "500",
+  },
+  tokenOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    zIndex: 9999,
+  },
+  tokenCard: {
+    borderRadius: 32,
+    padding: 32,
+    alignItems: "center",
+    gap: 16,
+    maxWidth: 400,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 30,
+      },
+      android: {
+        elevation: 24,
+      },
+      web: {
+        boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+      },
+    }),
+  },
+  tokenTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  tokenText: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  reloadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 28,
+    gap: 8,
+    marginTop: 8,
+  },
+  reloadButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   recenterButton: {
     position: "absolute",
