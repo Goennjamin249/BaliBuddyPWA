@@ -1471,11 +1471,9 @@ export default function SurvivalScreen() {
 
         {/* Content */}
         <ScrollView
-          style={styles.content}
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: Platform.OS === "ios" ? 140 : 120,
-          }}
+          contentContainerStyle={{ paddingBottom: 100 }}
         >
           {activeTab === "packing" && renderPackingTab()}
           {activeTab === "visa" && renderVisaTab()}

@@ -4,11 +4,11 @@
     "slug": "balibuddy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/ios/1024.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "balibuddy",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/ios/180.png",
+      "icon": "./assets/images/icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.balibuddy.pwa",
       "infoPlist": {
@@ -37,15 +37,15 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
-        "foregroundImage": "./assets/images/ios/512.png",
-        "backgroundImage": "./assets/images/ios/512.png",
-        "monochromeImage": "./assets/images/ios/512.png"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundImage": "./assets/images/icon.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/ios/32.png",
+      "favicon": "./assets/images/favicon.png",
       "name": "BaliBuddy - Offline Reise-Companion",
       "shortName": "BaliBuddy",
       "description": "Dein smarter Offline-Reise-Companion für Backpacker in Bali",
@@ -67,13 +67,13 @@
         "viewport": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
       },
       "icons": {
-        "apple": "./assets/images/ios/180.png",
-        "shortcut": "./assets/images/ios/192.png",
-        "icon": "./assets/images/ios/512.png"
+        "apple": "./assets/images/icon.png",
+        "shortcut": "./assets/images/icon.png",
+        "icon": "./assets/images/icon.png"
       },
       "splash": {
         "backgroundColor": "#0F172A",
-        "image": "./assets/images/ios/1024.png",
+        "image": "./assets/images/icon.png",
         "resizeMode": "contain"
       }
     },
@@ -83,14 +83,14 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0F172A",
-          "image": "./assets/images/ios/1024.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 180,
           "android": {
-            "image": "./assets/images/ios/512.png",
+            "image": "./assets/images/icon.png",
             "imageWidth": 150
           },
           "ios": {
-            "image": "./assets/images/ios/180.png"
+            "image": "./assets/images/icon.png"
           }
         }
       ],

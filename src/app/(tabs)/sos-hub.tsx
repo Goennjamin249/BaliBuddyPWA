@@ -1335,11 +1335,9 @@ export default function SOSHubScreen() {
 
         {/* Main Content */}
         <ScrollView
-          style={styles.content}
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: Platform.OS === "ios" ? 140 : 120,
-          }}
+          contentContainerStyle={{ paddingBottom: 100 }}
         >
           {renderSection()}
         </ScrollView>
