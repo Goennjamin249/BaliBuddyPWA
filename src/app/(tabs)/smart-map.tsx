@@ -1,10 +1,5 @@
 import "maplibre-gl/dist/maplibre-gl.css";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -452,7 +447,10 @@ export default function SmartMapScreen() {
             setPois(nearbyPOIs);
             console.log("[POI] Fresh data loaded:", nearbyPOIs.length, "items");
           } catch (apiError) {
-            console.warn("[POI] API failed (rate limit/timeout), using cached/mock data:", apiError);
+            console.warn(
+              "[POI] API failed (rate limit/timeout), using cached/mock data:",
+              apiError,
+            );
             const cached = await getPOIs();
             if (cached.data && cached.data.length > 0) {
               setPois(cached.data as POI[]);
@@ -499,32 +497,48 @@ export default function SmartMapScreen() {
   }, [userLocation]);
 
   // Open in maps - wrapped in try-catch for robustness
-  const openInMaps = useCallback((lat: number, lon: number, name: string) => {
-    try {
-      const url =
-        Platform.OS === "web"
-          ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`
-          : `geo:${lat},${lon}?q=${encodeURIComponent(name)}`;
-      if (Linking.canOpenURL) {
-        Linking.openURL(url);
-      } else {
-        console.warn("Linking.openURL not available, but app is still functional.");
+  const openInMaps = useCallback(
+    async (lat: number, lon: number, name: string) => {
+      try {
+        const url =
+          Platform.OS === "web"
+            ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`
+            : `geo:${lat},${lon}?q=${encodeURIComponent(name)}`;
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+          await Linking.openURL(url);
+        } else {
+          console.warn(
+            "Linking.openURL not available for url, but app is still functional.",
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to open maps, but app is still functional:",
+          error,
+        );
       }
-    } catch (error) {
-      console.warn("Failed to open maps, but app is still functional:", error);
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Call number - wrapped in try-catch for robustness
-  const callNumber = useCallback((phone: string) => {
+  const callNumber = useCallback(async (phone: string) => {
     try {
-      if (Linking.canOpenURL) {
-        Linking.openURL(`tel:${phone}`);
+      const url = `tel:${phone}`;
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
       } else {
-        console.warn("Linking.openURL not available, but app is still functional.");
+        console.warn(
+          "Linking.openURL not available for url, but app is still functional.",
+        );
       }
     } catch (error) {
-      console.warn("Failed to call number, but app is still functional:", error);
+      console.warn(
+        "Failed to call number, but app is still functional:",
+        error,
+      );
     }
   }, []);
 
@@ -553,7 +567,9 @@ export default function SmartMapScreen() {
                 try {
                   await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 } catch (e) {
-                  console.warn("Haptics not available, but app is still functional.");
+                  console.warn(
+                    "Haptics not available, but app is still functional.",
+                  );
                 }
                 if (userLocation) {
                   setIsLoading(true);
@@ -634,7 +650,9 @@ export default function SmartMapScreen() {
                   try {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   } catch (e) {
-                    console.warn("Haptics not available, but app is still functional.");
+                    console.warn(
+                      "Haptics not available, but app is still functional.",
+                    );
                   }
                   if (chip.id === "favorites") {
                     setShowFavoritesOnly(true);
@@ -665,15 +683,25 @@ export default function SmartMapScreen() {
             )}
 
             {/* Declarative Map */}
-            <View style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <View
+              style={{
+                width: "100%",
+                height: "100%",
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            >
               <Map
                 initialViewState={{
                   longitude: BALI_CENTER.longitude,
                   latitude: BALI_CENTER.latitude,
-                  zoom: 13
+                  zoom: 13,
                 }}
                 onMove={(evt) => setViewState(evt.viewState)}
-                style={{ width: '100%', height: '100%' }}
+                style={{ width: "100%", height: "100%" }}
                 mapStyle={OPENFREEMAP_STYLE}
                 attributionControl={false}
                 onError={(error) => console.error("Map error:", error)}
@@ -691,7 +719,9 @@ export default function SmartMapScreen() {
                       try {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       } catch (e) {
-                        console.warn("Haptics not available, but app is still functional.");
+                        console.warn(
+                          "Haptics not available, but app is still functional.",
+                        );
                       }
                       setSelectedPOI(poi);
                     }}
@@ -749,7 +779,9 @@ export default function SmartMapScreen() {
                             Haptics.ImpactFeedbackStyle.Light,
                           );
                         } catch (e) {
-                          console.warn("Haptics not available, but app is still functional.");
+                          console.warn(
+                            "Haptics not available, but app is still functional.",
+                          );
                         }
                         const isFav = favorites.includes(selectedPOI.id);
                         if (isFav) {
@@ -799,9 +831,13 @@ export default function SmartMapScreen() {
                       style={styles.modalRow}
                       onPress={() => {
                         try {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                         } catch (e) {
-                          console.warn("Haptics not available, but app is still functional.");
+                          console.warn(
+                            "Haptics not available, but app is still functional.",
+                          );
                         }
                         callNumber(selectedPOI.phone!);
                       }}
@@ -822,9 +858,13 @@ export default function SmartMapScreen() {
                       ]}
                       onPress={() => {
                         try {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                         } catch (e) {
-                          console.warn("Haptics not available, but app is still functional.");
+                          console.warn(
+                            "Haptics not available, but app is still functional.",
+                          );
                         }
                         openInMaps(
                           selectedPOI.latitude,
@@ -849,7 +889,9 @@ export default function SmartMapScreen() {
                               Haptics.ImpactFeedbackStyle.Light,
                             );
                           } catch (e) {
-                            console.warn("Haptics not available, but app is still functional.");
+                            console.warn(
+                              "Haptics not available, but app is still functional.",
+                            );
                           }
                           callNumber(selectedPOI.phone!);
                         }}
@@ -894,7 +936,7 @@ const styles = StyleSheet.create({
     flex: 1,
     position: "relative",
     minHeight: 500,
-    width: '100%',
+    width: "100%",
   },
   mapSkeleton: {
     position: "absolute",

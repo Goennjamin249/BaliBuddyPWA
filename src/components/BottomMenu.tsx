@@ -169,8 +169,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     borderRadius: 40,
     borderWidth: 1,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    borderColor: "rgba(255,255,255,0.3)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: "rgba(255, 255, 255, 0.2)",
     ...Platform.select({
       ios: {
         backdropFilter: "blur(20px)",

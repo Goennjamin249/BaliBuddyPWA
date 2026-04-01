@@ -1,12 +1,8 @@
-import * as ImagePicker from "expo-image-picker";
 import {
   Activity,
   AlertCircle,
   AlertTriangle,
-  Bike,
-  Camera,
   CheckCircle,
-  CheckSquare,
   Cloud,
   Droplets,
   Globe,
@@ -77,13 +73,6 @@ interface SafeBar {
   address: string;
   verified: boolean;
   notes: string;
-}
-
-interface ScooterCheckItem {
-  id: string;
-  label: string;
-  checked: boolean;
-  critical: boolean;
 }
 
 // ==================== CONSTANTS ====================
@@ -206,33 +195,6 @@ const SAFE_BARS: SafeBar[] = [
   },
 ];
 
-const SCOOTER_CHECKLIST: ScooterCheckItem[] = [
-  { id: "s1", label: "Bremsen funktionieren", checked: false, critical: true },
-  {
-    id: "s2",
-    label: "Reifenprofil ausreichend",
-    checked: false,
-    critical: true,
-  },
-  { id: "s3", label: "Licht funktioniert", checked: false, critical: true },
-  { id: "s4", label: "Hupe funktioniert", checked: false, critical: false },
-  { id: "s5", label: "Spiegel vorhanden", checked: false, critical: false },
-  { id: "s6", label: "Kraftstoffstand prüfen", checked: false, critical: true },
-  {
-    id: "s7",
-    label: "Keine sichtbaren Schäden",
-    checked: false,
-    critical: true,
-  },
-  { id: "s8", label: "Zündschlüssel passt", checked: false, critical: true },
-  {
-    id: "s9",
-    label: "Seitenständer funktioniert",
-    checked: false,
-    critical: false,
-  },
-  { id: "s10", label: "Kennzeichen lesbar", checked: false, critical: true },
-];
 
 // ==================== MAIN COMPONENT ====================
 export default function SOSHubScreen() {
@@ -240,47 +202,12 @@ export default function SOSHubScreen() {
   const { colors } = useTheme();
   const [activeSection, setActiveSection] = useState<string>("emergency");
 
-  // Feature 13: Solo-Traveler Check-in
-  const [checkInActive, setCheckInActive] = useState(false);
-  const [checkInTimer, setCheckInTimer] = useState<number>(0);
-  const [checkInDuration, setCheckInDuration] = useState<number>(30); // minutes
-  const [lastCheckIn, setLastCheckIn] = useState<Date | null>(null);
-
   // Feature 14: Weather & Volcano
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [volcanoAlerts, setVolcanoAlerts] =
     useState<VolcanoAlert[]>(VOLCANO_ALERTS);
   const [loadingWeather, setLoadingWeather] = useState(false);
 
-  // Feature 18: Scooter Check
-  const [scooterChecklist, setScooterChecklist] =
-    useState<ScooterCheckItem[]>(SCOOTER_CHECKLIST);
-  const [showCamera, setShowCamera] = useState(false);
-  const [scooterPhotos, setScooterPhotos] = useState<string[]>([]);
-
-  // Feature 15: Bali Belly
-  const [showBaliBellyInfo, setShowBaliBellyInfo] = useState(false);
-
-  // Feature 16: Rabies
-  const [showRabiesInfo, setShowRabiesInfo] = useState(false);
-
-  // Feature 17: Methanol
-  const [showMethanolInfo, setShowMethanolInfo] = useState(false);
-
-  // Feature 13: Check-in Timer
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (checkInActive && checkInTimer > 0) {
-      interval = setInterval(() => {
-        setCheckInTimer((prev) => prev - 1);
-      }, 1000);
-    } else if (checkInActive && checkInTimer === 0) {
-      // Timer expired - trigger emergency
-      handleCheckInExpired();
-      setCheckInActive(false);
-    }
-    return () => clearInterval(interval);
-  }, [checkInActive, checkInTimer]);
 
   // Fetch Weather Data (Feature 14) - Using OpenWeatherMap API
   const fetchWeather = useCallback(async () => {
@@ -353,113 +280,7 @@ export default function SOSHubScreen() {
     fetchWeather();
   }, [fetchWeather]);
 
-  // Feature 13: Start Check-in Timer
-  const startCheckIn = () => {
-    setCheckInActive(true);
-    setCheckInTimer(checkInDuration * 60); // Convert to seconds
-    setLastCheckIn(new Date());
-  };
 
-  // Feature 13: Stop Check-in
-  const stopCheckIn = () => {
-    setCheckInActive(false);
-    setCheckInTimer(0);
-  };
-
-  // Feature 13: Check-in Expired Handler
-  const handleCheckInExpired = () => {
-    // In production, this would send GPS to emergency contact
-    Alert.alert(
-      "⚠️ Check-in Frist abgelaufen!",
-      "Deine Notfall-Kontakt wurde über deine letzte Position informiert.",
-      [{ text: "Verstanden", style: "default" }],
-    );
-  };
-
-  // Feature 13: Send Manual Check-in
-  const sendManualCheckIn = () => {
-    setLastCheckIn(new Date());
-    Alert.alert(
-      "✅ Check-in gesendet",
-      "Deine Position wurde an deine Notfall-Kontakte gesendet.",
-      [{ text: "OK" }],
-    );
-  };
-
-  // Format timer
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  // Feature 18: Take Scooter Photo
-  const takeScooterPhoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-
-      if (status !== "granted") {
-        Alert.alert(
-          "Berechtigung erforderlich",
-          "Kamerazugriff ist erforderlich für Fotos.",
-        );
-        return;
-      }
-
-      // For web, use HTML5 file input approach
-      if (Platform.OS === "web") {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = "image/*";
-        input.capture = "environment";
-        input.onchange = (e: any) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              if (event.target?.result) {
-                setScooterPhotos((prev) => [
-                  ...prev,
-                  event.target!.result as string,
-                ]);
-              }
-            };
-            reader.readAsDataURL(file);
-          }
-        };
-        input.click();
-      } else {
-        const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ["images"],
-          allowsEditing: true,
-          aspect: [4, 3],
-          quality: 0.8,
-        });
-
-        if (!result.canceled && result.assets[0]) {
-          setScooterPhotos((prev) => [...prev, result.assets[0].uri]);
-        }
-      }
-    } catch (error) {
-      console.error("Camera error:", error);
-    }
-  };
-
-  // Toggle scooter checklist item
-  const toggleChecklistItem = (id: string) => {
-    setScooterChecklist((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, checked: !item.checked } : item,
-      ),
-    );
-  };
-
-  // Calculate scooter safety score
-  const getScooterScore = (): number => {
-    const criticalItems = scooterChecklist.filter((item) => item.critical);
-    const checkedCritical = criticalItems.filter((item) => item.checked).length;
-    return Math.round((checkedCritical / criticalItems.length) * 100);
-  };
 
   // Call emergency number
   const callEmergency = (type: string) => {
@@ -528,8 +349,6 @@ export default function SOSHubScreen() {
         return renderRabiesSection();
       case "methanol":
         return renderMethanolSection();
-      case "scooter":
-        return renderScooterSection();
       default:
         return null;
     }
@@ -602,87 +421,6 @@ export default function SOSHubScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Feature 13: Solo-Traveler Check-in */}
-      <View style={styles.checkInCard}>
-        <View style={styles.checkInHeader}>
-          <Timer size={24} color={checkInActive ? "#10B981" : "#64748B"} />
-          <Text style={styles.checkInTitle}>Solo-Traveler Check-in</Text>
-        </View>
-
-        <Text style={styles.checkInDescription}>
-          Lege ein Countdown-Timer fest. Wenn er abläuft, wird deine letzte
-          GPS-Position an Notfallkontakte gesendet.
-        </Text>
-
-        {checkInActive ? (
-          <View style={styles.checkInActive}>
-            <Text style={styles.checkInTimer}>{formatTime(checkInTimer)}</Text>
-            <Text style={styles.checkInStatus}>⏱️ Countdown läuft...</Text>
-            <View style={styles.checkInButtons}>
-              <TouchableOpacity
-                style={styles.checkInStopButton}
-                onPress={stopCheckIn}
-              >
-                <Text style={styles.checkInStopText}>Stoppen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.checkInResetButton}
-                onPress={startCheckIn}
-              >
-                <Text style={styles.checkInResetText}>Neu starten</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.checkInInactive}>
-            <View style={styles.durationSelector}>
-              {[15, 30, 60, 120].map((mins) => (
-                <TouchableOpacity
-                  key={mins}
-                  style={[
-                    styles.durationButton,
-                    checkInDuration === mins && styles.durationButtonActive,
-                  ]}
-                  onPress={() => setCheckInDuration(mins)}
-                >
-                  <Text
-                    style={[
-                      styles.durationText,
-                      checkInDuration === mins && styles.durationTextActive,
-                    ]}
-                  >
-                    {mins} min
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.checkInStartButton}
-              onPress={startCheckIn}
-            >
-              <Timer size={20} color="#FFFFFF" />
-              <Text style={styles.checkInStartText}>Check-in starten</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.manualCheckInButton}
-              onPress={sendManualCheckIn}
-            >
-              <Send size={18} color="#00B4D8" />
-              <Text style={styles.manualCheckInText}>
-                Jetzt Check-in senden
-              </Text>
-            </TouchableOpacity>
-
-            {!!lastCheckIn && (
-              <Text style={styles.lastCheckInText}>
-                ✅ Letzter Check-in: {lastCheckIn.toLocaleTimeString("de-DE")}
-              </Text>
-            )}
-          </View>
-        )}
-      </View>
 
       {/* Volcano Alerts */}
       <View style={styles.volcanoCard}>
@@ -1055,142 +793,6 @@ export default function SOSHubScreen() {
     </View>
   );
 
-  // Scooter Section (Feature 18)
-  const renderScooterSection = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>🛵 Scooter Anti-Scam Check</Text>
-
-      <View style={styles.scoreCard}>
-        <View style={styles.scoreCircle}>
-          <Text
-            style={[
-              styles.scoreValue,
-              {
-                color:
-                  getScooterScore() >= 80
-                    ? "#10B981"
-                    : getScooterScore() >= 50
-                      ? "#F59E0B"
-                      : "#EF4444",
-              },
-            ]}
-          >
-            {getScooterScore()}%
-          </Text>
-        </View>
-        <Text style={styles.scoreLabel}>Sicherheits-Score</Text>
-        <Text style={styles.scoreHint}>
-          {getScooterScore() >= 80
-            ? "✅ Roller scheint sicher"
-            : getScooterScore() >= 50
-              ? "⚠️ Mängel prüfen"
-              : "🚫 Nicht mieten!"}
-        </Text>
-      </View>
-
-      <View style={styles.checklistCard}>
-        <Text style={styles.checklistTitle}>📋 Checkliste</Text>
-        {scooterChecklist.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[
-              styles.checklistItem,
-              item.checked && styles.checklistItemChecked,
-              item.critical && styles.checklistItemCritical,
-            ]}
-            onPress={() => toggleChecklistItem(item.id)}
-          >
-            <View
-              style={[styles.checkbox, item.checked && styles.checkboxChecked]}
-            >
-              {item.checked && <CheckSquare size={16} color="#FFFFFF" />}
-            </View>
-            <Text
-              style={[
-                styles.checklistLabel,
-                item.checked && styles.checklistLabelChecked,
-              ]}
-            >
-              {item.label}
-            </Text>
-            {item.critical && <AlertTriangle size={16} color="#EF4444" />}
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.cameraCard}>
-        <Text style={styles.cameraTitle}>📸 Fotos dokumentieren</Text>
-        <Text style={styles.cameraHint}>
-          Mache Fotos von allen vorhandenen Schäden VOR der Miete!
-        </Text>
-
-        <TouchableOpacity
-          style={styles.cameraButton}
-          onPress={takeScooterPhoto}
-        >
-          <Camera size={24} color="#FFFFFF" />
-          <Text style={styles.cameraButtonText}>Foto aufnehmen</Text>
-        </TouchableOpacity>
-
-        {scooterPhotos.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.photosScroll}
-          >
-            {scooterPhotos.map((photo, index) => (
-              <View key={index} style={styles.photoItem}>
-                {/* In production, render actual image */}
-                <View style={styles.photoPlaceholder}>
-                  <Camera size={32} color="#94A3B8" />
-                </View>
-                <Text style={styles.photoIndex}>{index + 1}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        )}
-      </View>
-
-      <View style={styles.scamTipsCard}>
-        <Text style={styles.scamTipsTitle}>⚠️ Häufige Scams</Text>
-        <View style={styles.scamList}>
-          <View style={styles.scamItem}>
-            <AlertCircle size={18} color="#F59E0B" />
-            <Text style={styles.scamText}>
-              Vermieter behauptet "neue Kratzer" sind deine Schuld
-            </Text>
-          </View>
-          <View style={styles.scamItem}>
-            <AlertCircle size={18} color="#F59E0B" />
-            <Text style={styles.scamText}>
-              Kaution wird nicht zurückgezahlt
-            </Text>
-          </View>
-          <View style={styles.scamItem}>
-            <AlertCircle size={18} color="#F59E0B" />
-            <Text style={styles.scamText}>
-              Rechnung für nicht-existente Reparaturen
-            </Text>
-          </View>
-          <View style={styles.scamItem}>
-            <AlertCircle size={18} color="#F59E0B" />
-            <Text style={styles.scamText}>
-              Polizei-Check: "Keine Lizenz" - Bestechungsversuch
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.legalCard}>
-        <Text style={styles.legalTitle}>📋 Rechtliches</Text>
-        <Text style={styles.legalText}>
-          • Internationaler Führerschein (mit Motorrad-Klasse) PFLICHT{"\n"}•
-          Helm tragen PFLICHT{"\n"}• Polizeikontrollen: 500k IDR Strafe bei
-          Verstößen{"\n"}• Touristen werden regelmäßig kontrolliert!
-        </Text>
-      </View>
-    </View>
-  );
 
   return (
     <View className="flex-1 bg-background">
@@ -1310,26 +912,6 @@ export default function SOSHubScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeSection === "scooter" && styles.tabActive,
-              ]}
-              onPress={() => setActiveSection("scooter")}
-            >
-              <Bike
-                size={18}
-                color={activeSection === "scooter" ? "#FFFFFF" : "#64748B"}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  activeSection === "scooter" && styles.tabTextActive,
-                ]}
-              >
-                Scooter
-              </Text>
-            </TouchableOpacity>
           </ScrollView>
         </AnimatedView>
 
@@ -1481,138 +1063,6 @@ const styles = StyleSheet.create({
   },
   sarTile: {
     backgroundColor: "#10B981",
-  },
-  // Check-in Card
-  checkInCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-    elevation: 4,
-  },
-  checkInHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
-  },
-  checkInTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  checkInDescription: {
-    fontSize: 13,
-    color: "#64748B",
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  checkInActive: {
-    alignItems: "center",
-  },
-  checkInTimer: {
-    fontSize: 48,
-    fontWeight: "800",
-    color: "#10B981",
-    fontFamily: Platform.OS === "web" ? "monospace" : undefined,
-  },
-  checkInStatus: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 16,
-  },
-  checkInButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  checkInStopButton: {
-    backgroundColor: "#EF4444",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  checkInStopText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  checkInResetButton: {
-    backgroundColor: "#00B4D8",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  checkInResetText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  checkInInactive: {
-    gap: 12,
-  },
-  durationSelector: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  durationButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-start",
-  },
-  durationButtonActive: {
-    backgroundColor: "#00B4D8",
-  },
-  durationText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  durationTextActive: {
-    color: "#FFFFFF",
-  },
-  checkInStartButton: {
-    flexDirection: "row",
-    backgroundColor: "#10B981",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  checkInStartText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  manualCheckInButton: {
-    flexDirection: "row",
-    backgroundColor: "rgba(0, 180, 216, 0.1)",
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  manualCheckInText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#00B4D8",
-  },
-  lastCheckInText: {
-    fontSize: 13,
-    color: "#10B981",
-    textAlign: "center",
-    fontWeight: "600",
   },
   // Volcano Card
   volcanoCard: {
@@ -2115,176 +1565,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   tipsText: {
-    fontSize: 13,
-    color: "#475569",
-    lineHeight: 20,
-  },
-  // Scooter Score
-  scoreCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.75)",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  scoreCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  scoreValue: {
-    fontSize: 32,
-    fontWeight: "800",
-  },
-  scoreLabel: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 4,
-  },
-  scoreHint: {
-    fontSize: 13,
-    color: "#475569",
-    textAlign: "center",
-  },
-  checklistCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.75)",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  checklistTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 12,
-  },
-  checklistItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-    gap: 10,
-  },
-  checklistItemChecked: {
-    backgroundColor: "rgba(16, 185, 129, 0.05)",
-  },
-  checklistItemCritical: {
-    backgroundColor: "rgba(239, 68, 68, 0.05)",
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: "#10B981",
-  },
-  checklistLabel: {
-    flex: 1,
-    fontSize: 13,
-    color: "#475569",
-  },
-  checklistLabelChecked: {
-    color: "#10B981",
-    textDecorationLine: "line-through",
-  },
-  cameraCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.75)",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  cameraTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 6,
-  },
-  cameraHint: {
-    fontSize: 12,
-    color: "#64748B",
-    marginBottom: 12,
-  },
-  cameraButton: {
-    flexDirection: "row",
-    backgroundColor: "#8B5CF6",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  cameraButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  photosScroll: {
-    marginTop: 12,
-  },
-  photoItem: {
-    marginRight: 8,
-    alignItems: "center",
-  },
-  photoPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  photoIndex: {
-    fontSize: 11,
-    color: "#64748B",
-    marginTop: 4,
-  },
-  scamTipsCard: {
-    backgroundColor: "rgba(245, 158, 11, 0.1)",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  scamTipsTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 10,
-  },
-  scamList: {
-    gap: 8,
-  },
-  scamItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  scamText: {
-    fontSize: 13,
-    color: "#475569",
-    flex: 1,
-    lineHeight: 18,
-  },
-  legalCard: {
-    backgroundColor: "rgba(59, 130, 246, 0.1)",
-    borderRadius: 16,
-    padding: 16,
-  },
-  legalTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 6,
-  },
-  legalText: {
     fontSize: 13,
     color: "#475569",
     lineHeight: 20,

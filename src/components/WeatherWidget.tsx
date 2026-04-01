@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Image,
 } from "react-native";
 import {
   Cloud,
@@ -28,6 +29,7 @@ interface WeatherData {
   windSpeed: number;
   condition: string;
   description: string;
+  icon: string;
   location: string;
 }
 
@@ -39,6 +41,7 @@ const FALLBACK_WEATHER: WeatherData = {
   windSpeed: 12,
   condition: "Sunny",
   description: "Sonnig",
+  icon: "01d",
   location: "Bali, Indonesien",
 };
 
@@ -118,6 +121,7 @@ export default function WeatherWidget({
         windSpeed: Math.round(data.wind?.speed || 0),
         condition: data.weather[0].main,
         description: data.weather[0].description,
+        icon: data.weather[0].icon,
         location: `${data.name}, ${data.sys?.country || "ID"}`,
       });
       setError(null);
@@ -196,7 +200,15 @@ export default function WeatherWidget({
 
       {/* Main Weather Display */}
       <View style={styles.main}>
-        {getWeatherIcon(weather?.condition || "Sunny", 64, colors.primary)}
+        {weather?.icon ? (
+          <Image
+            source={{ uri: `https://openweathermap.org/img/wn/${weather.icon}@2x.png` }}
+            style={styles.weatherIcon}
+            resizeMode="contain"
+          />
+        ) : (
+          getWeatherIcon(weather?.condition || "Sunny", 64, colors.primary)
+        )}
         <View style={styles.tempContainer}>
           <Text style={[styles.temperature, { color: colors.text }]}>
             {weather?.temp || FALLBACK_WEATHER.temp}°C
@@ -294,6 +306,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 16,
     marginBottom: 16,
+  },
+  weatherIcon: {
+    width: 80,
+    height: 80,
   },
   tempContainer: {
     flex: 1,

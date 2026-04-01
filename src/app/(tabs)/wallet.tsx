@@ -78,7 +78,7 @@ const CURRENCIES: Currency[] = [
     code: "IDR",
     name: "Indonesian Rupiah",
     symbol: "Rp",
-    rate: 16800,
+    rate: 19508,
     flag: "🇮🇩",
   },
   { code: "GBP", name: "British Pound", symbol: "£", rate: 0.86, flag: "🇬🇧" },
