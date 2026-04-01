@@ -97,7 +97,8 @@
       "expo-audio",
       "expo-video",
       "expo-image",
-      "expo-camera"
+      "expo-camera",
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

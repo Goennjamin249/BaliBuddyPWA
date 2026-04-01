@@ -76,7 +76,10 @@ export default function WeatherWidget({
 
   const fetchWeather = useCallback(async () => {
     const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
-    const CITY = "Denpasar,ID"; // More specific location for Bali
+    
+    // Bali coordinates (Denpasar)
+    const BALI_LAT = -8.4095;
+    const BALI_LON = 115.1889;
 
     // If no API key, use fallback immediately
     if (!API_KEY) {
@@ -87,7 +90,8 @@ export default function WeatherWidget({
     }
 
     try {
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=${CITY}&appid=${API_KEY}&units=metric&lang=de`;
+      // Use Bali coordinates for accurate local weather
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${BALI_LAT}&lon=${BALI_LON}&appid=${API_KEY}&units=metric&lang=de`;
 
       // 2 second timeout
       const controller = new AbortController();

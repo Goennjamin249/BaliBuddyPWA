@@ -6,7 +6,10 @@
       "Bash(replace *)",
       "Bash(set-content *)",
       "Bash(powershell *)",
-      "Bash(select-object *)"
+      "Bash(select-object *)",
+      "Bash(npm *)",
+      "Bash(findstr *)",
+      "Bash(dir *)"
     ]
   },
   "$version": 3

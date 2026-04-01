@@ -11,8 +11,14 @@ import { StatusBar, View, useColorScheme, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import InstallPrompt from "../components/InstallPrompt";
 import { ThemeProvider as CustomThemeProvider } from "../theme/ThemeContext";
+import { registerServiceWorker } from "../utils/serviceWorker";
 import "../global.css";
 import "../i18n";
+
+// Register Service Worker for offline support
+if (typeof window !== "undefined") {
+  registerServiceWorker();
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

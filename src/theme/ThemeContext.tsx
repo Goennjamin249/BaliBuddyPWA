@@ -52,15 +52,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
       : {
           primary: "#FF9D6C",
-          secondary: "#1E293B",
-          background: "#0F172A",
+          secondary: "#000000",
+          background: "#000000",
           text: "#FFFFFF",
           textMuted: "#A1A1AA",
           highlight: "#FF9D6C",
           border: "rgba(255, 255, 255, 0.1)",
-          card: "#1E293B",
+          card: "rgba(0, 0, 0, 0.7)",
           cardMuted: "rgba(255, 255, 255, 0.05)",
-          surface: "#1E293B",
+          surface: "rgba(0, 0, 0, 0.7)",
         };
 
   return (

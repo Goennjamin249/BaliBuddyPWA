@@ -292,12 +292,12 @@ export default function SOSHubScreen() {
       if (!API_KEY) {
         console.warn("Weather API key not configured - using fallback");
         setWeather({
-          temperature: 29,
-          feelsLike: 33,
-          humidity: 75,
-          windSpeed: 12,
-          condition: "Sunny",
-          icon: "☀️",
+          temperature: 28,
+          feelsLike: 32,
+          humidity: 78,
+          windSpeed: 15,
+          condition: "Teilweise bewölkt",
+          icon: "⛅",
           location: "Bali, Indonesien",
         });
         setLoadingWeather(false);
@@ -336,12 +336,12 @@ export default function SOSHubScreen() {
     } catch (error) {
       // Silent fallback - no error shown to user
       setWeather({
-        temperature: 29,
-        feelsLike: 33,
-        humidity: 75,
-        windSpeed: 12,
-        condition: "Sunny",
-        icon: "☀️",
+        temperature: 28,
+        feelsLike: 32,
+        humidity: 78,
+        windSpeed: 15,
+        condition: "Teilweise bewölkt",
+        icon: "⛅",
         location: "Bali, Indonesien",
       });
     } finally {

@@ -1,41 +1,41 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+/**
+ * BaliBuddy Storage Utility
+ * Offline-first data persistence layer
+ * Migrated from AsyncStorage to expo-sqlite/kv-store
+ */
+
+import * as kvStore from "./kv-store";
 
 // Storage Keys
-const KEYS = {
-  TOURS: "@balibuddy:tours",
-  SETTINGS: "@balibuddy:settings",
-  WEATHER: "@balibuddy:weather",
+export const STORAGE_KEYS = {
   POIS: "@balibuddy:pois",
-  LAST_UPDATE: "@balibuddy:last_update",
+  POIS_TIMESTAMP: "@balibuddy:pois:timestamp",
+  POIS_LOCATION: "@balibuddy:pois:location",
+  FAVORITES: "@balibuddy:favorites",
+  WEATHER: "@balibuddy:weather",
+  WEATHER_TIMESTAMP: "@balibuddy:weather:timestamp",
+  SETTINGS: "@balibuddy:settings",
+  LAST_LAUNCH: "@balibuddy:last_launch",
+} as const;
+
+export const CACHE_DURATION = {
+  POIS: 15 * 60 * 1000,
+  WEATHER: 30 * 60 * 1000,
 };
 
-// Types
-export interface Tour {
+export interface CachedPOI {
   id: string;
   name: string;
-  stops: TourStop[];
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface TourStop {
-  id: string;
-  name: string;
+  type: string;
   latitude: number;
   longitude: number;
-  notes?: string;
-  payments?: Payment[];
+  description: string;
+  distance?: number;
+  phone?: string;
+  isFavorite?: boolean;
 }
 
-export interface Payment {
-  id: string;
-  amount: number;
-  currency: string;
-  paidBy: string;
-  category: string;
-}
-
-export interface WeatherData {
+export interface CachedWeather {
   temperature: number;
   feelsLike: number;
   humidity: number;
@@ -43,165 +43,133 @@ export interface WeatherData {
   condition: string;
   icon: string;
   location: string;
-  fetchedAt: number;
 }
 
-export interface Settings {
-  theme: "light" | "dark" | "system";
-  language: string;
-  notifications: boolean;
-  haptics: boolean;
+export interface StorageResult<T> {
+  data: T | null;
+  isCached: boolean;
+  timestamp?: number;
+  isExpired?: boolean;
 }
 
-// Tours
-export async function saveTour(tour: Tour): Promise<void> {
+export async function savePOIs(
+  pois: CachedPOI[],
+  latitude: number,
+  longitude: number,
+): Promise<void> {
   try {
-    const existingTours = await getTours();
-    const updatedTours = [...existingTours, tour];
-    await AsyncStorage.setItem(KEYS.TOURS, JSON.stringify(updatedTours));
+    await kvStore.setJSON(STORAGE_KEYS.POIS, pois);
+    await kvStore.set(STORAGE_KEYS.POIS_TIMESTAMP, Date.now().toString());
+    await kvStore.setJSON(STORAGE_KEYS.POIS_LOCATION, { latitude, longitude });
   } catch (error) {
-    console.error("Error saving tour:", error);
+    console.error("[Storage] Failed to save POIs:", error);
   }
 }
 
-export async function getTours(): Promise<Tour[]> {
+export async function getPOIs(): Promise<StorageResult<CachedPOI[]>> {
   try {
-    const data = await AsyncStorage.getItem(KEYS.TOURS);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error("Error getting tours:", error);
-    return [];
-  }
-}
-
-export async function updateTour(tour: Tour): Promise<void> {
-  try {
-    const existingTours = await getTours();
-    const updatedTours = existingTours.map((t) =>
-      t.id === tour.id ? { ...tour, updatedAt: Date.now() } : t,
-    );
-    await AsyncStorage.setItem(KEYS.TOURS, JSON.stringify(updatedTours));
-  } catch (error) {
-    console.error("Error updating tour:", error);
-  }
-}
-
-export async function deleteTour(tourId: string): Promise<void> {
-  try {
-    const existingTours = await getTours();
-    const updatedTours = existingTours.filter((t) => t.id !== tourId);
-    await AsyncStorage.setItem(KEYS.TOURS, JSON.stringify(updatedTours));
-  } catch (error) {
-    console.error("Error deleting tour:", error);
-  }
-}
-
-// Settings
-export async function saveSettings(settings: Settings): Promise<void> {
-  try {
-    await AsyncStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
-  } catch (error) {
-    console.error("Error saving settings:", error);
-  }
-}
-
-export async function getSettings(): Promise<Settings> {
-  try {
-    const data = await AsyncStorage.getItem(KEYS.SETTINGS);
-    return data
-      ? JSON.parse(data)
-      : {
-          theme: "system",
-          language: "de",
-          notifications: true,
-          haptics: true,
-        };
-  } catch (error) {
-    console.error("Error getting settings:", error);
-    return {
-      theme: "system",
-      language: "de",
-      notifications: true,
-      haptics: true,
-    };
-  }
-}
-
-// Weather
-export async function saveWeather(weather: WeatherData): Promise<void> {
-  try {
-    await AsyncStorage.setItem(KEYS.WEATHER, JSON.stringify(weather));
-    await AsyncStorage.setItem(KEYS.LAST_UPDATE, JSON.stringify(Date.now()));
-  } catch (error) {
-    console.error("Error saving weather:", error);
-  }
-}
-
-export async function getWeather(): Promise<WeatherData | null> {
-  try {
-    const data = await AsyncStorage.getItem(KEYS.WEATHER);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error("Error getting weather:", error);
-    return null;
-  }
-}
-
-export async function getCachedWeather(
-  maxAgeMinutes = 30,
-): Promise<WeatherData | null> {
-  try {
-    const [weatherData, lastUpdateData] = await Promise.all([
-      AsyncStorage.getItem(KEYS.WEATHER),
-      AsyncStorage.getItem(KEYS.LAST_UPDATE),
+    const [poisData, timestampData] = await Promise.all([
+      kvStore.getJSON<CachedPOI[]>(STORAGE_KEYS.POIS),
+      kvStore.get(STORAGE_KEYS.POIS_TIMESTAMP),
     ]);
 
-    if (!weatherData || !lastUpdateData) return null;
+    const timestamp = timestampData ? parseInt(timestampData, 10) : 0;
+    const isExpired = timestamp
+      ? Date.now() - timestamp > CACHE_DURATION.POIS
+      : false;
 
-    const weather = JSON.parse(weatherData);
-    const lastUpdate = JSON.parse(lastUpdateData);
-    const now = Date.now();
-    const ageMinutes = (now - lastUpdate) / 1000 / 60;
-
-    if (ageMinutes > maxAgeMinutes) {
-      return null; // Cache expired
-    }
-
-    return weather;
+    return { data: poisData, isCached: !!poisData, timestamp, isExpired: !!isExpired };
   } catch (error) {
-    console.error("Error getting cached weather:", error);
-    return null;
+    console.error("[Storage] Failed to get POIs:", error);
+    return { data: null, isCached: false, isExpired: false };
   }
 }
 
-// POIs
-export async function savePOIs(pois: any[]): Promise<void> {
+export async function getFavorites(): Promise<CachedPOI[]> {
   try {
-    await AsyncStorage.setItem(KEYS.POIS, JSON.stringify(pois));
-  } catch (error) {
-    console.error("Error saving POIs:", error);
-  }
-}
-
-export async function getPOIs(): Promise<any[]> {
-  try {
-    const data = await AsyncStorage.getItem(KEYS.POIS);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error("Error getting POIs:", error);
+    const data = await kvStore.getJSON<CachedPOI[]>(STORAGE_KEYS.FAVORITES);
+    return data ?? [];
+  } catch {
     return [];
   }
 }
 
-// Clear all data
+export async function addToFavorite(poi: CachedPOI): Promise<void> {
+  try {
+    const favorites = await getFavorites();
+    if (favorites.some((f) => f.id === poi.id)) return;
+    await kvStore.setJSON(STORAGE_KEYS.FAVORITES, [...favorites, { ...poi, isFavorite: true }]);
+  } catch (error) {
+    console.error("[Storage] Failed to add favorite:", error);
+  }
+}
+
+export async function removeFromFavorites(poiId: string): Promise<void> {
+  try {
+    const favorites = await getFavorites();
+    await kvStore.setJSON(STORAGE_KEYS.FAVORITES, favorites.filter((f) => f.id !== poiId));
+  } catch (error) {
+    console.error("[Storage] Failed to remove favorite:", error);
+  }
+}
+
+export async function toggleFavorite(poi: CachedPOI): Promise<boolean> {
+  const favorites = await getFavorites();
+  const exists = favorites.some((f) => f.id === poi.id);
+  if (exists) {
+    await removeFromFavorites(poi.id);
+    return false;
+  } else {
+    await addToFavorite(poi);
+    return true;
+  }
+}
+
+export async function isFavorite(poiId: string): Promise<boolean> {
+  try {
+    const favorites = await getFavorites();
+    return favorites.some((f) => f.id === poiId);
+  } catch {
+    return false;
+  }
+}
+
+export async function saveWeather(weather: CachedWeather): Promise<void> {
+  try {
+    await kvStore.setJSON(STORAGE_KEYS.WEATHER, weather);
+    await kvStore.set(STORAGE_KEYS.WEATHER_TIMESTAMP, Date.now().toString());
+  } catch (error) {
+    console.error("[Storage] Failed to save weather:", error);
+  }
+}
+
+export async function getWeather(): Promise<StorageResult<CachedWeather>> {
+  try {
+    const [weatherData, timestampData] = await Promise.all([
+      kvStore.getJSON<CachedWeather>(STORAGE_KEYS.WEATHER),
+      kvStore.get(STORAGE_KEYS.WEATHER_TIMESTAMP),
+    ]);
+
+    const timestamp = timestampData ? parseInt(timestampData, 10) : 0;
+    const isExpired = timestamp
+      ? Date.now() - timestamp > CACHE_DURATION.WEATHER
+      : false;
+
+    return {
+      data: weatherData,
+      isCached: !!weatherData,
+      timestamp,
+      isExpired: !!isExpired,
+    };
+  } catch {
+    return { data: null, isCached: false, isExpired: false };
+  }
+}
+
 export async function clearAllData(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(KEYS.TOURS);
-    await AsyncStorage.removeItem(KEYS.SETTINGS);
-    await AsyncStorage.removeItem(KEYS.WEATHER);
-    await AsyncStorage.removeItem(KEYS.POIS);
-    await AsyncStorage.removeItem(KEYS.LAST_UPDATE);
+    await kvStore.clearAll();
   } catch (error) {
-    console.error("Error clearing data:", error);
+    console.error("[Storage] Failed to clear all data:", error);
   }
 }
