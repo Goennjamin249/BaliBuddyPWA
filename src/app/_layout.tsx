@@ -46,11 +46,6 @@ export default function RootLayout() {
             >
               <Stack.Screen name="index" />
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="scanner/index" />
-              <Stack.Screen name="scooter-check/index" />
-              <Stack.Screen name="ocr-scanner/index" />
-              <Stack.Screen name="dictionary/index" />
-              <Stack.Screen name="law-hub/index" />
             </Stack>
 
             <InstallPrompt />

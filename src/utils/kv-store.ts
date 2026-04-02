@@ -13,11 +13,17 @@ export async function get(key: string): Promise<string | null> {
   }
 }
 
-export async function set(key: string, value: string): Promise<void> {
+export async function set(key: string, value: string): Promise<boolean> {
   try {
     localStorage.setItem(STORAGE_PREFIX + key, value);
+    return true;
   } catch (error) {
-    console.warn('[KV-Store] localStorage set failed:', error);
+    if (error instanceof DOMException && error.name === "QuotaExceededError") {
+      console.error("[KV-Store] localStorage quota exceeded. Data could not be saved.");
+    } else {
+      console.warn("[KV-Store] localStorage set failed:", error);
+    }
+    return false;
   }
 }
 

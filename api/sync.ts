@@ -151,6 +151,7 @@ async function initializeDatabase(): Promise<{
     "clinics",
     "itinerary_items",
     "squad_members",
+    "groups",
     "expenses",
     "expense_splits",
     "packing_items",

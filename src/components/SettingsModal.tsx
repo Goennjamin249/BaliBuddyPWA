@@ -13,10 +13,12 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
-import { X, Sun, Moon, Heart, MapPin, Trash2, Navigation } from "lucide-react-native";
+import { X, Sun, Moon, Heart, MapPin, Trash2, Navigation, RefreshCw, CheckCircle } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme/ThemeContext";
-import { getFavorites, removeFromFavorites, type CachedPOI } from "../utils/storage";
+import { getFavorites, removeFromFavorites, type CachedPOI, saveRate } from "../utils/storage";
+import { fetchWeather } from "../services/weather";
+import { fetchExchangeRate } from "../services/currency";
 
 interface SettingsModalProps {
   visible: boolean;
@@ -32,6 +34,8 @@ export default function SettingsModal({
   const { colors, themeMode, setThemeMode } = useTheme();
   const [favorites, setFavorites] = useState<CachedPOI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">("idle");
 
   // Load favorites when modal opens
   useEffect(() => {
@@ -73,6 +77,33 @@ export default function SettingsModal({
     setThemeMode(themeMode === "dark" ? "light" : "dark");
   };
 
+  // Sync all live data
+  const handleSync = async () => {
+    try {
+      setIsSyncing(true);
+      setSyncStatus("idle");
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Sync weather via serverless function
+      await fetchWeather(false);
+
+      // Sync exchange rate via centralized service
+      const rate = await fetchExchangeRate();
+      await saveRate({ eur: 1, idr: rate, timestamp: Date.now() });
+
+      setSyncStatus("success");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error("[Settings] Sync failed:", error);
+      setSyncStatus("error");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsSyncing(false);
+      // Reset status after 3 seconds
+      setTimeout(() => setSyncStatus("idle"), 3000);
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -110,6 +141,66 @@ export default function SettingsModal({
             style={styles.content}
             showsVerticalScrollIndicator={false}
           >
+            {/* Sync Section */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                🔄 Daten synchronisieren
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.syncButton,
+                  {
+                    backgroundColor: syncStatus === "success"
+                      ? "rgba(16, 185, 129, 0.2)"
+                      : syncStatus === "error"
+                        ? "rgba(239, 68, 68, 0.2)"
+                        : "rgba(255, 255, 255, 0.1)",
+                    borderColor: syncStatus === "success"
+                      ? "#10B981"
+                      : syncStatus === "error"
+                        ? "#EF4444"
+                        : colors.border,
+                  },
+                ]}
+                onPress={handleSync}
+                disabled={isSyncing}
+                activeOpacity={0.7}
+              >
+                {isSyncing ? (
+                  <RefreshCw size={20} color={colors.text} style={{ transform: [{ rotate: '45deg' }] }} />
+                ) : syncStatus === "success" ? (
+                  <CheckCircle size={20} color="#10B981" />
+                ) : syncStatus === "error" ? (
+                  <X size={20} color="#EF4444" />
+                ) : (
+                  <RefreshCw size={20} color={colors.text} />
+                )}
+                <Text
+                  style={[
+                    styles.syncButtonText,
+                    {
+                      color: syncStatus === "success"
+                        ? "#10B981"
+                        : syncStatus === "error"
+                          ? "#EF4444"
+                          : colors.text,
+                    },
+                  ]}
+                >
+                  {isSyncing
+                    ? "Synchronisiere..."
+                    : syncStatus === "success"
+                      ? "Erfolgreich!"
+                      : syncStatus === "error"
+                        ? "Fehler aufgetreten"
+                        : "Jetzt synchronisieren"}
+                </Text>
+              </TouchableOpacity>
+              <Text style={[styles.syncHint, { color: colors.textMuted }]}>
+                Aktualisiert Wetterdaten und Wechselkurse
+              </Text>
+            </View>
+
             {/* Appearance Section */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -307,5 +398,23 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 8,
+  },
+  syncButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  syncButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  syncHint: {
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: "center",
   },
 });

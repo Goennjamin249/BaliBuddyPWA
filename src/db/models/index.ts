@@ -141,6 +141,17 @@ export class ItineraryItem extends Model {
   @readonly @date("updated_at") updatedAt!: Date;
 }
 
+// ==================== GROUPS ====================
+export class Group extends Model {
+  static table = "groups";
+
+  @field("name") name!: string;
+  @field("members") members!: string;
+  @field("emoji") emoji!: string;
+  @readonly @date("created_at") createdAt!: Date;
+  @readonly @date("updated_at") updatedAt!: Date;
+}
+
 // ==================== SQUAD MEMBERS ====================
 export class SquadMember extends Model {
   static table = "squad_members";
@@ -252,6 +263,7 @@ export const allModels = [
   SafeBar,
   Clinic,
   ItineraryItem,
+  Group,
   SquadMember,
   Expense,
   ExpenseSplit,

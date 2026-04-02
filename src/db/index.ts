@@ -3,11 +3,12 @@ import LokiJSAdapter from "@nozbe/watermelondb/adapters/lokijs";
 
 import { allModels } from "./models";
 import schema from "./schema";
+import { migrations } from "./migrations";
 
 // Create LokiJS adapter for web (IndexedDB)
 const adapter = new LokiJSAdapter({
   schema,
-  // Migrations will be added as schema evolves
+  migrations,
   useWebWorker: false,
   useIncrementalIndexedDB: true,
 });

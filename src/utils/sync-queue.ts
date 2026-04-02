@@ -6,22 +6,32 @@
 
 import * as kvStore from './kv-store';
 import NetInfo from '@react-native-community/netinfo';
+import { SyncService } from '../services/api';
 
 // Sync Queue Keys
 const SYNC_QUEUE_KEY = '@balibuddy:sync_queue';
 const LAST_SYNC_KEY = '@balibuddy:last_sync';
 
-// Sync operation types
+// Sync operation types mapped to collection names
 export type SyncOperationType = 
   | 'ADD_FAVORITE'
   | 'REMOVE_FAVORITE'
   | 'UPDATE_POI'
-  | 'UPDATE_SETTINGS';
+  | 'UPDATE_SETTINGS'
+  | 'CREATE_RECORD'
+  | 'UPDATE_RECORD'
+  | 'DELETE_RECORD';
+
+export interface SyncOperationData {
+  collection?: string;
+  id?: string;
+  [key: string]: unknown;
+}
 
 export interface SyncOperation {
   id: string;
   type: SyncOperationType;
-  data: any;
+  data: SyncOperationData;
   timestamp: number;
   retryCount: number;
   maxRetries: number;
@@ -62,7 +72,7 @@ export function getPendingOperations(): SyncOperation[] {
  */
 export async function addToQueue(
   type: SyncOperationType,
-  data: any,
+  data: SyncOperationData,
   maxRetries: number = 3
 ): Promise<string> {
   const operation: SyncOperation = {
@@ -184,20 +194,72 @@ export async function processQueue(): Promise<{ synced: number; failed: number }
 }
 
 /**
- * Sync individual operation
+ * Map operation type to collection name
+ */
+function getCollectionForOperation(type: SyncOperationType, data: SyncOperationData): string {
+  switch (type) {
+    case 'ADD_FAVORITE':
+    case 'REMOVE_FAVORITE':
+      return 'favorites';
+    case 'UPDATE_POI':
+      return 'pois';
+    case 'UPDATE_SETTINGS':
+      return 'settings';
+    case 'CREATE_RECORD':
+    case 'UPDATE_RECORD':
+    case 'DELETE_RECORD':
+    default:
+      return data?.collection || 'records';
+  }
+}
+
+/**
+ * Map operation type to change type for sync push
+ */
+function getChangeType(type: SyncOperationType): 'created' | 'updated' | 'deleted' {
+  switch (type) {
+    case 'ADD_FAVORITE':
+    case 'CREATE_RECORD':
+      return 'created';
+    case 'UPDATE_POI':
+    case 'UPDATE_SETTINGS':
+    case 'UPDATE_RECORD':
+      return 'updated';
+    case 'REMOVE_FAVORITE':
+    case 'DELETE_RECORD':
+      return 'deleted';
+    default:
+      return 'updated';
+  }
+}
+
+/**
+ * Sync individual operation with real API
  */
 async function syncOperation(operation: SyncOperation): Promise<boolean> {
-  // In a real app, this would make API calls to sync data
-  // For now, we'll simulate successful sync
-  
   console.log(`[SyncQueue] Syncing: ${operation.type} (${operation.id})`);
   
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
-  // For demo purposes, always succeed
-  // In production, implement actual API calls based on operation.type
-  return true;
+  try {
+    const collection = getCollectionForOperation(operation.type, operation.data);
+    const changeType = getChangeType(operation.type);
+    
+    const result = await SyncService.push(collection, [{
+      type: changeType,
+      id: operation.id,
+      data: operation.data,
+    }]);
+    
+    if (result.success) {
+      console.log(`[SyncQueue] Successfully synced: ${operation.id}`);
+      return true;
+    }
+    
+    console.error(`[SyncQueue] Sync failed for ${operation.id}:`, result.errors);
+    return false;
+  } catch (error) {
+    console.error(`[SyncQueue] Sync error for ${operation.id}:`, error);
+    return false;
+  }
 }
 
 /**

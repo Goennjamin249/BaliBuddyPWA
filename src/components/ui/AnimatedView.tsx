@@ -5,8 +5,6 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-  FadeIn,
-  SlideInUp,
 } from "react-native-reanimated";
 
 type AnimationType = "fadeIn" | "slideUp" | "scaleIn" | "none";
@@ -26,15 +24,20 @@ export function AnimatedView({
   style,
   className,
 }: AnimatedViewProps) {
-  const opacity = useSharedValue(0);
+  const opacity = useSharedValue(animation === "none" ? 1 : 0);
   const scale = useSharedValue(animation === "scaleIn" ? 0.9 : 1);
   const translateY = useSharedValue(animation === "slideUp" ? 20 : 0);
 
   useEffect(() => {
+    if (animation === "none") {
+      opacity.value = 1;
+      return;
+    }
+
     const timeout = setTimeout(() => {
       opacity.value = withTiming(1, { duration: 300 });
       if (animation === "scaleIn") {
-        scale.value = withSpring(1);
+        scale.value = withSpring(1, { damping: 12, stiffness: 100 });
       }
       if (animation === "slideUp") {
         translateY.value = withTiming(0, { duration: 300 });
