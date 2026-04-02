@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,40 @@ import {
 import * as Haptics from "expo-haptics";
 
 import { useTheme } from "../theme/ThemeContext";
+import { saveWeather, getWeather } from "../utils/storage";
+import {
+  fromCachedWeather as mapperFromCached,
+  toCachedWeather as mapperToCached,
+  type CachedWeather,
+  type WeatherData as WeatherDataType,
+} from "../utils/weatherMapper";
+
+// Map WeatherData to CachedWeather for storage
+const toCachedWeather = (data: WeatherData): CachedWeather =>
+  mapperToCached({
+    temperature: data.temp,
+    feelsLike: data.feelsLike,
+    humidity: data.humidity,
+    windSpeed: data.windSpeed,
+    condition: data.condition,
+    icon: data.icon,
+    location: data.location,
+  });
+
+// Map CachedWeather to WeatherData for display
+const fromCachedWeather = (cached: CachedWeather): WeatherData => {
+  const mapped = mapperFromCached(cached);
+  return {
+    temp: mapped.temperature,
+    feelsLike: mapped.feelsLike,
+    humidity: mapped.humidity,
+    windSpeed: mapped.windSpeed,
+    condition: mapped.condition,
+    description: mapped.condition,
+    icon: mapped.icon,
+    location: mapped.location,
+  };
+};
 
 interface WeatherData {
   temp: number;
@@ -76,29 +110,39 @@ export default function WeatherWidget({
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastUpdateTimeRef = useRef<number>(0);
 
-  const fetchWeather = useCallback(async () => {
+  const fetchWeather = useCallback(async (showLoading: boolean = true) => {
     const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
     
     // Bali coordinates (Denpasar)
     const BALI_LAT = -8.4095;
     const BALI_LON = 115.1889;
 
-    // If no API key, use fallback immediately
+    // If no API key, try cached data first
     if (!API_KEY) {
-      console.warn("Weather API key not configured - using fallback");
-      setWeather(FALLBACK_WEATHER);
-      setLoading(false);
+      console.warn("Weather API key not configured - checking cache");
+      const cached = await getWeather();
+      if (cached.data) {
+        setWeather(fromCachedWeather(cached.data));
+        setError("API-Key nicht konfiguriert - zeige gecachte Daten");
+      } else {
+        setWeather(FALLBACK_WEATHER);
+        setError("Wetter-API nicht konfiguriert");
+      }
+      if (showLoading) setLoading(false);
       return;
     }
+
+    if (showLoading) setLoading(true);
 
     try {
       // Use Bali coordinates for accurate local weather
       const url = `https://api.openweathermap.org/data/2.5/weather?lat=${BALI_LAT}&lon=${BALI_LON}&appid=${API_KEY}&units=metric&lang=de`;
 
-      // 2 second timeout
+      // 10 second timeout for better reliability
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -114,7 +158,7 @@ export default function WeatherWidget({
         throw new Error("Invalid weather data");
       }
 
-      setWeather({
+      const weatherData: WeatherData = {
         temp: Math.round(data.main.temp),
         feelsLike: Math.round(data.main.feels_like),
         humidity: data.main.humidity,
@@ -123,20 +167,43 @@ export default function WeatherWidget({
         description: data.weather[0].description,
         icon: data.weather[0].icon,
         location: `${data.name}, ${data.sys?.country || "ID"}`,
-      });
+      };
+
+      setWeather(weatherData);
+      
+      // Save to storage for offline caching (30 min cache)
+      await saveWeather(toCachedWeather(weatherData));
+      lastUpdateTimeRef.current = Date.now();
+      
       setError(null);
     } catch (err) {
-      console.warn("Weather fetch failed, using fallback:", err);
-      // Silent fallback - no error shown to user
-      setWeather(FALLBACK_WEATHER);
-      setError(null);
+      console.warn("Weather fetch failed:", err);
+      
+      // Try to load cached data as fallback
+      const cached = await getWeather();
+      if (cached.data) {
+        setWeather(fromCachedWeather(cached.data));
+        setError("Offline-Modus: zeige gecachte Daten");
+      } else {
+        setWeather(FALLBACK_WEATHER);
+        setError("Offline-Modus: Wetterdaten nicht verfügbar");
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchWeather();
+    // Initial load - try cache first
+    fetchWeather(true);
+
+    // Set up auto-refresh interval (every 1 hour for live updates)
+    const refreshInterval = setInterval(() => {
+      fetchWeather(false); // Silent refresh
+    }, 60 * 60 * 1000); // 1 hour
+
+    // Cleanup on unmount
+    return () => clearInterval(refreshInterval);
   }, [fetchWeather]);
 
   const handleRefresh = async () => {
@@ -247,7 +314,7 @@ export default function WeatherWidget({
         >
           <AlertTriangle size={16} color="#F59E0B" />
           <Text style={[styles.errorText, { color: colors.textMuted }]}>
-            Offline-Modus: Wetterdaten nicht verfügbar
+            {error}
           </Text>
         </View>
       )}
@@ -263,10 +330,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
+        boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
       },
       android: {
         elevation: 8,
@@ -361,10 +425,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       },
       android: {
         elevation: 4,

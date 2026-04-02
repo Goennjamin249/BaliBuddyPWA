@@ -1,12 +1,21 @@
-// WatermelonDB Migrations for BaliBuddy
-// Currently empty - migrations will be added as schema evolves
+import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrations';
 
-export default {
-  // Migrations will be defined here as needed
-  // Example:
-  // 2: (schema) => schema
-  //   .table('posts')
-  //   .columns((addColumn) => {
-  //     addColumn('subtitle', 'subtitle', { type: 'string', isOptional: true })
-  //   }),
-};
+export const migrations = schemaMigrations({
+  migrations: [
+    {
+      toVersion: 2,
+      steps: [
+        {
+          type: 'sql',
+          sql: 'ALTER TABLE expenses RENAME COLUMN amount TO amount_idr',
+        },
+        addColumns({
+          table: 'expenses',
+          columns: [
+            { name: 'category', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
+  ],
+});

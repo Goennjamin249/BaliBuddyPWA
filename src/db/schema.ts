@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 1,
+  version: 2,
   tables: [
     // Currencies for offline conversion
     tableSchema({
@@ -161,7 +161,19 @@ export default appSchema({
       ],
     }),
     
-    // Expenses
+    // Groups (für Community/Gruppenkasse)
+    tableSchema({
+      name: 'groups',
+      columns: [
+        { name: 'name', type: 'string' },
+        { name: 'members', type: 'string' }, // JSON string of member names
+        { name: 'emoji', type: 'string' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    
+    // Expenses (für Gruppenkasse)
     tableSchema({
       name: 'expenses',
       columns: [
@@ -169,14 +181,14 @@ export default appSchema({
         { name: 'amount_idr', type: 'number' },
         { name: 'paid_by', type: 'string' },
         { name: 'squad_id', type: 'string' },
-        { name: 'date', type: 'number' },
         { name: 'category', type: 'string' },
+        { name: 'date', type: 'number' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
     }),
-    
-    // Expense splits
+
+    // Expense splits (legacy compatibility)
     tableSchema({
       name: 'expense_splits',
       columns: [

@@ -1,14 +1,18 @@
 /* eslint-disable no-restricted-globals */
 /* Service Worker for BaliBuddy PWA - Offline-First Asset Caching */
 
-const CACHE_NAME = 'balibuddy-v1';
+const CACHE_NAME = 'balibuddy-v2';
+const OFFLINE_URL = '/offline.html';
+
+// Static assets to precache
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/offline.html',
   '/manifest.json',
 ];
 
-// Install event - cache static assets
+// Install event - cache static assets including offline page
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -43,7 +47,8 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.css') ||
-    url.pathname.match(/\.(png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/)
+    url.pathname.endsWith('.json') ||
+    url.pathname.match(/\.(png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico)$/)
   ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
@@ -52,13 +57,20 @@ self.addEventListener('fetch', (event) => {
         }
         return fetch(request).then((networkResponse) => {
           // Cache successful responses
-          if (networkResponse.ok) {
+          if (networkResponse && networkResponse.ok) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseClone);
             });
           }
           return networkResponse;
+        }).catch(() => {
+          // Return offline page for navigation requests
+          if (request.mode === 'navigate') {
+            return caches.match(OFFLINE_URL);
+          }
+          // Return a basic Response to prevent errors
+          return new Response('', { status: 408, statusText: 'Request Timeout' });
         });
       })
     );
@@ -70,7 +82,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((networkResponse) => {
-          if (networkResponse.ok) {
+          // Only cache GET/POST requests, not HEAD
+          if (networkResponse && networkResponse.ok && request.method === 'GET') {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseClone);
@@ -80,8 +93,31 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => {
           // Fallback to cache if network fails
-          return caches.match(request);
+          return caches.match(request).then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            return new Response(JSON.stringify({ error: 'Offline' }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
         })
+    );
+    return;
+  }
+
+  // Navigate requests - Network-First with offline fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).then((response) => {
+        if (response && response.ok) {
+          return response;
+        }
+        return caches.match(OFFLINE_URL);
+      }).catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
     );
     return;
   }
@@ -89,8 +125,24 @@ self.addEventListener('fetch', (event) => {
   // Default: Network-First with cache fallback
   event.respondWith(
     fetch(request)
+      .then((networkResponse) => {
+        // Only cache GET requests, not HEAD
+        if (networkResponse && networkResponse.ok && request.method === 'GET') {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
       .catch(() => {
-        return caches.match(request);
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Return a basic Response for non-navigation requests to prevent errors
+          return new Response('', { status: 408, statusText: 'Request Timeout' });
+        });
       })
   );
 });

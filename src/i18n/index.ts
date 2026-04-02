@@ -4,13 +4,16 @@ import * as Localization from 'expo-localization';
 
 import de from './de.json';
 import en from './en.json';
+import fr from './fr.json';
+import es from './es.json';
 
 const resources = {
   de: { translation: de },
   en: { translation: en },
+  fr: { translation: fr },
+  es: { translation: es },
 };
 
-// Get device language
 const getDeviceLanguage = (): string => {
   try {
     const locales = Localization.getLocales();
@@ -23,7 +26,7 @@ const getDeviceLanguage = (): string => {
   } catch (error) {
     console.warn('Failed to get device language:', error);
   }
-  return 'de'; // Default to German
+  return 'de';
 };
 
 i18n

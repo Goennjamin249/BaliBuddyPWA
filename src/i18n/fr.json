@@ -1,0 +1,7 @@
+{
+  "tabs": { "radar": "Radar", "survival": "Survie", "wallet": "Caisse de Groupe", "settings": "Paramètres" },
+  "radar": { "title": "Radar de Proximité", "map": "Carte", "list": "Liste", "distance": "Distance", "route": "Itinéraire", "call": "Appeler" },
+  "survival": { "title": "Kit de Survie", "currency": "Convertisseur", "visa": "Compte à rebours Visa", "days": "Jours restants", "entry": "Date d'entrée" },
+  "wallet": { "title": "Caisse Commune", "members": "Membres", "balances": "Soldes", "expenses": "Dépenses", "add_expense": "Ajouter une dépense" },
+  "settings": { "title": "Paramètres", "language": "Langue", "sync": "Synchroniser maintenant", "online": "En ligne", "offline": "Hors ligne", "stats": "Statistiques" }
+}

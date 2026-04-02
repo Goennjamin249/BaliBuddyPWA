@@ -36,7 +36,6 @@ export default function Header({
       style={[
         styles.container,
         {
-          paddingTop: insets.top,
           backgroundColor: colors.background,
           borderBottomColor: colors.border,
         },

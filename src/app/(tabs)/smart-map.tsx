@@ -1,1129 +1,666 @@
-import "maplibre-gl/dist/maplibre-gl.css";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   ActivityIndicator,
-  Linking,
+  FlatList,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
+  ScrollView,
 } from "react-native";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   AlertTriangle,
   Banknote,
   Beer,
-  CreditCard,
-  Droplets,
-  Hotel,
-  Layers,
+  List,
+  Map as MapIcon,
   MapPin,
+  MessageCircle,
   Navigation,
   Phone,
-  RefreshCw,
-  Settings,
+  Star,
   Utensils,
   X,
-  LocateFixed,
+  Home,
+  Shield,
 } from "lucide-react-native";
-import type { LucideProps } from "lucide-react-native";
-import { AnimatedView, Chip } from "../../components/ui";
-import { useTheme } from "../../theme/ThemeContext";
-import Header from "../../components/Header";
-import SettingsModal from "../../components/SettingsModal";
+import { useTranslation } from "react-i18next";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
 import NetInfo from "@react-native-community/netinfo";
-import Map, { Marker } from "react-map-gl/maplibre";
-import {
-  savePOIs,
-  getPOIs,
-  getFavorites,
-  toggleFavorite,
-  addToFavorite,
-  removeFromFavorites,
-  isFavorite,
-  type CachedPOI,
-} from "../../utils/storage";
 
-// OpenFreeMap style URL (token-free)
-const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+// Lokale Utilities (V2 Standard)
+import { openPhone, openWhatsApp, openRoute } from "../../lib/deeplinks";
+import { haversineDistance, formatDistance } from "../../lib/haversine";
+import db from "../../db/index"; // Dein SQLite/Dexie Pfad
 
-// ==================== TYPES ====================
+// === V2 Design Tokens ===
+const EMERALD_600 = "#059669";
+const TEAL_700 = "#0F766E";
+const BG = "#F2F2F7";
+const WHITE = "#FFFFFF";
+
+type Category =
+  | "atm"
+  | "warung"
+  | "klinik"
+  | "police"
+  | "fuel"
+  | "bar"
+  | "hotel"
+  | "restaurant"
+  | "accommodation";
+
 interface POI {
   id: string;
   name: string;
-  type: POIType;
-  latitude: number;
-  longitude: number;
+  category: Category;
   description: string;
+  lat: number;
+  lng: number;
+  rating: number;
+  phone: string;
+  tags: string[];
   distance?: number;
-  phone?: string;
 }
 
-type POIType =
-  | "hotel"
-  | "bar"
-  | "restaurant"
-  | "atm"
-  | "water"
-  | "hospital"
-  | "surf";
-
-interface FilterChip {
-  id: string;
-  label: string;
-  icon: React.ReactElement<any>;
-  active: boolean;
-  color: string;
-}
-
-// ==================== CONSTANTS ====================
-const BALI_CENTER = {
-  longitude: 115.1889,
-  latitude: -8.4095,
-};
-
-// Mock POI Data for Bali
-const MOCK_POIS: POI[] = [
-  {
-    id: "hotel1",
-    name: "Bali Garden Hotel",
-    type: "hotel",
-    latitude: -8.6705,
-    longitude: 115.2126,
-    description: "Comfortable hotel in Denpasar",
+const CAT_STYLE: Record<
+  Category,
+  { bg: string; color: string; label: string; Icon: any; emoji: string }
+> = {
+  atm: {
+    bg: "#DBEAFE",
+    color: "#2563EB",
+    label: "ATM",
+    Icon: Banknote,
+    emoji: "💳",
   },
-  {
-    id: "bar1",
-    name: "Sunset Bar Seminyak",
-    type: "bar",
-    latitude: -8.6889,
-    longitude: 115.1615,
-    description: "Beachfront cocktails",
+  warung: {
+    bg: "#FFEDD5",
+    color: "#EA580C",
+    label: "Warung",
+    Icon: Utensils,
+    emoji: "🍜",
   },
-  {
-    id: "restaurant1",
-    name: "Warung Nia",
-    type: "restaurant",
-    latitude: -8.6481,
-    longitude: 115.1384,
-    description: "Local Balinese cuisine",
+  klinik: {
+    bg: "#FEE2E2",
+    color: "#DC2626",
+    label: "Klinik",
+    Icon: AlertTriangle,
+    emoji: "🏥",
   },
-  {
-    id: "atm1",
-    name: "BCA ATM Legian",
-    type: "atm",
-    latitude: -8.7205,
-    longitude: 115.1729,
-    description: "24/7 ATM",
+  police: {
+    bg: "#E0E7FF",
+    color: "#4F46E5",
+    label: "Polizei",
+    Icon: Shield,
+    emoji: "👮",
   },
-];
-
-// POI Colors for markers
-const POI_COLORS: Record<POIType, string> = {
-  hotel: "#6366F1",
-  bar: "#EC4899",
-  restaurant: "#F97316",
-  atm: "#10B981",
-  water: "#00B4D8",
-  hospital: "#EF4444",
-  surf: "#3B82F6",
+  fuel: {
+    bg: "#FEF3C7",
+    color: "#D97706",
+    label: "Benzin",
+    Icon: MapPin,
+    emoji: "⛽",
+  },
+  bar: {
+    bg: "#FCE7F3",
+    color: "#BE185D",
+    label: "Bar",
+    Icon: Beer,
+    emoji: "🍺",
+  },
+  hotel: {
+    bg: "#E0F2FE",
+    color: "#0284C7",
+    label: "Hotel",
+    Icon: MapPin,
+    emoji: "🏨",
+  },
+  accommodation: {
+    bg: "#F3E8FF",
+    color: "#7E22CE",
+    label: "Villa",
+    Icon: Home,
+    emoji: "🏡",
+  },
+  restaurant: {
+    bg: "#FFEDD5",
+    color: "#EA580C",
+    label: "Rest.",
+    Icon: Utensils,
+    emoji: "🍽️",
+  },
 };
 
-// ==================== HELPER FUNCTIONS ====================
-const getPOIIcon = (type: POIType, size: number = 20, color?: string) => {
-  const iconColor = color || POI_COLORS[type];
-
-  switch (type) {
-    case "hotel":
-      return <Hotel size={size} color={iconColor} />;
-    case "bar":
-      return <Beer size={size} color={iconColor} />;
-    case "restaurant":
-      return <Utensils size={size} color={iconColor} />;
-    case "atm":
-      return <Banknote size={size} color={iconColor} />;
-    case "water":
-      return <Droplets size={size} color={iconColor} />;
-    case "hospital":
-      return <AlertTriangle size={size} color={iconColor} />;
-    case "surf":
-      return <Navigation size={size} color={iconColor} />;
-    default:
-      return <MapPin size={size} color={iconColor} />;
-  }
-};
-
-const getPOIColor = (type: POIType): string => {
-  return POI_COLORS[type] || "#6B7280";
-};
-
-const calculateDistance = (
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number => {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
-const getPOIType = (tags: any): string => {
-  if (tags?.tourism === "hotel" || tags?.tourism === "hostel") return "hotel";
-  if (tags?.amenity === "bar" || tags?.amenity === "pub") return "bar";
-  if (tags?.amenity === "restaurant" || tags?.amenity === "cafe")
-    return "restaurant";
-  if (tags?.amenity === "atm" || tags?.amenity === "bank") return "atm";
-  return "restaurant";
-};
-
-// Race-Condition-Fetch: Try multiple mirrors simultaneously
-const fetchNearbyPOIs = async (
-  lat: number,
-  lon: number,
-  radiusMeters = 2000,
-): Promise<POI[]> => {
-  const radiusDegrees = radiusMeters / 111000;
-
-  const bbox = {
-    south: lat - radiusDegrees,
-    west: lon - radiusDegrees,
-    north: lat + radiusDegrees,
-    east: lon + radiusDegrees,
-  };
-
-  const query = `
-[out:json][timeout:25];
-(
-  node["tourism"~"hotel|hostel|guest_house"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
-  node["amenity"~"bar|pub|nightclub"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
-  node["amenity"~"restaurant|cafe|fast_food"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
-  node["amenity"~"atm|bank"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
-);
-out body 50;
-  `.trim();
-
-  const mirrors = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-  ];
-
-  const fetchPromises = mirrors.map(async (mirror) => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-      const response = await fetch(mirror, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      return data.elements.map((el: any) => ({
-        id: `osm-${el.id}`,
-        name: el.tags?.name || getPOIType(el.tags),
-        type: getPOIType(el.tags) as POIType,
-        latitude: el.lat,
-        longitude: el.lon,
-        description: el.tags?.description || getPOIType(el.tags),
-        phone: el.tags?.phone,
-        distance: calculateDistance(lat, lon, el.lat, el.lon),
-      }));
-    } catch (error) {
-      return null;
-    }
-  });
-
-  try {
-    const results = await Promise.allSettled(fetchPromises);
-
-    for (const result of results) {
-      if (result.status === "fulfilled" && result.value) {
-        console.log("[POI] ✓ Loaded from mirror");
-        return result.value;
-      }
-    }
-
-    console.warn("[POI] All mirrors failed, using cached data");
-    throw new Error("All mirrors failed");
-  } catch (error) {
-    throw error;
-  }
-};
-
-// ==================== MAIN COMPONENT ====================
 export default function SmartMapScreen() {
   const { t } = useTranslation();
-  const { colors, themeMode } = useTheme();
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const mapRef = useRef<MapView>(null);
+  const [viewMode, setViewMode] = useState<"list" | "map">("map");
+  const [activeFilter, setActiveFilter] = useState<Category | "all">("all");
   const [pois, setPois] = useState<POI[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState({
+    lat: -8.5069,
+    lng: 115.2625,
+  }); // Default Ubud
   const [isOnline, setIsOnline] = useState(true);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedPOI, setSelectedPOI] = useState<POI | null>(null);
-  const [selectedPOIFavorite, setSelectedPOIFavorite] = useState(false);
-  const [viewState, setViewState] = useState({
-    longitude: BALI_CENTER.longitude,
-    latitude: BALI_CENTER.latitude,
-    zoom: 13,
-  });
-  const [showSettings, setShowSettings] = useState(false);
 
-  // Filter chips
-  const filterChips: FilterChip[] = [
-    {
-      id: "all",
-      label: t("smartMap.all", "Alle"),
-      icon: <MapPin {...({ size: 16 } as LucideProps)} />,
-      active: !showFavoritesOnly && selectedFilter === "all",
-      color: "#00B4D8",
-    },
-    {
-      id: "favorites",
-      label: "❤️ Favoriten",
-      icon: <MapPin {...({ size: 16 } as LucideProps)} />,
-      active: showFavoritesOnly,
-      color: "#EF4444",
-    },
-    {
-      id: "hotel",
-      label: t("smartMap.hotel", "Hotel"),
-      icon: <Hotel {...({ size: 16 } as LucideProps)} />,
-      active: selectedFilter === "hotel",
-      color: "#6366F1",
-    },
-    {
-      id: "bar",
-      label: t("smartMap.bar", "Bar"),
-      icon: <Beer {...({ size: 16 } as LucideProps)} />,
-      active: selectedFilter === "bar",
-      color: "#EC4899",
-    },
-    {
-      id: "restaurant",
-      label: t("smartMap.restaurant", "Food"),
-      icon: <Utensils {...({ size: 16 } as LucideProps)} />,
-      active: selectedFilter === "restaurant",
-      color: "#F97316",
-    },
-    {
-      id: "atm",
-      label: t("smartMap.atm", "ATM"),
-      icon: <CreditCard {...({ size: 16 } as LucideProps)} />,
-      active: selectedFilter === "atm",
-      color: "#10B981",
-    },
+  // 1. Online Status & Location Fetching
+  useEffect(() => {
+    const sub = NetInfo.addEventListener((state) =>
+      setIsOnline(state.isConnected ?? true),
+    );
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        let loc = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          lat: loc.coords.latitude,
+          lng: loc.coords.longitude,
+        });
+      }
+      loadData();
+    })();
+    return () => sub();
+  }, []);
+
+  // MOCK POIs als Fallback wenn DB leer
+  const MOCK_POIS: POI[] = [
+    { id: "m1", name: "BCA ATM Ubud", category: "atm", description: "BNI ATM", lat: -8.5069, lng: 115.2625, rating: 4.5, phone: "+6281234567890", tags: ["visa", "24h"] },
+    { id: "m2", name: "Warung Babi Guling", category: "warung", description: "Babi Guling", lat: -8.5075, lng: 115.2630, rating: 4.8, phone: "+6281234567891", tags: ["lokal"] },
+    { id: "m3", name: "Bali Clinic", category: "klinik", description: "Klinik", lat: -8.5055, lng: 115.2640, rating: 4.2, phone: "+6281234567892", tags: ["24h"] },
+    { id: "m4", name: "No Mums Bar", category: "bar", description: "Cocktails", lat: -8.5090, lng: 115.2620, rating: 4.6, phone: "+6281234567893", tags: ["party"] },
+    { id: "m5", name: "Ubud Hotel", category: "hotel", description: "Hotel", lat: -8.5100, lng: 115.2650, rating: 4.3, phone: "+6281234567894", tags: ["pool"] },
+    { id: "m6", name: "Polizeistation", category: "police", description: "Polizei", lat: -8.5080, lng: 115.2610, rating: 4.0, phone: "+6281234567895", tags: [] },
+    { id: "m7", name: "Tankstelle", category: "fuel", description: "Pertamax", lat: -8.5060, lng: 115.2640, rating: 4.1, phone: "", tags: [] },
+    { id: "m8", name: "Villa Seminyak", category: "accommodation", description: "Private Villa", lat: -8.5110, lng: 115.2660, rating: 4.7, phone: "+6281234567896", tags: ["pool"] },
+    { id: "m9", name: "Restaurant Merah Putih", category: "restaurant", description: "Fine Dining", lat: -8.5040, lng: 115.2600, rating: 4.9, phone: "+6281234567897", tags: ["fine"] },
   ];
 
-  // Online/Offline detection
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      const handleOnline = () => {
-        setIsOnline(true);
-      };
-      const handleOffline = () => {
-        setIsOnline(false);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      };
-
-      setIsOnline(navigator.onLine);
-      window.addEventListener("online", handleOnline);
-      window.addEventListener("offline", handleOffline);
-
-      return () => {
-        window.removeEventListener("online", handleOnline);
-        window.removeEventListener("offline", handleOffline);
-      };
-    }
-
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const connected = state.isConnected ?? state.isInternetReachable ?? false;
-      setIsOnline(connected);
-      if (!connected) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      }
-    });
-
-    NetInfo.fetch().then((state) => {
-      setIsOnline(state.isConnected ?? state.isInternetReachable ?? false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Load favorites on mount
-  useEffect(() => {
-    const loadFavorites = async () => {
-      const favs = await getFavorites();
-      setFavorites(favs.map((f) => f.id));
-    };
-    loadFavorites();
-  }, []);
-
-  // Get user location
-  useEffect(() => {
-    if (Platform.OS === "web" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const loc = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-          setUserLocation(loc);
-          setViewState((prev) => ({
-            ...prev,
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-          }));
-        },
-        () => {
-          setUserLocation({
-            latitude: BALI_CENTER.latitude,
-            longitude: BALI_CENTER.longitude,
-          });
-        },
-      );
-    } else {
-      setUserLocation({
-        latitude: BALI_CENTER.latitude,
-        longitude: BALI_CENTER.longitude,
-      });
-    }
-  }, []);
-
-  // Fetch nearby POIs with caching (OFFLINE-FIRST)
-  useEffect(() => {
-    if (!userLocation) return;
-
-    const loadPOIs = async () => {
-      setIsLoading(true);
-      try {
-        const cached = await getPOIs();
-        if (cached.data && cached.data.length > 0) {
-          setPois(cached.data as POI[]);
-          console.log("[POI] Loaded from cache:", cached.data.length, "items");
-        }
-
-        if (isOnline) {
-          try {
-            const nearbyPOIs = await fetchNearbyPOIs(
-              userLocation.latitude,
-              userLocation.longitude,
-              2000,
-            );
-
-            await savePOIs(
-              nearbyPOIs,
-              userLocation.latitude,
-              userLocation.longitude,
-            );
-
-            setPois(nearbyPOIs);
-            console.log("[POI] Fresh data loaded:", nearbyPOIs.length, "items");
-          } catch (apiError) {
-            console.warn(
-              "[POI] API failed (rate limit/timeout), using cached/mock data:",
-              apiError,
-            );
-            const cached = await getPOIs();
-            if (cached.data && cached.data.length > 0) {
-              setPois(cached.data as POI[]);
-            } else {
-              setPois(MOCK_POIS);
-            }
-          }
-        }
-      } catch (error) {
-        console.warn("[POI] Load failed, using mock data:", error);
-        setPois(MOCK_POIS);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadPOIs();
-  }, [userLocation, isOnline]);
-
-  // Filter POIs
-  const filteredPOIs = useMemo(() => {
-    if (!pois || pois.length === 0) return [];
-
-    if (showFavoritesOnly) {
-      return pois.filter((poi) => favorites.includes(poi.id));
-    }
-
-    if (selectedFilter !== "all") {
-      return pois.filter((poi) => poi.type === selectedFilter);
-    }
-
-    return pois;
-  }, [pois, selectedFilter, showFavoritesOnly, favorites]);
-
-  // Fly to user location
-  const flyToUser = useCallback(() => {
-    if (!userLocation) return;
-    setViewState((prev) => ({
-      ...prev,
-      longitude: userLocation.longitude,
-      latitude: userLocation.latitude,
-      zoom: 15,
-    }));
-  }, [userLocation]);
-
-  // Open in maps - wrapped in try-catch for robustness
-  const openInMaps = useCallback(
-    async (lat: number, lon: number, name: string) => {
-      try {
-        const url =
-          Platform.OS === "web"
-            ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`
-            : `geo:${lat},${lon}?q=${encodeURIComponent(name)}`;
-        const supported = await Linking.canOpenURL(url);
-        if (supported) {
-          await Linking.openURL(url);
-        } else {
-          console.warn(
-            "Linking.openURL not available for url, but app is still functional.",
-          );
-        }
-      } catch (error) {
-        console.warn(
-          "Failed to open maps, but app is still functional:",
-          error,
-        );
-      }
-    },
-    [],
-  );
-
-  // Call number - wrapped in try-catch for robustness
-  const callNumber = useCallback(async (phone: string) => {
+  // 2. Daten aus SQLite laden & Distanzen berechnen
+  const loadData = async () => {
+    setLoading(true);
     try {
-      const url = `tel:${phone}`;
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        console.warn(
-          "Linking.openURL not available for url, but app is still functional.",
-        );
-      }
-    } catch (error) {
-      console.warn(
-        "Failed to call number, but app is still functional:",
-        error,
-      );
-    }
-  }, []);
+      // Lade Daten aus den einzelnen Tabellen
+      const dbPois: POI[] = [];
+      
+      try {
+        // ATMs
+        const atms = await db.collections.get('atms').query().fetch();
+        atms.forEach((p: any) => dbPois.push({
+          id: p.id,
+          name: p.bankName || p._raw?.bank_name || 'ATM',
+          category: 'atm',
+          description: p.address || p._raw?.address || '',
+          lat: p.latitude || p._raw?.latitude || 0,
+          lng: p.longitude || p._raw?.longitude || 0,
+          rating: p.rating || p._raw?.rating || 0,
+          phone: '',
+          tags: p.operatingHours ? [p.operatingHours] : [],
+        }));
 
-  // Format distance
-  const formatDistance = (km?: number): string => {
-    if (!km) return "";
-    if (km < 1) return `${Math.round(km * 1000)}m`;
-    return `${km.toFixed(1)}km`;
+        // Clinics
+        const clinics = await db.collections.get('clinics').query().fetch();
+        clinics.forEach((p: any) => dbPois.push({
+          id: p.id,
+          name: p.name || p._raw?.name || 'Klinik',
+          category: 'klinik',
+          description: p.address || p._raw?.address || '',
+          lat: p.latitude || p._raw?.latitude || 0,
+          lng: p.longitude || p._raw?.longitude || 0,
+          rating: 4.0,
+          phone: p.phone || p._raw?.phone || '',
+          tags: [p.emergency24h ? '24h' : ''],
+        }));
+
+        // Safe Bars
+        const bars = await db.collections.get('safe_bars').query().fetch();
+        bars.forEach((p: any) => dbPois.push({
+          id: p.id,
+          name: p.name || p._raw?.name || 'Bar',
+          category: 'bar',
+          description: p.address || p._raw?.address || '',
+          lat: p.latitude || p._raw?.latitude || 0,
+          lng: p.longitude || p._raw?.longitude || 0,
+          rating: p.rating || p._raw?.rating || 0,
+          phone: '',
+          tags: p.isVerified ? ['verified'] : [],
+        }));
+
+        // Laundries
+        const laundries = await db.collections.get('laundries').query().fetch();
+        laundries.forEach((p: any) => dbPois.push({
+          id: p.id,
+          name: p.name || p._raw?.name || 'Waschsalon',
+          category: 'warung',
+          description: p.address || p._raw?.address || '',
+          lat: p.latitude || p._raw?.latitude || 0,
+          lng: p.longitude || p._raw?.longitude || 0,
+          rating: p.rating || p._raw?.rating || 0,
+          phone: '',
+          tags: [],
+        }));
+
+        // Water Stations
+        const water = await db.collections.get('water_stations').query().fetch();
+        water.forEach((p: any) => dbPois.push({
+          id: p.id,
+          name: p.name || p._raw?.name || 'Wasserstation',
+          category: 'fuel',
+          description: p.address || p._raw?.address || '',
+          lat: p.latitude || p._raw?.latitude || 0,
+          lng: p.longitude || p._raw?.longitude || 0,
+          rating: p.rating || p._raw?.rating || 0,
+          phone: '',
+          tags: [p.waterType || ''],
+        }));
+
+      } catch (_dbError) {
+        // Falls Tabellen noch nicht existieren
+      }
+
+      // Fallback auf MOCK_POIS wenn DB leer
+      const poisToUse = dbPois.length > 0 ? dbPois : MOCK_POIS;
+      const enriched = poisToUse
+        .map((p: POI) => ({
+          ...p,
+          distance: haversineDistance(
+            userLocation.lat,
+            userLocation.lng,
+            p.lat,
+            p.lng,
+          ),
+        }))
+        .sort((a: POI, b: POI) => (a.distance || 0) - (b.distance || 0));
+      setPois(enriched);
+    } catch (e) {
+      console.error("DB Load Error", e);
+      // Fallback auf MOCK_POIS bei Fehler
+      const enriched = MOCK_POIS
+        .map((p: POI) => ({
+          ...p,
+          distance: haversineDistance(
+            userLocation.lat,
+            userLocation.lng,
+            p.lat,
+            p.lng,
+          ),
+        }))
+        .sort((a: POI, b: POI) => (a.distance || 0) - (b.distance || 0));
+      setPois(enriched);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredPOIs = useMemo(() => {
+    return activeFilter === "all"
+      ? pois
+      : pois.filter((p) => p.category === activeFilter);
+  }, [pois, activeFilter]);
+
+  // 3. Karte zu POI bewegen
+  const focusOnPOI = (poi: POI) => {
+    setSelectedPOI(poi);
+    mapRef.current?.animateToRegion(
+      {
+        latitude: poi.lat,
+        longitude: poi.lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      1000,
+    );
   };
 
   return (
-    <View
-      className="flex-1 bg-background"
-      style={{ backgroundColor: colors.background }}
-    >
-      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        {/* Header */}
-        <Header
-          title={t("smartMap.title", "Smart Map")}
-          showBackButton={false}
-          rightComponents={[
-            <TouchableOpacity
-              key="refresh"
-              style={[styles.headerButton, { backgroundColor: colors.card }]}
-              onPress={async () => {
-                try {
-                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                } catch (e) {
-                  console.warn(
-                    "Haptics not available, but app is still functional.",
-                  );
-                }
-                if (userLocation) {
-                  setIsLoading(true);
-                  const nearbyPOIs = await fetchNearbyPOIs(
-                    userLocation.latitude,
-                    userLocation.longitude,
-                    2000,
-                  );
-                  setPois(nearbyPOIs);
-                  setIsLoading(false);
-                }
-              }}
-              disabled={isLoading}
-              activeOpacity={0.7}
-            >
-              <RefreshCw
-                size={18}
-                color={isLoading ? colors.textMuted : colors.text}
-              />
-            </TouchableOpacity>,
-            <TouchableOpacity
-              key="settings"
-              style={[styles.headerButton, { backgroundColor: colors.card }]}
-              onPress={() => setShowSettings(true)}
-              activeOpacity={0.7}
-            >
-              <Settings size={18} color={colors.text} />
-            </TouchableOpacity>,
-          ]}
-        />
-
-        {/* Settings Modal */}
-        <SettingsModal
-          visible={showSettings}
-          onClose={() => setShowSettings(false)}
-          onFlyToFavorite={(lat, lon) => {
-            setViewState((prev) => ({
-              ...prev,
-              longitude: lon,
-              latitude: lat,
-              zoom: 15,
-            }));
-          }}
-        />
-
-        {/* Offline Status Badge */}
-        {!isOnline && (
-          <View style={styles.offlineBadge}>
-            <Text style={styles.offlineText}>📴 Offline</Text>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.root}>
+        {/* V2 Header Gradient */}
+        <LinearGradient colors={[EMERALD_600, TEAL_700]} style={styles.header}>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.headerTitle}>{t("radar.title")}</Text>
+              <Text style={styles.headerSub}>
+                {isOnline ? "Online" : "Offline"} • {filteredPOIs.length}{" "}
+                {t("radar.places")}
+              </Text>
+            </View>
+            <View style={styles.viewToggleRow}>
+              <TouchableOpacity
+                onPress={() => setViewMode("list")}
+                style={[
+                  styles.toggleBtn,
+                  viewMode === "list" && styles.toggleBtnActive,
+                ]}
+              >
+                <List
+                  size={16}
+                  color={viewMode === "list" ? EMERALD_600 : "#FFF"}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setViewMode("map")}
+                style={[
+                  styles.toggleBtn,
+                  viewMode === "map" && styles.toggleBtnActive,
+                ]}
+              >
+                <MapIcon
+                  size={16}
+                  color={viewMode === "map" ? EMERALD_600 : "#FFF"}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
+        </LinearGradient>
 
         {/* Filter Chips */}
-        <AnimatedView animation="fadeIn" delay={100}>
+        <View style={styles.filterContainer}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.filterContainer}
-            contentContainerStyle={styles.filterContent}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
           >
-            {filterChips.map((chip) => (
-              <Chip
-                key={chip.id}
-                label={chip.label}
-                active={chip.active}
-                icon={
-                  React.isValidElement(chip.icon)
-                    ? React.cloneElement(
-                        chip.icon as React.ReactElement<LucideProps>,
-                        {
-                          size: 16,
-                          color: chip.active ? "#FFFFFF" : colors.text,
-                        },
-                      )
-                    : chip.icon
+            <TouchableOpacity
+              onPress={() => setActiveFilter("all")}
+              style={[styles.chip, activeFilter === "all" && styles.chipActive]}
+            >
+              <Text
+                style={
+                  activeFilter === "all"
+                    ? styles.chipTextActive
+                    : styles.chipText
                 }
-                onPress={() => {
-                  try {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  } catch (e) {
-                    console.warn(
-                      "Haptics not available, but app is still functional.",
-                    );
+              >
+                Alle
+              </Text>
+            </TouchableOpacity>
+            {Object.keys(CAT_STYLE).map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                onPress={() => setActiveFilter(cat as Category)}
+                style={[styles.chip, activeFilter === cat && styles.chipActive]}
+              >
+                <Text
+                  style={
+                    activeFilter === cat
+                      ? styles.chipTextActive
+                      : styles.chipText
                   }
-                  if (chip.id === "favorites") {
-                    setShowFavoritesOnly(true);
-                    setSelectedFilter("all");
-                  } else {
-                    setShowFavoritesOnly(false);
-                    setSelectedFilter(chip.id);
-                  }
-                }}
-              />
+                >
+                  {CAT_STYLE[cat as Category].label}
+                </Text>
+              </TouchableOpacity>
             ))}
           </ScrollView>
-        </AnimatedView>
+        </View>
 
-        {/* Main Content */}
-        <View style={{ flex: 1 }}>
-          <View style={styles.mapContainer}>
-            {/* Loading State */}
-            {isLoading && (
-              <View style={styles.mapSkeleton}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text
-                  style={[styles.skeletonText, { color: colors.textMuted }]}
-                >
-                  Loading Map...
-                </Text>
-              </View>
-            )}
-
-            {/* Declarative Map */}
-            <View
-              style={{
-                width: "100%",
-                height: "100%",
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              }}
-            >
-              <Map
-                initialViewState={{
-                  longitude: BALI_CENTER.longitude,
-                  latitude: BALI_CENTER.latitude,
-                  zoom: 13,
-                }}
-                onMove={(evt) => setViewState(evt.viewState)}
-                style={{ width: "100%", height: "100%" }}
-                mapStyle={OPENFREEMAP_STYLE}
-                attributionControl={false}
-                onError={(error) => console.error("Map error:", error)}
-                onLoad={() => console.log("Map loaded successfully")}
-              >
-                {/* POI Markers */}
-                {filteredPOIs.map((poi) => (
-                  <Marker
-                    key={poi.id}
-                    longitude={poi.longitude}
-                    latitude={poi.latitude}
-                    anchor="center"
-                    onClick={(e) => {
-                      e.originalEvent.stopPropagation();
-                      try {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      } catch (e) {
-                        console.warn(
-                          "Haptics not available, but app is still functional.",
-                        );
-                      }
-                      setSelectedPOI(poi);
-                    }}
-                  >
-                    <View
-                      style={[
-                        styles.markerContainer,
-                        { backgroundColor: getPOIColor(poi.type) },
-                      ]}
-                    >
-                      {getPOIIcon(poi.type, 16, "#FFFFFF")}
-                    </View>
-                  </Marker>
-                ))}
-
-                {/* User Location Marker */}
-                {userLocation && (
-                  <Marker
-                    longitude={userLocation.longitude}
-                    latitude={userLocation.latitude}
-                    anchor="center"
-                  >
-                    <View style={styles.userMarker}>
-                      <View style={styles.userMarkerInner} />
-                    </View>
-                  </Marker>
-                )}
-              </Map>
-            </View>
-
-            {/* Floating Recenter Button */}
-            <TouchableOpacity
-              style={styles.recenterButton}
-              onPress={flyToUser}
-              activeOpacity={0.7}
-            >
-              <LocateFixed size={20} color="#FFFFFF" />
-            </TouchableOpacity>
+        {/* Main Content: Map or List */}
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={EMERALD_600} size="large" />
           </View>
-
-          {/* POI Detail Bottom Sheet */}
-          {selectedPOI && (
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: colors.text }]}>
-                    {selectedPOI.name}
-                  </Text>
-                  <View style={styles.modalHeaderActions}>
-                    {/* Favorite Toggle */}
-                    <TouchableOpacity
-                      onPress={async () => {
-                        try {
-                          await Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                        } catch (e) {
-                          console.warn(
-                            "Haptics not available, but app is still functional.",
-                          );
-                        }
-                        const isFav = favorites.includes(selectedPOI.id);
-                        if (isFav) {
-                          await removeFromFavorites(selectedPOI.id);
-                          setFavorites(
-                            favorites.filter((id) => id !== selectedPOI.id),
-                          );
-                        } else {
-                          await addToFavorite(selectedPOI as CachedPOI);
-                          setFavorites([...favorites, selectedPOI.id]);
-                        }
-                        setSelectedPOIFavorite(!isFav);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.favoriteButton}>
-                        {favorites.includes(selectedPOI.id) ? "❤️" : "🤍"}
-                      </Text>
-                    </TouchableOpacity>
-                    {/* Close Button */}
-                    <TouchableOpacity
-                      onPress={() => setSelectedPOI(null)}
-                      activeOpacity={0.7}
-                    >
-                      <X size={24} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.modalBody}>
-                  <View style={styles.poiInfoRow}>
-                    {getPOIIcon(selectedPOI.type, 24)}
-                    <Text style={[styles.poiType, { color: colors.textMuted }]}>
-                      {selectedPOI.type} •{" "}
-                      {formatDistance(selectedPOI.distance)}
+        ) : viewMode === "map" ? (
+          <View style={{ flex: 1 }}>
+            <MapView
+              ref={mapRef}
+              style={StyleSheet.absoluteFill}
+              provider={PROVIDER_GOOGLE}
+              initialRegion={{
+                latitude: userLocation.lat,
+                longitude: userLocation.lng,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }}
+              showsUserLocation
+            >
+              {filteredPOIs.map((poi) => (
+                <Marker
+                  key={poi.id}
+                  coordinate={{ latitude: poi.lat, longitude: poi.lng }}
+                  onPress={() => setSelectedPOI(poi)}
+                >
+                  <View
+                    style={[
+                      styles.customMarker,
+                      {
+                        backgroundColor:
+                          CAT_STYLE[poi.category]?.color || EMERALD_600,
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: 16 }}>
+                      {CAT_STYLE[poi.category]?.emoji || "📍"}
                     </Text>
                   </View>
-
-                  <Text
-                    style={[styles.poiDescription, { color: colors.textMuted }]}
+                </Marker>
+              ))}
+            </MapView>
+            {/* Horizontaler Slider auf der Karte */}
+            <View style={styles.mapSlider}>
+              <FlatList
+                horizontal
+                data={filteredPOIs}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.miniCard}
+                    onPress={() => focusOnPOI(item)}
                   >
-                    {selectedPOI.description}
-                  </Text>
-
-                  {selectedPOI.phone && (
-                    <TouchableOpacity
-                      style={styles.modalRow}
-                      onPress={() => {
-                        try {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                        } catch (e) {
-                          console.warn(
-                            "Haptics not available, but app is still functional.",
-                          );
-                        }
-                        callNumber(selectedPOI.phone!);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Phone size={16} color="#10B981" />
-                      <Text style={[styles.modalText, styles.modalLink]}>
-                        {selectedPOI.phone}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <View style={styles.modalActions}>
-                    <TouchableOpacity
-                      style={[
-                        styles.mapsButton,
-                        { backgroundColor: colors.primary },
-                      ]}
-                      onPress={() => {
-                        try {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                        } catch (e) {
-                          console.warn(
-                            "Haptics not available, but app is still functional.",
-                          );
-                        }
-                        openInMaps(
-                          selectedPOI.latitude,
-                          selectedPOI.longitude,
-                          selectedPOI.name,
-                        );
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Navigation size={18} color="#FFFFFF" />
-                      <Text style={styles.mapsButtonText}>Route</Text>
-                    </TouchableOpacity>
-                    {selectedPOI.phone && (
-                      <TouchableOpacity
-                        style={[
-                          styles.callButton,
-                          { backgroundColor: "#10B981" },
-                        ]}
-                        onPress={() => {
-                          try {
-                            Haptics.impactAsync(
-                              Haptics.ImpactFeedbackStyle.Light,
-                            );
-                          } catch (e) {
-                            console.warn(
-                              "Haptics not available, but app is still functional.",
-                            );
-                          }
-                          callNumber(selectedPOI.phone!);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Phone size={18} color="#FFFFFF" />
-                        <Text style={styles.callButtonText}>Call</Text>
-                      </TouchableOpacity>
+                    <Text style={styles.miniCardName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.miniCardDist}>
+                      {formatDistance(item.distance || 0)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                showsHorizontalScrollIndicator={false}
+              />
+            </View>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredPOIs}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => setSelectedPOI(item)}
+              >
+                <View style={styles.cardInner}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      { backgroundColor: CAT_STYLE[item.category]?.bg },
+                    ]}
+                  >
+                    {React.createElement(
+                      CAT_STYLE[item.category]?.Icon || MapPin,
+                      { size: 20, color: CAT_STYLE[item.category]?.color },
                     )}
                   </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.name}>{item.name}</Text>
+                    <Text style={styles.desc}>{item.description}</Text>
+                  </View>
+                  <Text style={styles.distLabel}>
+                    {formatDistance(item.distance || 0)}
+                  </Text>
                 </View>
+                <View style={styles.actionBar}>
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => openRoute(item.lat, item.lng, item.name)}
+                  >
+                    <Navigation size={14} color={EMERALD_600} />
+                    <Text style={styles.actionText}>{t("radar.route")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => openWhatsApp(item.phone)}
+                  >
+                    <MessageCircle size={14} color={EMERALD_600} />
+                    <Text style={styles.actionText}>WhatsApp</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+
+        {/* POI Detail Sheet */}
+        {selectedPOI && (
+          <View style={styles.sheetContainer}>
+            <View style={styles.sheet}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Text style={styles.sheetTitle}>{selectedPOI.name}</Text>
+                <TouchableOpacity onPress={() => setSelectedPOI(null)}>
+                  <X size={24} color="#666" />
+                </TouchableOpacity>
               </View>
+              <Text style={styles.sheetDesc}>{selectedPOI.description}</Text>
+              <TouchableOpacity
+                style={styles.mainActionBtn}
+                onPress={() =>
+                  openRoute(selectedPOI.lat, selectedPOI.lng, selectedPOI.name)
+                }
+              >
+                <Text style={{ color: "#FFF", fontWeight: "bold" }}>
+                  Google Maps Route
+                </Text>
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </SafeAreaView>
-    </View>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
-// ==================== STYLES ====================
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
-  filterContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  filterContent: {
-    gap: 8,
-  },
-  mapContainer: {
-    flex: 1,
-    position: "relative",
-    minHeight: 500,
-    width: "100%",
-  },
-  mapSkeleton: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.05)",
-    gap: 12,
-    zIndex: 10,
-  },
-  skeletonText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  fallbackContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+  safeArea: { flex: 1, backgroundColor: BG },
+  root: { flex: 1 },
+  header: {
     padding: 20,
-    gap: 12,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  fallbackMessage: {
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  fallbackSubtext: {
-    fontSize: 14,
-    textAlign: "center",
-  },
-  offlineBadge: {
-    position: "absolute",
-    top: 70,
-    left: 16,
-    backgroundColor: "rgba(239,68,68,0.9)",
-    borderRadius: 16,
-    padding: 12,
-    alignItems: "center",
-    zIndex: 9999,
-  },
-  offlineText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  markerContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  userMarker: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "rgba(59, 130, 246, 0.3)",
-    borderWidth: 3,
-    borderColor: "#3B82F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  userMarkerInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#3B82F6",
-  },
-  recenterButton: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#FF9D6C",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  modalOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: "70%",
-  },
-  modalHeader: {
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
   },
-  modalHeaderActions: {
+  headerTitle: { fontSize: 24, fontWeight: "bold", color: "#FFF" },
+  headerSub: { fontSize: 12, color: "#FFF", opacity: 0.8 },
+  viewToggleRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 12,
+    padding: 2,
   },
-  favoriteButton: {
-    fontSize: 24,
+  toggleBtn: { padding: 8, borderRadius: 10 },
+  toggleBtnActive: { backgroundColor: "#FFF" },
+  filterContainer: { paddingVertical: 12 },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#E5E7EB",
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
+  chipActive: { backgroundColor: EMERALD_600 },
+  chipText: { color: "#4B5563", fontWeight: "600" },
+  chipTextActive: { color: "#FFF" },
+  card: {
+    backgroundColor: WHITE,
+    borderRadius: 20,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  modalBody: {
-    gap: 12,
-  },
-  poiInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  poiType: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  poiDescription: {
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  modalRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  modalText: {
-    fontSize: 14,
-    color: "#475569",
-  },
-  modalLink: {
-    color: "#3B82F6",
-    textDecorationLine: "underline",
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-  mapsButton: {
-    flex: 1,
-    flexDirection: "row",
-    paddingVertical: 12,
-    borderRadius: 9999,
+  cardInner: { flexDirection: "row", padding: 16, alignItems: "center" },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
   },
-  mapsButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#FFFFFF",
+  name: { fontSize: 15, fontWeight: "bold", color: "#1F2937" },
+  desc: { fontSize: 12, color: "#6B7280", marginTop: 2 },
+  distLabel: { fontSize: 13, fontWeight: "bold", color: EMERALD_600 },
+  actionBar: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    padding: 4,
   },
-  callButton: {
+  actionBtn: {
     flex: 1,
     flexDirection: "row",
-    paddingVertical: 12,
-    borderRadius: 9999,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    paddingVertical: 10,
+    gap: 6,
   },
-  callButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#FFFFFF",
+  actionText: { fontSize: 12, fontWeight: "600", color: EMERALD_600 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  customMarker: {
+    padding: 6,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#FFF",
+    elevation: 4,
+  },
+  mapSlider: { position: "absolute", bottom: 20, left: 0, right: 0 },
+  miniCard: {
+    backgroundColor: WHITE,
+    marginHorizontal: 8,
+    padding: 15,
+    borderRadius: 16,
+    width: 200,
+    elevation: 5,
+  },
+  miniCardName: { fontWeight: "bold", fontSize: 14 },
+  miniCardDist: { color: EMERALD_600, fontSize: 12, fontWeight: "bold" },
+  sheetContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    top: 0,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: WHITE,
+    padding: 25,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+  sheetTitle: { fontSize: 20, fontWeight: "bold" },
+  sheetDesc: { color: "#666", marginVertical: 10 },
+  mainActionBtn: {
+    backgroundColor: EMERALD_600,
+    padding: 16,
+    borderRadius: 15,
+    alignItems: "center",
+    marginTop: 10,
   },
 });

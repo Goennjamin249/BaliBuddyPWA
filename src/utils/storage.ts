@@ -16,6 +16,10 @@ export const STORAGE_KEYS = {
   WEATHER_TIMESTAMP: "@balibuddy:weather:timestamp",
   SETTINGS: "@balibuddy:settings",
   LAST_LAUNCH: "@balibuddy:last_launch",
+  SCANNER_RESULTS: "@balibuddy:scanner:results",
+  SCANNER_ALLERGENS: "@balibuddy:scanner:allergens",
+  DICTIONARY_FAVORITES: "@balibuddy:dictionary:favorites",
+  LAWHUB_FAVORITES: "@balibuddy:lawhub:favorites",
 } as const;
 
 export const CACHE_DURATION = {
@@ -43,6 +47,46 @@ export interface CachedWeather {
   condition: string;
   icon: string;
   location: string;
+}
+
+export interface CachedRate {
+  eur: number;
+  idr: number;
+  timestamp: number;
+}
+
+export interface ScannerMenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  allergens: string[];
+  isSafe: boolean;
+  riskLevel: "low" | "medium" | "high";
+}
+
+export interface ScannerResult {
+  timestamp: number;
+  items: ScannerMenuItem[];
+  selectedAllergens: string[];
+}
+
+const RATE_KEY = "@balibuddy:rate";
+
+export async function saveRate(rate: CachedRate): Promise<void> {
+  try {
+    await kvStore.setJSON(RATE_KEY, rate);
+  } catch (error) {
+    console.error("[Storage] Failed to save rate:", error);
+  }
+}
+
+export async function getCachedRate(): Promise<CachedRate | null> {
+  try {
+    return await kvStore.getJSON<CachedRate>(RATE_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export interface StorageResult<T> {
@@ -163,6 +207,136 @@ export async function getWeather(): Promise<StorageResult<CachedWeather>> {
     };
   } catch {
     return { data: null, isCached: false, isExpired: false };
+  }
+}
+
+// === Scanner Storage ===
+export async function saveScannerResult(result: ScannerResult): Promise<void> {
+  try {
+    await kvStore.setJSON(STORAGE_KEYS.SCANNER_RESULTS, result);
+  } catch (error) {
+    console.error("[Storage] Failed to save scanner result:", error);
+  }
+}
+
+export async function getScannerResult(): Promise<ScannerResult | null> {
+  try {
+    return await kvStore.getJSON<ScannerResult>(STORAGE_KEYS.SCANNER_RESULTS);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveScannerAllergens(allergens: string[]): Promise<void> {
+  try {
+    await kvStore.set(STORAGE_KEYS.SCANNER_ALLERGENS, JSON.stringify(allergens));
+  } catch (error) {
+    console.error("[Storage] Failed to save scanner allergens:", error);
+  }
+}
+
+export async function getScannerAllergens(): Promise<string[]> {
+  try {
+    const data = await kvStore.get(STORAGE_KEYS.SCANNER_ALLERGENS);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function clearScannerResult(): Promise<void> {
+  try {
+    await kvStore.set(STORAGE_KEYS.SCANNER_RESULTS, null);
+  } catch (error) {
+    console.error("[Storage] Failed to clear scanner result:", error);
+  }
+}
+
+// === Dictionary Favorites Storage ===
+export async function saveDictionaryFavorites(ids: string[]): Promise<void> {
+  try {
+    await kvStore.setJSON(STORAGE_KEYS.DICTIONARY_FAVORITES, ids);
+  } catch (error) {
+    console.error("[Storage] Failed to save dictionary favorites:", error);
+  }
+}
+
+export async function getDictionaryFavorites(): Promise<string[]> {
+  try {
+    const data = await kvStore.getJSON<string[]>(STORAGE_KEYS.DICTIONARY_FAVORITES);
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function toggleDictionaryFavorite(id: string): Promise<boolean> {
+  try {
+    const favorites = await getDictionaryFavorites();
+    const index = favorites.indexOf(id);
+    if (index >= 0) {
+      favorites.splice(index, 1);
+    } else {
+      favorites.push(id);
+    }
+    await saveDictionaryFavorites(favorites);
+    return index < 0;
+  } catch (error) {
+    console.error("[Storage] Failed to toggle dictionary favorite:", error);
+    return false;
+  }
+}
+
+export async function isDictionaryFavorite(id: string): Promise<boolean> {
+  try {
+    const favorites = await getDictionaryFavorites();
+    return favorites.includes(id);
+  } catch {
+    return false;
+  }
+}
+
+// === Law Hub Favorites Storage ===
+export async function saveLawHubFavorites(ids: string[]): Promise<void> {
+  try {
+    await kvStore.setJSON(STORAGE_KEYS.LAWHUB_FAVORITES, ids);
+  } catch (error) {
+    console.error("[Storage] Failed to save law hub favorites:", error);
+  }
+}
+
+export async function getLawHubFavorites(): Promise<string[]> {
+  try {
+    const data = await kvStore.getJSON<string[]>(STORAGE_KEYS.LAWHUB_FAVORITES);
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function toggleLawHubFavorite(id: string): Promise<boolean> {
+  try {
+    const favorites = await getLawHubFavorites();
+    const index = favorites.indexOf(id);
+    if (index >= 0) {
+      favorites.splice(index, 1);
+    } else {
+      favorites.push(id);
+    }
+    await saveLawHubFavorites(favorites);
+    return index < 0;
+  } catch (error) {
+    console.error("[Storage] Failed to toggle law hub favorite:", error);
+    return false;
+  }
+}
+
+export async function isLawHubFavorite(id: string): Promise<boolean> {
+  try {
+    const favorites = await getLawHubFavorites();
+    return favorites.includes(id);
+  } catch {
+    return false;
   }
 }
 

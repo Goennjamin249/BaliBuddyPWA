@@ -1,14 +1,11 @@
-import { Platform } from 'react-native';
-
 // API Configuration - All external API calls now go through our serverless functions
 const API_CONFIG = {
   // Local API endpoints (secured via Vercel Serverless Functions)
   WEATHER_ENDPOINT: '/api/weather',
   VOLCANO_ENDPOINT: '/api/volcano',
   EXCHANGE_RATE_ENDPOINT: '/api/exchange-rate',
-  FERRY_ENDPOINT: '/api/ferry',
   OVERPASS_ENDPOINT: '/api/overpass',
-  TRIPADVISOR_ENDPOINT: '/api/tripadvisor',
+  SYNC_ENDPOINT: '/api/sync',
 };
 
 // Types
@@ -266,53 +263,27 @@ export const CurrencyService = {
   },
 };
 
-// AIS (Vessel Tracking) API Service
-export const AISservice = {
-  async getFerryLocations(): Promise<any[]> {
-    const cacheKey = 'ferry_locations';
-    const cached = cache.get(cacheKey);
-    if (cached) return cached;
-
-    try {
-      const response = await fetchWithRetry(API_CONFIG.FERRY_ENDPOINT);
-      
-      if (!response.ok) {
-        throw new Error(`AIS API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Transform API response to match our interface
-      const ferries = data.vessels?.map((vessel: any) => ({
-        id: vessel.mmsi || vessel.id,
-        name: vessel.name,
-        type: vessel.type || 'Ferry',
-        lat: vessel.latitude || vessel.lat,
-        lng: vessel.longitude || vessel.lng,
-        destination: vessel.destination || 'Unknown',
-        eta: vessel.eta || 'Unknown',
-        status: vessel.status || 'active',
-      })) || [];
-
-      cache.set(cacheKey, ferries, 5); // Cache for 5 minutes (real-time data)
-      return ferries;
-    } catch (error) {
-      console.error('AIS API error:', error);
-      throw new Error('Fährdaten konnten nicht geladen werden');
-    }
-  },
-};
+// Earthquake data interface
+export interface EarthquakeData {
+  id: string;
+  magnitude: number;
+  depth: number;
+  location: string;
+  time: string;
+  lat: number;
+  lng: number;
+}
 
 // BMKG API Service (Indonesian Meteorological Agency)
 export const BMKGService = {
-  async getEarthquakeData(): Promise<any[]> {
+  async getEarthquakeData(): Promise<EarthquakeData[]> {
     const cacheKey = 'earthquake_data';
     const cached = cache.get(cacheKey);
     if (cached) return cached;
 
     try {
       // Simulated earthquake data
-      const earthquakes = [
+      const earthquakes: EarthquakeData[] = [
         {
           id: '1',
           magnitude: 4.2,
@@ -341,9 +312,80 @@ export const BMKGService = {
     }
   },
 
-  async getTsunamiWarnings(): Promise<any[]> {
+  async getTsunamiWarnings(): Promise<string[]> {
     // Check for active tsunami warnings
     return []; // No active warnings in simulation
+  },
+};
+
+// Sync API Service
+interface SyncPullRequest {
+  collection: string;
+  lastPulledTimestamp?: number;
+}
+
+interface SyncPushRequest {
+  collection: string;
+  changes: {
+    type: "created" | "updated" | "deleted";
+    id: string;
+    data?: Record<string, unknown>;
+  }[];
+}
+
+export const SyncService = {
+  async pull(collection: string, lastPulledTimestamp?: number): Promise<any[]> {
+    try {
+      const response = await fetchWithRetry(API_CONFIG.SYNC_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'pull',
+          collection,
+          lastPulledTimestamp,
+        }),
+      });
+      if (!response.ok) throw new Error(`Sync pull error: ${response.status}`);
+      const data = await response.json();
+      return data.changes || [];
+    } catch (error) {
+      console.error('[SyncService] Pull error:', error);
+      return [];
+    }
+  },
+
+  async push(collection: string, changes: SyncPushRequest['changes']): Promise<{ success: boolean; synced: string[]; errors?: string[] }> {
+    try {
+      const response = await fetchWithRetry(API_CONFIG.SYNC_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'push',
+          collection,
+          changes,
+        }),
+      });
+      if (!response.ok) throw new Error(`Sync push error: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('[SyncService] Push error:', error);
+      return { success: false, synced: [], errors: [String(error)] };
+    }
+  },
+
+  async initializeDatabase(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetchWithRetry(API_CONFIG.SYNC_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'init' }),
+      });
+      if (!response.ok) throw new Error(`Sync init error: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('[SyncService] Init error:', error);
+      return { success: false, message: String(error) };
+    }
   },
 };
 
@@ -352,6 +394,6 @@ export default {
   Weather: WeatherService,
   Volcano: VolcanoService,
   Currency: CurrencyService,
-  AIS: AISservice,
   BMKG: BMKGService,
+  Sync: SyncService,
 };
