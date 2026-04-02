@@ -1,18 +1,31 @@
 import { Database, Q } from "@nozbe/watermelondb";
-import LokiJSAdapter from "@nozbe/watermelondb/adapters/lokijs";
+import { Platform } from "react-native";
 
 import { allModels } from "./models";
 import schema from "./schema";
 import { migrations } from "./migrations";
 
-// Create LokiJS adapter for web (IndexedDB)
-// Web Worker enabled for better UI responsiveness during DB operations
-const adapter = new LokiJSAdapter({
-  schema,
-  migrations,
-  useWebWorker: true,
-  useIncrementalIndexedDB: true,
-});
+// Platform-specific adapter setup
+let adapter: any;
+
+if (Platform.OS === "web") {
+  // For web, use LokiJS adapter without web worker to avoid "self is not defined" error
+  const LokiJSAdapter = require("@nozbe/watermelondb/adapters/lokijs").default;
+  adapter = new LokiJSAdapter({
+    schema,
+    migrations,
+    useWebWorker: false, // Disable web worker for web compatibility
+    useIncrementalIndexedDB: true,
+  });
+} else {
+  // For native, use SQLite adapter for better performance
+  const SQLiteAdapter = require("@nozbe/watermelondb/adapters/sqlite").default;
+  adapter = new SQLiteAdapter({
+    schema,
+    migrations,
+    dbName: "balibuddy",
+  });
+}
 
 // Create database instance with all models
 const database = new Database({

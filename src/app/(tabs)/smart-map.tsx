@@ -10,7 +10,6 @@ import {
   Dimensions,
   ScrollView,
 } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   AlertTriangle,
@@ -38,6 +37,18 @@ import NetInfo from "@react-native-community/netinfo";
 import { openPhone, openWhatsApp, openRoute } from "../../lib/deeplinks";
 import { haversineDistance, formatDistance } from "../../lib/haversine";
 import db from "../../db/index"; // Dein SQLite/Dexie Pfad
+
+// Platform-specific map imports
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = null;
+
+if (Platform.OS !== 'web') {
+  const Maps = require("react-native-maps");
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+}
 
 // === V2 Design Tokens ===
 const EMERALD_600 = "#059669";
@@ -407,6 +418,19 @@ export default function SmartMapScreen() {
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator color={EMERALD_600} size="large" />
+          </View>
+        ) : viewMode === "map" && Platform.OS === 'web' ? (
+          <View style={[styles.center, { backgroundColor: '#e8f4ea' }]}>
+            <MapIcon size={48} color={EMERALD_600} />
+            <Text style={{ color: EMERALD_600, marginTop: 12, textAlign: 'center', paddingHorizontal: 32 }}>
+              Karte ist auf Web nicht verfügbar.{'\n'}Bitte nutze die Listen-Ansicht.
+            </Text>
+            <TouchableOpacity
+              onPress={() => setViewMode("list")}
+              style={[styles.chip, styles.chipActive, { marginTop: 16 }]}
+            >
+              <Text style={styles.chipTextActive}>Zur Liste wechseln</Text>
+            </TouchableOpacity>
           </View>
         ) : viewMode === "map" ? (
           <View style={{ flex: 1 }}>
