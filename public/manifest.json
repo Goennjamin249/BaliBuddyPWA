@@ -3,14 +3,17 @@
   "short_name": "BaliBuddy",
   "description": "Dein smarter Offline-Reise-Companion für Backpacker in Bali. Finde Wasser, Wäschereien, ATMs, Kliniken und Fähren - auch ohne Internet!",
   "start_url": "/",
+  "scope": "/",
+  "id": "balibuddy-pwa",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
   "background_color": "#0F172A",
   "theme_color": "#FF9D6C",
-  "orientation": "portrait-primary",
-  "scope": "/",
   "lang": "de",
   "dir": "ltr",
   "categories": ["travel", "utilities", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -55,9 +58,6 @@
       "purpose": "any"
     }
   ],
-  "screenshots": [],
-  "related_applications": [],
-  "prefer_related_applications": false,
   "shortcuts": [
     {
       "name": "Karte öffnen",
@@ -111,5 +111,22 @@
         }
       ]
     }
-  ]
+  ],
+  "screenshots": [],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "images",
+          "accept": "image/*"
+        }
+      ]
+    }
+  }
 }

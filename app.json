@@ -48,33 +48,77 @@
       "favicon": "./assets/images/favicon.png",
       "name": "BaliBuddy - Offline Reise-Companion",
       "shortName": "BaliBuddy",
-      "description": "Dein smarter Offline-Reise-Companion für Backpacker in Bali",
+      "description": "Dein smarter Offline-Reise-Companion für Backpacker in Bali. Finde Wasser, Wäschereien, ATMs, Kliniken und Fähren - auch ohne Internet!",
       "themeColor": "#FF9D6C",
       "backgroundColor": "#0F172A",
       "display": "standalone",
-      "orientation": "portrait",
+      "display_override": [
+        "window-controls-overlay",
+        "standalone",
+        "minimal-ui"
+      ],
+      "orientation": "portrait-primary",
       "scope": "/",
       "startUrl": "/",
+      "id": "balibuddy-pwa",
+      "lang": "de",
+      "dir": "ltr",
+      "categories": [
+        "travel",
+        "utilities",
+        "lifestyle"
+      ],
       "manifest": "./public/manifest.json",
-      "meta": {
-        "apple-mobile-web-app-capable": "yes",
-        "apple-mobile-web-app-status-bar-style": "light",
-        "apple-mobile-web-app-title": "BaliBuddy",
-        "mobile-web-app-capable": "yes",
-        "msapplication-TileColor": "#FF9D6C",
-        "msapplication-tap-highlight": "no",
-        "theme-color": "#FF9D6C",
-        "viewport": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-      },
       "icons": {
         "apple": "./assets/images/icon.png",
         "shortcut": "./assets/images/icon.png",
-        "icon": "./assets/images/icon.png"
+        "icon": "./assets/images/icon.png",
+        "favicon": "./assets/images/favicon.png"
       },
       "splash": {
         "backgroundColor": "#0F172A",
         "image": "./assets/images/icon.png",
         "resizeMode": "contain"
+      },
+      "preferRelatedApplications": false,
+      "shortcuts": [
+        {
+          "name": "Karte öffnen",
+          "shortName": "Karte",
+          "url": "/smart-map",
+          "icons": [
+            {
+              "src": "./assets/images/icon.png",
+              "sizes": "192x192"
+            }
+          ]
+        },
+        {
+          "name": "Notfall",
+          "shortName": "Notfall",
+          "url": "/sos-hub",
+          "icons": [
+            {
+              "src": "./assets/images/icon.png",
+              "sizes": "192x192"
+            }
+          ]
+        },
+        {
+          "name": "Währungsrechner",
+          "shortName": "Währung",
+          "url": "/wallet",
+          "icons": [
+            {
+              "src": "./assets/images/icon.png",
+              "sizes": "192x192"
+            }
+          ]
+        }
+      ],
+      "screenshots": [],
+      "edge_side_panel": {
+        "preferred_width": 400
       }
     },
     "plugins": [
@@ -98,7 +142,8 @@
       "expo-camera",
       "expo-sqlite",
       "expo-audio",
-      "expo-video"
+      "expo-video",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -3,15 +3,7 @@
  * Centralizes weather mapping to avoid duplication across components
  */
 
-export interface CachedWeather {
-  temperature: number;
-  feelsLike: number;
-  humidity: number;
-  windSpeed: number;
-  condition: string;
-  icon: string;
-  location: string;
-}
+import type { CachedWeather } from "./storage";
 
 export interface WeatherData {
   temperature: number;
@@ -38,8 +30,11 @@ export const fromCachedWeather = (cached: CachedWeather): WeatherData => ({
 
 /**
  * Convert display weather data to cache format
+ * Note: timestamp is added by saveWeather() for cache validation
  */
-export const toCachedWeather = (data: WeatherData): CachedWeather => ({
+export const toCachedWeather = (
+  data: WeatherData,
+): Omit<CachedWeather, "timestamp"> => ({
   temperature: data.temperature,
   feelsLike: data.feelsLike,
   humidity: data.humidity,

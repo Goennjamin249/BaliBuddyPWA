@@ -8,9 +8,13 @@ import { getWeather, saveWeather, type CachedWeather } from "../utils/storage";
 import {
   fromCachedWeather,
   toCachedWeather,
-  DEFAULT_WEATHER,
-  type WeatherData,
+  DEFAULT_WEATHER as _DEFAULT_WEATHER,
+  type WeatherData as _WeatherData,
 } from "../utils/weatherMapper";
+
+// Re-export for use in other modules
+export { _DEFAULT_WEATHER as DEFAULT_WEATHER };
+export type { _WeatherData as WeatherData };
 
 // Serverless endpoint (no API key needed - key is server-side)
 const WEATHER_API_URL = "/api/weather";
@@ -19,17 +23,16 @@ const WEATHER_API_URL = "/api/weather";
 const WEATHER_CACHE_DURATION_MS = 30 * 60 * 1000;
 
 // In-memory cache to prevent duplicate requests
-let inFlightRequest: Promise<WeatherData> | null = null;
+let inFlightRequest: Promise<_WeatherData> | null = null;
 let lastFetchTime: number = 0;
 
 /**
- * Check if cached weather data is still valid
+ * Check if cached weather data is still valid (30 minutes)
  */
 function isCacheValid(cached: CachedWeather | null): boolean {
   if (!cached) return false;
-  // Note: We use a simple approach - if we have any cached data, use it
-  // The server-side also caches for 30 minutes
-  return true;
+  const age = Date.now() - cached.timestamp;
+  return age < WEATHER_CACHE_DURATION_MS;
 }
 
 /**
@@ -39,7 +42,7 @@ function isCacheValid(cached: CachedWeather | null): boolean {
  */
 export async function fetchWeather(
   _showLoading: boolean = true,
-): Promise<WeatherData> {
+): Promise<_WeatherData> {
   // If there's already a request in flight, return that promise
   if (inFlightRequest) {
     return inFlightRequest;
@@ -57,7 +60,9 @@ export async function fetchWeather(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(WEATHER_API_URL, { signal: controller.signal });
+      const response = await fetch(WEATHER_API_URL, {
+        signal: controller.signal,
+      });
       clearTimeout(timeoutId);
 
       if (!response.ok) {
@@ -66,14 +71,14 @@ export async function fetchWeather(
 
       const data = await response.json();
 
-      const weatherData: WeatherData = {
-        temperature: data.temperature ?? DEFAULT_WEATHER.temperature,
-        feelsLike: data.feelsLike ?? DEFAULT_WEATHER.feelsLike,
-        humidity: data.humidity ?? DEFAULT_WEATHER.humidity,
-        windSpeed: data.windSpeed ?? DEFAULT_WEATHER.windSpeed,
-        condition: data.condition ?? DEFAULT_WEATHER.condition,
-        icon: data.icon ?? DEFAULT_WEATHER.icon,
-        location: data.location ?? DEFAULT_WEATHER.location,
+      const weatherData: _WeatherData = {
+        temperature: data.temperature ?? _DEFAULT_WEATHER.temperature,
+        feelsLike: data.feelsLike ?? _DEFAULT_WEATHER.feelsLike,
+        humidity: data.humidity ?? _DEFAULT_WEATHER.humidity,
+        windSpeed: data.windSpeed ?? _DEFAULT_WEATHER.windSpeed,
+        condition: data.condition ?? _DEFAULT_WEATHER.condition,
+        icon: data.icon ?? _DEFAULT_WEATHER.icon,
+        location: data.location ?? _DEFAULT_WEATHER.location,
       };
 
       // Cache the result
@@ -90,7 +95,7 @@ export async function fetchWeather(
         return fromCachedWeather(fallbackCached.data);
       }
 
-      return DEFAULT_WEATHER;
+      return _DEFAULT_WEATHER;
     } finally {
       inFlightRequest = null;
     }
@@ -102,7 +107,7 @@ export async function fetchWeather(
 /**
  * Get weather data with cache-first strategy
  */
-export async function getWeatherData(): Promise<WeatherData> {
+export async function getWeatherData(): Promise<_WeatherData> {
   // Try cache first
   const cached = await getWeather();
   if (cached.data) {

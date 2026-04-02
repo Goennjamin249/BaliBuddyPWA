@@ -6,10 +6,11 @@ import schema from "./schema";
 import { migrations } from "./migrations";
 
 // Create LokiJS adapter for web (IndexedDB)
+// Web Worker enabled for better UI responsiveness during DB operations
 const adapter = new LokiJSAdapter({
   schema,
   migrations,
-  useWebWorker: false,
+  useWebWorker: true,
   useIncrementalIndexedDB: true,
 });
 

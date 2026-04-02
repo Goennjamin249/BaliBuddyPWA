@@ -21,16 +21,15 @@ import {
 import * as Haptics from "expo-haptics";
 
 import { useTheme } from "../theme/ThemeContext";
-import { saveWeather, getWeather } from "../utils/storage";
+import { saveWeather, getWeather, type CachedWeather } from "../utils/storage";
 import {
   fromCachedWeather as mapperFromCached,
   toCachedWeather as mapperToCached,
-  type CachedWeather,
   type WeatherData as WeatherDataType,
 } from "../utils/weatherMapper";
 
 // Map WeatherData to CachedWeather for storage
-const toCachedWeather = (data: WeatherData): CachedWeather =>
+const toCachedWeather = (data: WeatherData): Omit<CachedWeather, "timestamp"> =>
   mapperToCached({
     temperature: data.temp,
     feelsLike: data.feelsLike,
@@ -114,7 +113,7 @@ export default function WeatherWidget({
 
   const fetchWeather = useCallback(async (showLoading: boolean = true) => {
     const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
-    
+
     // Bali coordinates (Denpasar)
     const BALI_LAT = -8.4095;
     const BALI_LON = 115.1889;
@@ -170,15 +169,15 @@ export default function WeatherWidget({
       };
 
       setWeather(weatherData);
-      
+
       // Save to storage for offline caching (30 min cache)
       await saveWeather(toCachedWeather(weatherData));
       lastUpdateTimeRef.current = Date.now();
-      
+
       setError(null);
     } catch (err) {
       console.warn("Weather fetch failed:", err);
-      
+
       // Try to load cached data as fallback
       const cached = await getWeather();
       if (cached.data) {
@@ -198,9 +197,12 @@ export default function WeatherWidget({
     fetchWeather(true);
 
     // Set up auto-refresh interval (every 1 hour for live updates)
-    const refreshInterval = setInterval(() => {
-      fetchWeather(false); // Silent refresh
-    }, 60 * 60 * 1000); // 1 hour
+    const refreshInterval = setInterval(
+      () => {
+        fetchWeather(false); // Silent refresh
+      },
+      60 * 60 * 1000,
+    ); // 1 hour
 
     // Cleanup on unmount
     return () => clearInterval(refreshInterval);
@@ -269,7 +271,9 @@ export default function WeatherWidget({
       <View style={styles.main}>
         {weather?.icon ? (
           <Image
-            source={{ uri: `https://openweathermap.org/img/wn/${weather.icon}@2x.png` }}
+            source={{
+              uri: `https://openweathermap.org/img/wn/${weather.icon}@2x.png`,
+            }}
             style={styles.weatherIcon}
             resizeMode="contain"
           />

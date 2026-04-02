@@ -49,10 +49,31 @@ import { Q } from "@nozbe/watermelondb";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
 import db from "../../db/index";
-import { getCachedRate, saveRate, saveScannerResult, getScannerResult, saveScannerAllergens, getScannerAllergens, clearScannerResult } from "../../utils/storage";
-import { searchDictionary, dictionaryCategories } from "../../services/dictionary";
-import { lawCategories, lawEntries, getLawsByCategory, getSeverityColor, getSeverityLabel } from "../../services/lawHub";
-import { fetchWeather as fetchWeatherService, DEFAULT_WEATHER, type WeatherData as WeatherDataType } from "../../services/weather";
+import {
+  getCachedRate,
+  saveRate,
+  saveScannerResult,
+  getScannerResult,
+  saveScannerAllergens,
+  getScannerAllergens,
+  clearScannerResult,
+} from "../../utils/storage";
+import {
+  searchDictionary,
+  dictionaryCategories,
+} from "../../services/dictionary";
+import {
+  lawCategories,
+  lawEntries,
+  getLawsByCategory,
+  getSeverityColor,
+  getSeverityLabel,
+} from "../../services/lawHub";
+import {
+  fetchWeather as fetchWeatherService,
+  DEFAULT_WEATHER,
+  type WeatherData as WeatherDataType,
+} from "../../services/weather";
 import { fetchExchangeRate } from "../../services/currency";
 
 // === V2 Design Tokens ===
@@ -77,11 +98,16 @@ const PURPLE_500 = "#8B5CF6";
 const PURPLE_100 = "#EDE9FE";
 
 // === TYPES ===
+interface Price {
+  amount: number;
+  currency: "IDR" | "EUR";
+}
+
 interface MenuItem {
   id: string;
   name: string;
   description: string;
-  price: string;
+  price: Price;
   allergens: string[];
   isSafe: boolean;
   riskLevel: "low" | "medium" | "high";
@@ -139,24 +165,115 @@ const EMERGENCY_NUMBERS = {
 };
 
 const VOLCANO_ALERTS: VolcanoAlert[] = [
-  { id: "v1", name: "Mount Agung", status: "waspada", level: 2, lastEruption: "2019", distance: "45 km von Denpasar" },
-  { id: "v2", name: "Mount Batur", status: "normal", level: 1, lastEruption: "2000", distance: "60 km von Denpasar" },
-  { id: "v3", name: "Mount Merapi", status: "siaga", level: 3, lastEruption: "2024", distance: "250 km (Java)" },
+  {
+    id: "v1",
+    name: "Mount Agung",
+    status: "waspada",
+    level: 2,
+    lastEruption: "2019",
+    distance: "45 km von Denpasar",
+  },
+  {
+    id: "v2",
+    name: "Mount Batur",
+    status: "normal",
+    level: 1,
+    lastEruption: "2000",
+    distance: "60 km von Denpasar",
+  },
+  {
+    id: "v3",
+    name: "Mount Merapi",
+    status: "siaga",
+    level: 3,
+    lastEruption: "2024",
+    distance: "250 km (Java)",
+  },
 ];
 
 const RABIES_CLINICS: Clinic[] = [
-  { id: "rb1", name: "BIMC Hospital Nusa Dua", type: "rabies", latitude: -8.7984, longitude: 115.2308, phone: "+62 361 3000911", address: "Jl. Bypass Ngurah Rai 100X, Nusa Dua", verified: true, open24h: true },
-  { id: "rb2", name: "Siloam Hospital Denpasar", type: "hospital", latitude: -8.6705, longitude: 115.2126, phone: "+62 361 449900", address: "Jl. Raya Puputan No.1, Denpasar", verified: true, open24h: true },
-  { id: "rb3", name: "Prima Medika Hospital", type: "hospital", latitude: -8.6589, longitude: 115.2239, phone: "+62 361 227777", address: "Jl. Pulau Serangan No.9X, Denpasar", verified: true, open24h: false },
-  { id: "rb4", name: "Bali International Medical Centre", type: "rabies", latitude: -8.6889, longitude: 115.1615, phone: "+62 361 761263", address: "Jl. Raya Seminyak, Seminyak", verified: true, open24h: true },
+  {
+    id: "rb1",
+    name: "BIMC Hospital Nusa Dua",
+    type: "rabies",
+    latitude: -8.7984,
+    longitude: 115.2308,
+    phone: "+62 361 3000911",
+    address: "Jl. Bypass Ngurah Rai 100X, Nusa Dua",
+    verified: true,
+    open24h: true,
+  },
+  {
+    id: "rb2",
+    name: "Siloam Hospital Denpasar",
+    type: "hospital",
+    latitude: -8.6705,
+    longitude: 115.2126,
+    phone: "+62 361 449900",
+    address: "Jl. Raya Puputan No.1, Denpasar",
+    verified: true,
+    open24h: true,
+  },
+  {
+    id: "rb3",
+    name: "Prima Medika Hospital",
+    type: "hospital",
+    latitude: -8.6589,
+    longitude: 115.2239,
+    phone: "+62 361 227777",
+    address: "Jl. Pulau Serangan No.9X, Denpasar",
+    verified: true,
+    open24h: false,
+  },
+  {
+    id: "rb4",
+    name: "Bali International Medical Centre",
+    type: "rabies",
+    latitude: -8.6889,
+    longitude: 115.1615,
+    phone: "+62 361 761263",
+    address: "Jl. Raya Seminyak, Seminyak",
+    verified: true,
+    open24h: true,
+  },
 ];
 
 const SAFE_BARS: SafeBar[] = [
-  { id: "sb1", name: "La Favela", address: "Jl. Laksmana, Seminyak", verified: true, notes: "Premium Cocktail Bar, internationale Standards" },
-  { id: "sb2", name: "Potato Head Beach Club", address: "Jl. Petitenget, Seminyak", verified: true, notes: "Resort Bar, eigene Produktion" },
-  { id: "sb3", name: "Finns Beach Club", address: "Jl. Pantai Berawa, Canggu", verified: true, notes: "Großer Beach Club, importierte Getränke" },
-  { id: "sb4", name: "Rock Bar Bali", address: "AYANA Resort, Jimbaran", verified: true, notes: "5-Sterne Resort Bar" },
-  { id: "sb5", name: "Mrs Sippy", address: "Jl. Pantai Batu Mejan, Canggu", verified: true, notes: "Premium Beach Club" },
+  {
+    id: "sb1",
+    name: "La Favela",
+    address: "Jl. Laksmana, Seminyak",
+    verified: true,
+    notes: "Premium Cocktail Bar, internationale Standards",
+  },
+  {
+    id: "sb2",
+    name: "Potato Head Beach Club",
+    address: "Jl. Petitenget, Seminyak",
+    verified: true,
+    notes: "Resort Bar, eigene Produktion",
+  },
+  {
+    id: "sb3",
+    name: "Finns Beach Club",
+    address: "Jl. Pantai Berawa, Canggu",
+    verified: true,
+    notes: "Großer Beach Club, importierte Getränke",
+  },
+  {
+    id: "sb4",
+    name: "Rock Bar Bali",
+    address: "AYANA Resort, Jimbaran",
+    verified: true,
+    notes: "5-Sterne Resort Bar",
+  },
+  {
+    id: "sb5",
+    name: "Mrs Sippy",
+    address: "Jl. Pantai Batu Mejan, Canggu",
+    verified: true,
+    notes: "Premium Beach Club",
+  },
 ];
 
 const TABS = [
@@ -228,18 +345,45 @@ export default function SurvivalScreen() {
     setVisaLoading(true);
     try {
       const settingsCollection = db.collections.get("settings");
-      const entryDateSetting = await settingsCollection.query(Q.where("key", "visa_entry_date")).fetch();
-      const durationSetting = await settingsCollection.query(Q.where("key", "visa_duration_days")).fetch();
-      const typeSetting = await settingsCollection.query(Q.where("key", "visa_type")).fetch();
+      const entryDateSetting = await settingsCollection
+        .query(Q.where("key", "visa_entry_date"))
+        .fetch();
+      const durationSetting = await settingsCollection
+        .query(Q.where("key", "visa_duration_days"))
+        .fetch();
+      const typeSetting = await settingsCollection
+        .query(Q.where("key", "visa_type"))
+        .fetch();
 
-      const entryDate = entryDateSetting[0] ? Number((entryDateSetting[0] as any).value || (entryDateSetting[0] as any)._raw?.value || 0) : Date.now();
-      const durationDays = durationSetting[0] ? Number((durationSetting[0] as any).value || (durationSetting[0] as any)._raw?.value || 30) : 30;
-      const visaType = typeSetting[0] ? (typeSetting[0] as any).value || (typeSetting[0] as any)._raw?.value || "eVOA" : "eVOA";
+      const entryDate = entryDateSetting[0]
+        ? Number(
+            (entryDateSetting[0] as any).value ||
+              (entryDateSetting[0] as any)._raw?.value ||
+              0,
+          )
+        : Date.now();
+      const durationDays = durationSetting[0]
+        ? Number(
+            (durationSetting[0] as any).value ||
+              (durationSetting[0] as any)._raw?.value ||
+              30,
+          )
+        : 30;
+      const visaType = typeSetting[0]
+        ? (typeSetting[0] as any).value ||
+          (typeSetting[0] as any)._raw?.value ||
+          "eVOA"
+        : "eVOA";
 
       setVisaInfo({ id: "visa", entryDate, durationDays, visaType });
     } catch (e) {
       console.error("Load visa info error:", e);
-      setVisaInfo({ id: "visa", entryDate: Date.now(), durationDays: 30, visaType: "eVOA" });
+      setVisaInfo({
+        id: "visa",
+        entryDate: Date.now(),
+        durationDays: 30,
+        visaType: "eVOA",
+      });
     } finally {
       setVisaLoading(false);
     }
@@ -263,7 +407,10 @@ export default function SurvivalScreen() {
     loadRate();
     loadVisaInfo();
     fetchWeather(true);
-    const refreshInterval = setInterval(() => fetchWeather(false), 60 * 60 * 1000);
+    const refreshInterval = setInterval(
+      () => fetchWeather(false),
+      60 * 60 * 1000,
+    );
     return () => clearInterval(refreshInterval);
   }, [loadRate, loadVisaInfo, fetchWeather]);
 
@@ -272,18 +419,51 @@ export default function SurvivalScreen() {
     const loadScannerData = async () => {
       const savedResult = await getScannerResult();
       const savedAllergens = await getScannerAllergens();
-      
+
       if (savedResult) {
-        setScannedItems(savedResult.items);
+        // Normalize saved scanner items to current MenuItem shape (convert price string -> Price)
+        const normalized = (savedResult.items || []).map((it: any) => {
+          let priceObj: Price = { amount: 0, currency: "IDR" };
+          if (typeof it.price === "string") {
+            const p = it.price.replace(/\s/g, "");
+            if (p.startsWith("Rp") || p.toUpperCase().includes("IDR")) {
+              const num = Number(p.replace(/[^0-9.-]/g, "")) || 0;
+              priceObj = { amount: num, currency: "IDR" };
+            } else if (p.startsWith("€") || p.toUpperCase().includes("EUR")) {
+              const num = Number(p.replace(/[^0-9.-]/g, "")) || 0;
+              priceObj = { amount: num, currency: "EUR" };
+            } else {
+              const num = Number(p.replace(/[^0-9.-]/g, "")) || 0;
+              priceObj = { amount: num, currency: "IDR" };
+            }
+          } else if (it.price && typeof it.price === "object") {
+            priceObj = {
+              amount: Number(it.price.amount) || 0,
+              currency: it.price.currency === "EUR" ? "EUR" : "IDR",
+            };
+          }
+
+          return {
+            id: it.id || String(Math.random()),
+            name: it.name || "",
+            description: it.description || "",
+            price: priceObj,
+            allergens: it.allergens || [],
+            isSafe: Boolean(it.isSafe),
+            riskLevel: it.riskLevel || "low",
+          } as MenuItem;
+        });
+
+        setScannedItems(normalized);
         setShowScannerResults(true);
       }
-      
+
       if (savedAllergens.length > 0) {
-        setScannerAllergens(prev =>
-          prev.map(a => ({
+        setScannerAllergens((prev) =>
+          prev.map((a) => ({
             ...a,
             selected: savedAllergens.includes(a.id),
-          }))
+          })),
         );
       }
     };
@@ -298,7 +478,9 @@ export default function SurvivalScreen() {
 
   const visaDays = useMemo(() => {
     if (!visaInfo) return null;
-    const expiry = new Date(visaInfo.entryDate + visaInfo.durationDays * 86400000);
+    const expiry = new Date(
+      visaInfo.entryDate + visaInfo.durationDays * 86400000,
+    );
     return Math.ceil((expiry.getTime() - new Date().getTime()) / 86400000);
   }, [visaInfo]);
 
@@ -320,7 +502,9 @@ export default function SurvivalScreen() {
 
   const visaExpiryDate = useMemo(() => {
     if (!visaInfo) return "--";
-    const expiry = new Date(visaInfo.entryDate + visaInfo.durationDays * 86400000);
+    const expiry = new Date(
+      visaInfo.entryDate + visaInfo.durationDays * 86400000,
+    );
     return expiry.toLocaleDateString("de-DE");
   }, [visaInfo]);
 
@@ -335,29 +519,40 @@ export default function SurvivalScreen() {
   };
 
   const openInMaps = (lat: number, lon: number, name: string) => {
-    const url = Platform.OS === "web"
-      ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`
-      : `geo:${lat},${lon}?q=${encodeURIComponent(name)}`;
+    const url =
+      Platform.OS === "web"
+        ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`
+        : `geo:${lat},${lon}?q=${encodeURIComponent(name)}`;
     Linking.openURL(url);
   };
 
   const getVolcanoColor = (status: string): string => {
     switch (status) {
-      case "normal": return "#10B981";
-      case "waspada": return "#F59E0B";
-      case "siaga": return "#F97316";
-      case "awas": return "#EF4444";
-      default: return "#6B7280";
+      case "normal":
+        return "#10B981";
+      case "waspada":
+        return "#F59E0B";
+      case "siaga":
+        return "#F97316";
+      case "awas":
+        return "#EF4444";
+      default:
+        return "#6B7280";
     }
   };
 
   const getVolcanoStatusText = (status: string): string => {
     switch (status) {
-      case "normal": return "Normal (Level I)";
-      case "waspada": return "Wachsam (Level II)";
-      case "siaga": return "Bereit (Level III)";
-      case "awas": return "Gefahr (Level IV)";
-      default: return status;
+      case "normal":
+        return "Normal (Level I)";
+      case "waspada":
+        return "Wachsam (Level II)";
+      case "siaga":
+        return "Bereit (Level III)";
+      case "awas":
+        return "Gefahr (Level IV)";
+      default:
+        return status;
     }
   };
 
@@ -371,11 +566,18 @@ export default function SurvivalScreen() {
           try {
             await db.write(async () => {
               const collection = db.collections.get("settings");
-              const existing = await collection.query(Q.where("key", "visa_entry_date")).fetch();
+              const existing = await collection
+                .query(Q.where("key", "visa_entry_date"))
+                .fetch();
               if (existing.length > 0) {
-                await existing[0].update((record: any) => { record.value = String(entryDate); });
+                await existing[0].update((record: any) => {
+                  record.value = String(entryDate);
+                });
               } else {
-                await collection.create((record: any) => { record.key = "visa_entry_date"; record.value = String(entryDate); });
+                await collection.create((record: any) => {
+                  record.key = "visa_entry_date";
+                  record.value = String(entryDate);
+                });
               }
             });
             await loadVisaInfo();
@@ -386,20 +588,29 @@ export default function SurvivalScreen() {
         }
       },
       "plain-text",
-      String(visaInfo?.entryDate || Date.now())
+      String(visaInfo?.entryDate || Date.now()),
     );
   };
 
   const formatIDR = (n: number) => `Rp${Math.round(n).toLocaleString("de-DE")}`;
   const formatEUR = (n: number) => `€${n.toFixed(2)}`;
 
+  const formatPrice = (price: Price): string => {
+    if (price.currency === "IDR") {
+      return formatIDR(price.amount);
+    }
+    return formatEUR(price.amount);
+  };
+
   // === Scanner Functions ===
   const handleToggleAllergen = useCallback(async (id: string) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setScannerAllergens((prev) => {
-      const updated = prev.map((a) => (a.id === id ? { ...a, selected: !a.selected } : a));
+      const updated = prev.map((a) =>
+        a.id === id ? { ...a, selected: !a.selected } : a,
+      );
       // Save allergens immediately when toggled
-      saveScannerAllergens(updated.filter(a => a.selected).map(a => a.id));
+      saveScannerAllergens(updated.filter((a) => a.selected).map((a) => a.id));
       return updated;
     });
   }, []);
@@ -417,7 +628,7 @@ export default function SurvivalScreen() {
         id: "1",
         name: "Nasi Goreng",
         description: "Gebratener Reis mit Gemüse und Ei",
-        price: "45.000 IDR",
+        price: { amount: 45000, currency: "IDR" },
         allergens: ["Eier", "Soja"],
         isSafe: true,
         riskLevel: "low",
@@ -426,7 +637,7 @@ export default function SurvivalScreen() {
         id: "2",
         name: "Mie Goreng",
         description: "Gebratene Nudeln mit Garnelen",
-        price: "50.000 IDR",
+        price: { amount: 50000, currency: "IDR" },
         allergens: ["Meeresfrüchte", "Gluten"],
         isSafe: false,
         riskLevel: "high",
@@ -435,7 +646,7 @@ export default function SurvivalScreen() {
         id: "3",
         name: "Gado-Gado",
         description: "Gemüsesalat mit Erdnusssauce",
-        price: "35.000 IDR",
+        price: { amount: 35000, currency: "IDR" },
         allergens: ["Nüsse"],
         isSafe: false,
         riskLevel: "medium",
@@ -447,10 +658,17 @@ export default function SurvivalScreen() {
     setIsScanning(false);
 
     // Save to storage for offline access
-    const selectedAllergenIds = scannerAllergens.filter(a => a.selected).map(a => a.id);
+    const selectedAllergenIds = scannerAllergens
+      .filter((a) => a.selected)
+      .map((a) => a.id);
+    // storage expects a simplified item shape (e.g. price as string) — map accordingly
+    const storageItems = mockItems.map((it) => ({
+      ...it,
+      price: formatPrice(it.price),
+    }));
     await saveScannerResult({
       timestamp: Date.now(),
-      items: mockItems,
+      items: storageItems,
       selectedAllergens: selectedAllergenIds,
     });
     await saveScannerAllergens(selectedAllergenIds);
@@ -473,7 +691,9 @@ export default function SurvivalScreen() {
   const renderCameraView = () => {
     if (cameraPermission === null) {
       return (
-        <View style={[styles.scannerCameraContainer, { backgroundColor: GRAY_100 }]}>
+        <View
+          style={[styles.scannerCameraContainer, { backgroundColor: GRAY_100 }]}
+        >
           <ActivityIndicator size="large" color={ROSE_600} />
           <Text style={[styles.scannerCameraText, { color: GRAY_500 }]}>
             Kamera wird geladen...
@@ -482,19 +702,26 @@ export default function SurvivalScreen() {
       );
     }
 
-    if (cameraPermission === false) {
+    if (cameraPermission?.granted !== true) {
       return (
-        <View style={[styles.scannerCameraContainer, { backgroundColor: GRAY_100 }]}>
+        <View
+          style={[styles.scannerCameraContainer, { backgroundColor: GRAY_100 }]}
+        >
           <Camera size={48} color={GRAY_500} />
           <Text style={[styles.scannerCameraText, { color: GRAY_500 }]}>
             Kamera-Zugriff erforderlich
           </Text>
           <TouchableOpacity
             onPress={requestCameraPermission}
-            style={[styles.scannerPermissionButton, { backgroundColor: ROSE_600 }]}
+            style={[
+              styles.scannerPermissionButton,
+              { backgroundColor: ROSE_600 },
+            ]}
             activeOpacity={0.7}
           >
-            <Text style={styles.scannerPermissionButtonText}>Zugriff erlauben</Text>
+            <Text style={styles.scannerPermissionButtonText}>
+              Zugriff erlauben
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -519,7 +746,10 @@ export default function SurvivalScreen() {
         <TouchableOpacity
           onPress={handleScan}
           disabled={isScanning}
-          style={[styles.scannerScanButton, isScanning && styles.scannerScanButtonDisabled]}
+          style={[
+            styles.scannerScanButton,
+            isScanning && styles.scannerScanButtonDisabled,
+          ]}
           activeOpacity={0.7}
         >
           {isScanning ? (
@@ -548,20 +778,42 @@ export default function SurvivalScreen() {
         <View style={styles.converterSection}>
           <View style={styles.converterRow}>
             <View style={styles.converterInput}>
-              <Text style={styles.converterLabel}>{reversed ? "IDR" : "EUR"}</Text>
-              <TextInput value={amount} onChangeText={setAmount} keyboardType="numeric" style={styles.converterInputText} placeholder="0" />
+              <Text style={styles.converterLabel}>
+                {reversed ? "IDR" : "EUR"}
+              </Text>
+              <TextInput
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="numeric"
+                style={styles.converterInputText}
+                placeholder="0"
+              />
             </View>
-            <TouchableOpacity onPress={() => { setReversed(!reversed); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={styles.reverseBtn}>
+            <TouchableOpacity
+              onPress={() => {
+                setReversed(!reversed);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={styles.reverseBtn}
+            >
               <ArrowRightLeft size={20} color={ROSE_600} />
             </TouchableOpacity>
             <View style={styles.converterInput}>
-              <Text style={styles.converterLabel}>{reversed ? "EUR" : "IDR"}</Text>
-              <Text style={styles.converterResultText}>{reversed ? formatEUR(converted) : formatIDR(converted)}</Text>
+              <Text style={styles.converterLabel}>
+                {reversed ? "EUR" : "IDR"}
+              </Text>
+              <Text style={styles.converterResultText}>
+                {reversed ? formatEUR(converted) : formatIDR(converted)}
+              </Text>
             </View>
           </View>
           <View style={styles.rateInfo}>
-            <Text style={styles.rateInfoText}>1 EUR = {rate.toLocaleString("de-DE")} IDR</Text>
-            <TouchableOpacity onPress={loadRate}><RefreshCw size={14} color={GRAY_500} /></TouchableOpacity>
+            <Text style={styles.rateInfoText}>
+              1 EUR = {rate.toLocaleString("de-DE")} IDR
+            </Text>
+            <TouchableOpacity onPress={loadRate}>
+              <RefreshCw size={14} color={GRAY_500} />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -571,40 +823,58 @@ export default function SurvivalScreen() {
         <View style={styles.cardHeader}>
           <Calendar size={18} color={ROSE_600} />
           <Text style={styles.cardTitle}>Visa-Status</Text>
-          <TouchableOpacity onPress={handleUpdateVisa}><Text style={styles.editText}>Bearbeiten</Text></TouchableOpacity>
+          <TouchableOpacity onPress={handleUpdateVisa}>
+            <Text style={styles.editText}>Bearbeiten</Text>
+          </TouchableOpacity>
         </View>
         {visaLoading ? (
-          <View style={styles.visaLoading}><ActivityIndicator size="small" color={ROSE_600} /></View>
+          <View style={styles.visaLoading}>
+            <ActivityIndicator size="small" color={ROSE_600} />
+          </View>
         ) : (
           <View style={styles.visaContent}>
             <View style={styles.visaMainRow}>
               <View style={styles.visaDaysContainer}>
-                <Text style={[styles.visaDaysText, { color: visaStatusColor }]}>{visaDays !== null ? visaDays : "--"}</Text>
+                <Text style={[styles.visaDaysText, { color: visaStatusColor }]}>
+                  {visaDays !== null ? visaDays : "--"}
+                </Text>
                 <Text style={styles.visaDaysLabel}>Tage verbleibend</Text>
               </View>
               <View style={styles.visaStatusBadge}>
-                <Text style={[styles.visaStatusText, { color: visaStatusColor }]}>{visaStatusText}</Text>
+                <Text
+                  style={[styles.visaStatusText, { color: visaStatusColor }]}
+                >
+                  {visaStatusText}
+                </Text>
               </View>
             </View>
             <View style={styles.visaDetails}>
               <View style={styles.visaDetailRow}>
                 <Clock size={14} color={GRAY_500} />
-                <Text style={styles.visaDetailText}>Typ: {visaInfo?.visaType || "eVOA"}</Text>
+                <Text style={styles.visaDetailText}>
+                  Typ: {visaInfo?.visaType || "eVOA"}
+                </Text>
               </View>
               <View style={styles.visaDetailRow}>
                 <Calendar size={14} color={GRAY_500} />
-                <Text style={styles.visaDetailText}>Ablauf: {visaExpiryDate}</Text>
+                <Text style={styles.visaDetailText}>
+                  Ablauf: {visaExpiryDate}
+                </Text>
               </View>
               <View style={styles.visaDetailRow}>
                 <Info size={14} color={GRAY_500} />
-                <Text style={styles.visaDetailText}>Dauer: {visaInfo?.durationDays || 30} Tage</Text>
+                <Text style={styles.visaDetailText}>
+                  Dauer: {visaInfo?.durationDays || 30} Tage
+                </Text>
               </View>
             </View>
             {visaDays !== null && visaDays < 7 && (
               <View style={styles.visaWarning}>
                 <AlertTriangle size={16} color={RED_500} />
                 <Text style={styles.visaWarningText}>
-                  {visaDays < 0 ? "Visa überzogen! Sofort verlängern oder ausreisen!" : "Visa läuft bald ab! Verlängerung prüfen!"}
+                  {visaDays < 0
+                    ? "Visa überzogen! Sofort verlängern oder ausreisen!"
+                    : "Visa läuft bald ab! Verlängerung prüfen!"}
                 </Text>
               </View>
             )}
@@ -637,7 +907,9 @@ export default function SurvivalScreen() {
                     ]}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.scannerAllergenIcon}>{allergen.icon}</Text>
+                    <Text style={styles.scannerAllergenIcon}>
+                      {allergen.icon}
+                    </Text>
                     <Text
                       style={[
                         styles.scannerAllergenText,
@@ -655,12 +927,16 @@ export default function SurvivalScreen() {
 
             {/* Camera Section */}
             <View style={styles.scannerCameraSection}>
-              <Text style={styles.scannerSectionTitle}>Speisekarte scannen</Text>
+              <Text style={styles.scannerSectionTitle}>
+                Speisekarte scannen
+              </Text>
               {renderCameraView()}
             </View>
 
             {/* Info Card */}
-            <View style={[styles.scannerInfoCard, { backgroundColor: GRAY_100 }]}>
+            <View
+              style={[styles.scannerInfoCard, { backgroundColor: GRAY_100 }]}
+            >
               <View style={styles.scannerInfoCardContent}>
                 <Shield size={24} color={ROSE_600} />
                 <View style={styles.scannerInfoCardText}>
@@ -683,41 +959,88 @@ export default function SurvivalScreen() {
               <Text style={styles.scannerResultsTitle}>Scan-Ergebnisse</Text>
               <TouchableOpacity
                 onPress={handleResetScanner}
-                style={[styles.scannerResetButton, { backgroundColor: GRAY_100 }]}
+                style={[
+                  styles.scannerResetButton,
+                  { backgroundColor: GRAY_100 },
+                ]}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.scannerResetButtonText, { color: GRAY_500 }]}>
+                <Text
+                  style={[styles.scannerResetButtonText, { color: GRAY_500 }]}
+                >
                   Erneut scannen
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Summary */}
-            <View style={[styles.scannerSummaryCard, { backgroundColor: WHITE }]}>
+            <View
+              style={[styles.scannerSummaryCard, { backgroundColor: WHITE }]}
+            >
               <View style={styles.scannerSummaryStats}>
                 <View style={styles.scannerSummaryStat}>
-                  <Text style={[styles.scannerSummaryStatValue, { color: GRAY_800 }]}>
+                  <Text
+                    style={[
+                      styles.scannerSummaryStatValue,
+                      { color: GRAY_800 },
+                    ]}
+                  >
                     {scannedItems.length}
                   </Text>
-                  <Text style={[styles.scannerSummaryStatLabel, { color: GRAY_500 }]}>
+                  <Text
+                    style={[
+                      styles.scannerSummaryStatLabel,
+                      { color: GRAY_500 },
+                    ]}
+                  >
                     Gerichte
                   </Text>
                 </View>
-                <View style={[styles.scannerSummaryStatDivider, { backgroundColor: GRAY_200 }]} />
+                <View
+                  style={[
+                    styles.scannerSummaryStatDivider,
+                    { backgroundColor: GRAY_200 },
+                  ]}
+                />
                 <View style={styles.scannerSummaryStat}>
-                  <Text style={[styles.scannerSummaryStatValue, { color: "#90BE6D" }]}>
+                  <Text
+                    style={[
+                      styles.scannerSummaryStatValue,
+                      { color: "#90BE6D" },
+                    ]}
+                  >
                     {scannedItems.filter((i) => i.isSafe).length}
                   </Text>
-                  <Text style={[styles.scannerSummaryStatLabel, { color: GRAY_500 }]}>
+                  <Text
+                    style={[
+                      styles.scannerSummaryStatLabel,
+                      { color: GRAY_500 },
+                    ]}
+                  >
                     Sicher
                   </Text>
                 </View>
-                <View style={[styles.scannerSummaryStatDivider, { backgroundColor: GRAY_200 }]} />
+                <View
+                  style={[
+                    styles.scannerSummaryStatDivider,
+                    { backgroundColor: GRAY_200 },
+                  ]}
+                />
                 <View style={styles.scannerSummaryStat}>
-                  <Text style={[styles.scannerSummaryStatValue, { color: "#EF4444" }]}>
+                  <Text
+                    style={[
+                      styles.scannerSummaryStatValue,
+                      { color: "#EF4444" },
+                    ]}
+                  >
                     {scannedItems.filter((i) => !i.isSafe).length}
                   </Text>
-                  <Text style={[styles.scannerSummaryStatLabel, { color: GRAY_500 }]}>
+                  <Text
+                    style={[
+                      styles.scannerSummaryStatLabel,
+                      { color: GRAY_500 },
+                    ]}
+                  >
                     Vorsicht
                   </Text>
                 </View>
@@ -728,20 +1051,30 @@ export default function SurvivalScreen() {
             {scannedItems.map((item) => (
               <View
                 key={item.id}
-                style={[styles.scannerMenuItemCard, { backgroundColor: WHITE, borderColor: GRAY_200 }]}
+                style={[
+                  styles.scannerMenuItemCard,
+                  { backgroundColor: WHITE, borderColor: GRAY_200 },
+                ]}
               >
                 <View style={styles.scannerMenuItemHeader}>
                   <View style={styles.scannerMenuItemInfo}>
-                    <Text style={[styles.scannerMenuItemName, { color: GRAY_800 }]}>
+                    <Text
+                      style={[styles.scannerMenuItemName, { color: GRAY_800 }]}
+                    >
                       {item.name}
                     </Text>
-                    <Text style={[styles.scannerMenuItemDescription, { color: GRAY_500 }]}>
+                    <Text
+                      style={[
+                        styles.scannerMenuItemDescription,
+                        { color: GRAY_500 },
+                      ]}
+                    >
                       {item.description}
                     </Text>
                   </View>
                   <View style={styles.scannerMenuItemMeta}>
-                    <Text style={[styles.scannerMenuItemPrice, { color: ROSE_600 }]}>
-                      {item.price}
+                    <Text style={styles.scannerMenuItemPrice}>
+                      {formatPrice(item.price)}
                     </Text>
                     <View
                       style={[
@@ -750,9 +1083,15 @@ export default function SurvivalScreen() {
                       ]}
                     >
                       {item.isSafe ? (
-                        <CheckCircle size={16} color={RISK_COLORS[item.riskLevel]} />
+                        <CheckCircle
+                          size={16}
+                          color={RISK_COLORS[item.riskLevel]}
+                        />
                       ) : (
-                        <AlertTriangle size={16} color={RISK_COLORS[item.riskLevel]} />
+                        <AlertTriangle
+                          size={16}
+                          color={RISK_COLORS[item.riskLevel]}
+                        />
                       )}
                       <Text
                         style={[
@@ -769,7 +1108,9 @@ export default function SurvivalScreen() {
                   <View style={styles.scannerAllergenTags}>
                     {item.allergens.map((allergen, index) => (
                       <View key={index} style={styles.scannerAllergenTag}>
-                        <Text style={styles.scannerAllergenTagText}>{allergen}</Text>
+                        <Text style={styles.scannerAllergenTagText}>
+                          {allergen}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -786,23 +1127,59 @@ export default function SurvivalScreen() {
     <>
       {/* Notfallnummern - Bento Grid */}
       <View style={styles.bentoGrid}>
-        <TouchableOpacity style={[styles.bentoTile, { backgroundColor: RED_500 }]} onPress={async () => { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); callEmergency("ambulance"); }} activeOpacity={0.7}>
-          <View style={styles.bentoIconContainer}><Activity size={40} color="#FFFFFF" /></View>
+        <TouchableOpacity
+          style={[styles.bentoTile, { backgroundColor: RED_500 }]}
+          onPress={async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            callEmergency("ambulance");
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.bentoIconContainer}>
+            <Activity size={40} color="#FFFFFF" />
+          </View>
           <Text style={styles.bentoTitle}>Krankenwagen</Text>
           <Text style={styles.bentoNumber}>{EMERGENCY_NUMBERS.ambulance}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.bentoTile, { backgroundColor: BLUE_500 }]} onPress={async () => { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); callEmergency("police"); }} activeOpacity={0.7}>
-          <View style={styles.bentoIconContainer}><Shield size={40} color="#FFFFFF" /></View>
+        <TouchableOpacity
+          style={[styles.bentoTile, { backgroundColor: BLUE_500 }]}
+          onPress={async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            callEmergency("police");
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.bentoIconContainer}>
+            <Shield size={40} color="#FFFFFF" />
+          </View>
           <Text style={styles.bentoTitle}>Polizei</Text>
           <Text style={styles.bentoNumber}>{EMERGENCY_NUMBERS.police}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.bentoTile, { backgroundColor: ORANGE_500 }]} onPress={async () => { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); callEmergency("fire"); }} activeOpacity={0.7}>
-          <View style={styles.bentoIconContainer}><AlertTriangle size={40} color="#FFFFFF" /></View>
+        <TouchableOpacity
+          style={[styles.bentoTile, { backgroundColor: ORANGE_500 }]}
+          onPress={async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            callEmergency("fire");
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.bentoIconContainer}>
+            <AlertTriangle size={40} color="#FFFFFF" />
+          </View>
           <Text style={styles.bentoTitle}>Feuerwehr</Text>
           <Text style={styles.bentoNumber}>{EMERGENCY_NUMBERS.fire}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.bentoTile, { backgroundColor: GREEN_500 }]} onPress={async () => { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); callEmergency("sar"); }} activeOpacity={0.7}>
-          <View style={styles.bentoIconContainer}><Navigation size={40} color="#FFFFFF" /></View>
+        <TouchableOpacity
+          style={[styles.bentoTile, { backgroundColor: GREEN_500 }]}
+          onPress={async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            callEmergency("sar");
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.bentoIconContainer}>
+            <Navigation size={40} color="#FFFFFF" />
+          </View>
           <Text style={styles.bentoTitle}>SAR</Text>
           <Text style={styles.bentoNumber}>{EMERGENCY_NUMBERS.sar}</Text>
         </TouchableOpacity>
@@ -812,7 +1189,9 @@ export default function SurvivalScreen() {
       <View style={styles.volcanoCard}>
         <View style={styles.volcanoHeader}>
           <AlertTriangle size={24} color={ORANGE_500} />
-          <Text style={styles.volcanoTitle}>Vulkan Alarm (MAGMA Indonesia)</Text>
+          <Text style={styles.volcanoTitle}>
+            Vulkan Alarm (MAGMA Indonesia)
+          </Text>
         </View>
         {VOLCANO_ALERTS.map((volcano) => (
           <View key={volcano.id} style={styles.volcanoItem}>
@@ -820,12 +1199,27 @@ export default function SurvivalScreen() {
               <Text style={styles.volcanoName}>{volcano.name}</Text>
               <Text style={styles.volcanoDistance}>{volcano.distance}</Text>
             </View>
-            <View style={[styles.volcanoStatus, { backgroundColor: getVolcanoColor(volcano.status) + "20" }]}>
-              <Text style={[styles.volcanoStatusText, { color: getVolcanoColor(volcano.status) }]}>{getVolcanoStatusText(volcano.status)}</Text>
+            <View
+              style={[
+                styles.volcanoStatus,
+                { backgroundColor: getVolcanoColor(volcano.status) + "20" },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.volcanoStatusText,
+                  { color: getVolcanoColor(volcano.status) },
+                ]}
+              >
+                {getVolcanoStatusText(volcano.status)}
+              </Text>
             </View>
           </View>
         ))}
-        <TouchableOpacity style={styles.magmaButton} onPress={() => Linking.openURL("https://magma.esdm.go.id/")}>
+        <TouchableOpacity
+          style={styles.magmaButton}
+          onPress={() => Linking.openURL("https://magma.esdm.go.id/")}
+        >
           <Globe size={18} color="#FFFFFF" />
           <Text style={styles.magmaButtonText}>MAGMA Indonesia Website</Text>
         </TouchableOpacity>
@@ -846,7 +1240,9 @@ export default function SurvivalScreen() {
             <View style={styles.weatherMain}>
               <Text style={styles.weatherIcon}>{weather.icon}</Text>
               <View style={styles.weatherTemp}>
-                <Text style={styles.temperature}>{Math.round(weather.temperature)}°C</Text>
+                <Text style={styles.temperature}>
+                  {Math.round(weather.temperature)}°C
+                </Text>
                 <Text style={styles.condition}>{weather.condition}</Text>
               </View>
             </View>
@@ -854,17 +1250,23 @@ export default function SurvivalScreen() {
               <View style={styles.weatherDetail}>
                 <Thermometer size={20} color={RED_500} />
                 <Text style={styles.weatherDetailLabel}>Gefühlt</Text>
-                <Text style={styles.weatherDetailValue}>{Math.round(weather.feelsLike)}°C</Text>
+                <Text style={styles.weatherDetailValue}>
+                  {Math.round(weather.feelsLike)}°C
+                </Text>
               </View>
               <View style={styles.weatherDetail}>
                 <Droplets size={20} color={BLUE_500} />
                 <Text style={styles.weatherDetailLabel}>Luftfeuchtigkeit</Text>
-                <Text style={styles.weatherDetailValue}>{weather.humidity}%</Text>
+                <Text style={styles.weatherDetailValue}>
+                  {weather.humidity}%
+                </Text>
               </View>
               <View style={styles.weatherDetail}>
                 <Wind size={20} color={GREEN_500} />
                 <Text style={styles.weatherDetailLabel}>Wind</Text>
-                <Text style={styles.weatherDetailValue}>{weather.windSpeed} km/h</Text>
+                <Text style={styles.weatherDetailValue}>
+                  {weather.windSpeed} km/h
+                </Text>
               </View>
             </View>
           </View>
@@ -872,11 +1274,15 @@ export default function SurvivalScreen() {
             <Text style={styles.alertTitle}>⚠️ Wetterwarnungen</Text>
             <View style={styles.alertItem}>
               <AlertCircle size={20} color={YELLOW_500} />
-              <Text style={styles.alertText}>Monsunzeit (Nov-Mär): Starke Regenfälle möglich</Text>
+              <Text style={styles.alertText}>
+                Monsunzeit (Nov-Mär): Starke Regenfälle möglich
+              </Text>
             </View>
             <View style={styles.alertItem}>
               <AlertCircle size={20} color={YELLOW_500} />
-              <Text style={styles.alertText}>UV-Index sehr hoch - Sonnenschutz empfohlen</Text>
+              <Text style={styles.alertText}>
+                UV-Index sehr hoch - Sonnenschutz empfohlen
+              </Text>
             </View>
           </View>
         </>
@@ -894,7 +1300,10 @@ export default function SurvivalScreen() {
       {/* Bali Belly */}
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>🤢 Bali Belly SOS</Text>
-        <Text style={styles.infoText}>Durchfallerkrankung durch verunreinigtes Wasser oder Essen. Sehr häufig bei Touristen in Bali.</Text>
+        <Text style={styles.infoText}>
+          Durchfallerkrankung durch verunreinigtes Wasser oder Essen. Sehr
+          häufig bei Touristen in Bali.
+        </Text>
       </View>
       <View style={styles.symptomsCard}>
         <Text style={styles.symptomsTitle}>🦠 Symptome</Text>
@@ -909,38 +1318,67 @@ export default function SurvivalScreen() {
       <View style={styles.treatmentCard}>
         <Text style={styles.treatmentTitle}>✅ Erste Hilfe</Text>
         <View style={styles.treatmentList}>
-          <Text style={styles.treatment}>💧 Viel Wasser trinken (nur Flaschenwasser!)</Text>
-          <Text style={styles.treatment}>🧂 Elektrolyte einnehmen (Oralit)</Text>
+          <Text style={styles.treatment}>
+            💧 Viel Wasser trinken (nur Flaschenwasser!)
+          </Text>
+          <Text style={styles.treatment}>
+            🧂 Elektrolyte einnehmen (Oralit)
+          </Text>
           <Text style={styles.treatment}>🍚 Leichte Kost (Reis, Bananen)</Text>
-          <Text style={styles.treatment}>💊 Loperamid (Imodium) bei Bedarf</Text>
-          <Text style={styles.treatment}>🚫 Kein Alkohol, kein Kaffee, keine Milch</Text>
+          <Text style={styles.treatment}>
+            💊 Loperamid (Imodium) bei Bedarf
+          </Text>
+          <Text style={styles.treatment}>
+            🚫 Kein Alkohol, kein Kaffee, keine Milch
+          </Text>
         </View>
       </View>
 
       {/* Rabies */}
       <View style={styles.warningCard}>
         <AlertTriangle size={32} color={RED_500} />
-        <Text style={styles.warningTitle}>ACHTUNG: Bali ist Tollwut-Gebiet!</Text>
-        <Text style={styles.warningText}>Affenbisse sind KEIN Kavaliersdelikt. Tollwut ist zu 100% tödlich wenn unbehandelt!</Text>
+        <Text style={styles.warningTitle}>
+          ACHTUNG: Bali ist Tollwut-Gebiet!
+        </Text>
+        <Text style={styles.warningText}>
+          Affenbisse sind KEIN Kavaliersdelikt. Tollwut ist zu 100% tödlich wenn
+          unbehandelt!
+        </Text>
       </View>
       <View style={styles.firstAidCard}>
         <Text style={styles.firstAidTitle}>🚑 Erste Hilfe nach Biss</Text>
         <View style={styles.stepList}>
           <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
-            <Text style={styles.stepText}>Wunde sofort 15 Min. mit Seife und Wasser auswaschen</Text>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>1</Text>
+            </View>
+            <Text style={styles.stepText}>
+              Wunde sofort 15 Min. mit Seife und Wasser auswaschen
+            </Text>
           </View>
           <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
-            <Text style={styles.stepText}>Mit Desinfektionsmittel behandeln (Jod, Alkohol)</Text>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>2</Text>
+            </View>
+            <Text style={styles.stepText}>
+              Mit Desinfektionsmittel behandeln (Jod, Alkohol)
+            </Text>
           </View>
           <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
-            <Text style={styles.stepText}>NICHT verbinden - Wunde offen lassen</Text>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>3</Text>
+            </View>
+            <Text style={styles.stepText}>
+              NICHT verbinden - Wunde offen lassen
+            </Text>
           </View>
           <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>4</Text></View>
-            <Text style={styles.stepText}>SOFORT zur Klinik für Impfung (innerhalb 24h!)</Text>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>4</Text>
+            </View>
+            <Text style={styles.stepText}>
+              SOFORT zur Klinik für Impfung (innerhalb 24h!)
+            </Text>
           </View>
         </View>
       </View>
@@ -956,11 +1394,19 @@ export default function SurvivalScreen() {
             </View>
             <Text style={styles.rabiesClinicPhone}>{clinic.phone}</Text>
             <View style={styles.rabiesClinicActions}>
-              <TouchableOpacity style={styles.callButtonSmall} onPress={() => callClinic(clinic.phone)}>
+              <TouchableOpacity
+                style={styles.callButtonSmall}
+                onPress={() => callClinic(clinic.phone)}
+              >
                 <Phone size={16} color="#FFFFFF" />
                 <Text style={styles.callButtonText}>Anrufen</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.mapsButtonSmall} onPress={() => openInMaps(clinic.latitude, clinic.longitude, clinic.name)}>
+              <TouchableOpacity
+                style={styles.mapsButtonSmall}
+                onPress={() =>
+                  openInMaps(clinic.latitude, clinic.longitude, clinic.name)
+                }
+              >
                 <Navigation size={16} color="#FFFFFF" />
                 <Text style={styles.mapsButtonText}>Route</Text>
               </TouchableOpacity>
@@ -969,7 +1415,10 @@ export default function SurvivalScreen() {
         ))}
       </View>
 
-      <TouchableOpacity style={styles.emergencyCallButton} onPress={() => callEmergency("ambulance")}>
+      <TouchableOpacity
+        style={styles.emergencyCallButton}
+        onPress={() => callEmergency("ambulance")}
+      >
         <Activity size={24} color="#FFFFFF" />
         <Text style={styles.emergencyCallText}>🚑 NOTRUF 118</Text>
       </TouchableOpacity>
@@ -982,17 +1431,29 @@ export default function SurvivalScreen() {
       <View style={styles.methanolWarningCard}>
         <AlertTriangle size={40} color={RED_500} />
         <Text style={styles.methanolWarningTitle}>LEBENSGEFAHR!</Text>
-        <Text style={styles.methanolWarningText}>Gefälschter Alkohol mit Methanol führt zu Erblindung und Tod!</Text>
+        <Text style={styles.methanolWarningText}>
+          Gefälschter Alkohol mit Methanol führt zu Erblindung und Tod!
+        </Text>
       </View>
 
       <View style={styles.symptomsCard}>
         <Text style={styles.methanolSymptomsTitle}>⚠️ Vergiftungssymptome</Text>
         <View style={styles.methanolSymptomList}>
-          <Text style={styles.methanolSymptom}>🤢 Starke Übelkeit & Erbrechen</Text>
-          <Text style={styles.methanolSymptom}>🤕 Kopfschmerzen & Schwindel</Text>
-          <Text style={styles.methanolSymptom}>👁️ Verschwommene Sicht / Erblindung</Text>
-          <Text style={styles.methanolSymptom}>😵 Verwirrtheit & Bewusstlosigkeit</Text>
-          <Text style={styles.methanolSymptom}>💀 Atemstillstand (tödlich)</Text>
+          <Text style={styles.methanolSymptom}>
+            🤢 Starke Übelkeit & Erbrechen
+          </Text>
+          <Text style={styles.methanolSymptom}>
+            🤕 Kopfschmerzen & Schwindel
+          </Text>
+          <Text style={styles.methanolSymptom}>
+            👁️ Verschwommene Sicht / Erblindung
+          </Text>
+          <Text style={styles.methanolSymptom}>
+            😵 Verwirrtheit & Bewusstlosigkeit
+          </Text>
+          <Text style={styles.methanolSymptom}>
+            💀 Atemstillstand (tödlich)
+          </Text>
         </View>
       </View>
 
@@ -1013,17 +1474,21 @@ export default function SurvivalScreen() {
       <View style={styles.tipsCard}>
         <Text style={styles.tipsTitle}>🛡️ Schutzmaßnahmen</Text>
         <Text style={styles.tipsText}>
-          • Nur in etablierten Bars/Restaurants trinken{"\n"}
-          • Finger weg von zu billigem Alkohol{"\n"}
-          • Originalverpackte Flaschen bevorzugen{"\n"}
-          • Bei Verdacht: NICHT trinken!{"\n"}
-          • Niemals "selbstgebrannten" Alkohol probieren
+          • Nur in etablierten Bars/Restaurants trinken{"\n"}• Finger weg von zu
+          billigem Alkohol{"\n"}• Originalverpackte Flaschen bevorzugen{"\n"}•
+          Bei Verdacht: NICHT trinken!{"\n"}• Niemals "selbstgebrannten" Alkohol
+          probieren
         </Text>
       </View>
 
-      <TouchableOpacity style={styles.emergencyCallButton} onPress={() => callEmergency("ambulance")}>
+      <TouchableOpacity
+        style={styles.emergencyCallButton}
+        onPress={() => callEmergency("ambulance")}
+      >
         <Activity size={24} color="#FFFFFF" />
-        <Text style={styles.emergencyCallText}>🚑 Bei Vergiftung: SOFORT 118!</Text>
+        <Text style={styles.emergencyCallText}>
+          🚑 Bei Vergiftung: SOFORT 118!
+        </Text>
       </TouchableOpacity>
     </>
   );
@@ -1031,7 +1496,7 @@ export default function SurvivalScreen() {
   // === Dictionary Functions ===
   const dictResults = useMemo(
     () => searchDictionary(dictSearch, dictCategory),
-    [dictSearch, dictCategory]
+    [dictSearch, dictCategory],
   );
 
   const copyDictEntry = async (text: string, id: string) => {
@@ -1058,11 +1523,11 @@ export default function SurvivalScreen() {
   // === Law Hub Functions ===
   const categoryLaws = useMemo(
     () => (lawCategory ? getLawsByCategory(lawCategory) : []),
-    [lawCategory]
+    [lawCategory],
   );
   const selectedLawDetails = useMemo(
     () => (selectedLaw ? lawEntries.find((l) => l.id === selectedLaw) : null),
-    [selectedLaw]
+    [selectedLaw],
   );
 
   const handleLawBack = () => {
@@ -1094,17 +1559,30 @@ export default function SurvivalScreen() {
       </View>
 
       {/* Category Filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dictCategoriesScroll} contentContainerStyle={styles.dictCategoriesContent}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.dictCategoriesScroll}
+        contentContainerStyle={styles.dictCategoriesContent}
+      >
         {dictionaryCategories.map((category) => (
           <TouchableOpacity
             key={category}
             style={[
               styles.dictCategoryChip,
-              dictCategory === category && { backgroundColor: ROSE_600, borderColor: ROSE_600 },
+              dictCategory === category && {
+                backgroundColor: ROSE_600,
+                borderColor: ROSE_600,
+              },
             ]}
             onPress={() => setDictCategory(category)}
           >
-            <Text style={[styles.dictCategoryChipText, dictCategory === category && { color: WHITE }]}>
+            <Text
+              style={[
+                styles.dictCategoryChipText,
+                dictCategory === category && { color: WHITE },
+              ]}
+            >
               {category}
             </Text>
           </TouchableOpacity>
@@ -1112,9 +1590,7 @@ export default function SurvivalScreen() {
       </ScrollView>
 
       {/* Results Count */}
-      <Text style={styles.dictResultsCount}>
-        {dictResults.length} Einträge
-      </Text>
+      <Text style={styles.dictResultsCount}>{dictResults.length} Einträge</Text>
 
       {/* Dictionary Entries */}
       {dictResults.length > 0 ? (
@@ -1122,8 +1598,12 @@ export default function SurvivalScreen() {
           <View key={entry.id} style={styles.dictEntryCard}>
             <View style={styles.dictEntryHeader}>
               <View style={styles.dictEntryMain}>
-                <Text style={styles.dictEntryIndonesian}>{entry.indonesian}</Text>
-                <Text style={styles.dictEntryPronunciation}>{entry.pronunciation}</Text>
+                <Text style={styles.dictEntryIndonesian}>
+                  {entry.indonesian}
+                </Text>
+                <Text style={styles.dictEntryPronunciation}>
+                  {entry.pronunciation}
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.dictCopyButton}
@@ -1146,8 +1626,12 @@ export default function SurvivalScreen() {
                 <Text style={styles.dictExamplesTitle}>Beispiele:</Text>
                 {entry.examples.map((example, idx) => (
                   <View key={idx} style={styles.dictExample}>
-                    <Text style={styles.dictExampleIndonesian}>{example.indonesian}</Text>
-                    <Text style={styles.dictExampleGerman}>{example.german}</Text>
+                    <Text style={styles.dictExampleIndonesian}>
+                      {example.indonesian}
+                    </Text>
+                    <Text style={styles.dictExampleGerman}>
+                      {example.german}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -1169,26 +1653,53 @@ export default function SurvivalScreen() {
     if (selectedLaw && selectedLawDetails) {
       return (
         <>
-          <TouchableOpacity style={styles.lawBackButton} onPress={handleLawBack}>
-            <ChevronRight size={20} color={ROSE_600} style={{ transform: [{ rotate: '180deg' }] }} />
+          <TouchableOpacity
+            style={styles.lawBackButton}
+            onPress={handleLawBack}
+          >
+            <ChevronRight
+              size={20}
+              color={ROSE_600}
+              style={{ transform: [{ rotate: "180deg" }] }}
+            />
             <Text style={styles.lawBackText}>Zurück</Text>
           </TouchableOpacity>
 
-          <View style={[styles.lawSeverityBadge, { backgroundColor: getSeverityColor(selectedLawDetails.severity) + "20" }]}>
-            <AlertTriangle size={20} color={getSeverityColor(selectedLawDetails.severity)} />
-            <Text style={[styles.lawSeverityText, { color: getSeverityColor(selectedLawDetails.severity) }]}>
+          <View
+            style={[
+              styles.lawSeverityBadge,
+              {
+                backgroundColor:
+                  getSeverityColor(selectedLawDetails.severity) + "20",
+              },
+            ]}
+          >
+            <AlertTriangle
+              size={20}
+              color={getSeverityColor(selectedLawDetails.severity)}
+            />
+            <Text
+              style={[
+                styles.lawSeverityText,
+                { color: getSeverityColor(selectedLawDetails.severity) },
+              ]}
+            >
               {getSeverityLabel(selectedLawDetails.severity, "de")}
             </Text>
           </View>
 
           <View style={styles.lawDetailCard}>
             <Text style={styles.lawDetailLabel}>Beschreibung</Text>
-            <Text style={styles.lawDetailText}>{selectedLawDetails.description.de}</Text>
+            <Text style={styles.lawDetailText}>
+              {selectedLawDetails.description.de}
+            </Text>
           </View>
 
           <View style={[styles.lawDetailCard, styles.lawPenaltyCard]}>
             <Text style={styles.lawDetailLabel}>Strafe</Text>
-            <Text style={[styles.lawDetailText, styles.lawPenaltyText]}>{selectedLawDetails.penalty.de}</Text>
+            <Text style={[styles.lawDetailText, styles.lawPenaltyText]}>
+              {selectedLawDetails.penalty.de}
+            </Text>
           </View>
 
           <View style={styles.lawDetailCard}>
@@ -1203,7 +1714,8 @@ export default function SurvivalScreen() {
 
           <View style={styles.lawDisclaimer}>
             <Text style={styles.lawDisclaimerText}>
-              ⚠️ Dies ist nur eine Orientierungshilfe. Gesetze können sich ändern. Im Zweifel offizielle Quellen konsultieren.
+              ⚠️ Dies ist nur eine Orientierungshilfe. Gesetze können sich
+              ändern. Im Zweifel offizielle Quellen konsultieren.
             </Text>
           </View>
         </>
@@ -1212,11 +1724,18 @@ export default function SurvivalScreen() {
 
     // Category Laws List View
     if (lawCategory) {
-      const cat = lawCategories.find(c => c.id === lawCategory);
+      const cat = lawCategories.find((c) => c.id === lawCategory);
       return (
         <>
-          <TouchableOpacity style={styles.lawBackButton} onPress={handleLawBack}>
-            <ChevronRight size={20} color={ROSE_600} style={{ transform: [{ rotate: '180deg' }] }} />
+          <TouchableOpacity
+            style={styles.lawBackButton}
+            onPress={handleLawBack}
+          >
+            <ChevronRight
+              size={20}
+              color={ROSE_600}
+              style={{ transform: [{ rotate: "180deg" }] }}
+            />
             <Text style={styles.lawBackText}>Zurück</Text>
           </TouchableOpacity>
 
@@ -1234,20 +1753,33 @@ export default function SurvivalScreen() {
               >
                 <View style={styles.lawHeader}>
                   <View style={styles.lawTitleSection}>
-                    <Text style={styles.lawTitle} numberOfLines={1}>{law.title.de}</Text>
-                    <View style={[styles.lawSeverityBadge, { backgroundColor: getSeverityColor(law.severity) }]}>
-                      <Text style={styles.lawSeverityBadgeText}>{getSeverityLabel(law.severity, "de")}</Text>
+                    <Text style={styles.lawTitle} numberOfLines={1}>
+                      {law.title.de}
+                    </Text>
+                    <View
+                      style={[
+                        styles.lawSeverityBadge,
+                        { backgroundColor: getSeverityColor(law.severity) },
+                      ]}
+                    >
+                      <Text style={styles.lawSeverityBadgeText}>
+                        {getSeverityLabel(law.severity, "de")}
+                      </Text>
                     </View>
                   </View>
                   <ChevronRight size={20} color={GRAY_500} />
                 </View>
-                <Text style={styles.lawDescription} numberOfLines={2}>{law.description.de}</Text>
+                <Text style={styles.lawDescription} numberOfLines={2}>
+                  {law.description.de}
+                </Text>
               </TouchableOpacity>
             ))
           ) : (
             <View style={styles.dictEmptyState}>
               <Info size={48} color={GRAY_500} />
-              <Text style={styles.dictEmptyText}>Keine Gesetze in dieser Kategorie</Text>
+              <Text style={styles.dictEmptyText}>
+                Keine Gesetze in dieser Kategorie
+              </Text>
             </View>
           )}
         </>
@@ -1259,7 +1791,9 @@ export default function SurvivalScreen() {
       <>
         <View style={styles.lawIntroSection}>
           <Scale size={32} color={ROSE_600} />
-          <Text style={styles.lawIntroTitle}>Rechtlicher Leitfaden für Bali</Text>
+          <Text style={styles.lawIntroTitle}>
+            Rechtlicher Leitfaden für Bali
+          </Text>
           <Text style={styles.lawIntroText}>
             Wichtige Gesetze und Vorschriften für Touristen in Indonesien
           </Text>
@@ -1275,7 +1809,9 @@ export default function SurvivalScreen() {
             <Text style={styles.lawCategoryIcon}>{cat.icon}</Text>
             <View style={styles.lawCategoryInfo}>
               <Text style={styles.lawCategoryTitle}>{cat.title.de}</Text>
-              <Text style={styles.lawCategoryCount}>{getLawsByCategory(cat.id).length} Gesetze</Text>
+              <Text style={styles.lawCategoryCount}>
+                {getLawsByCategory(cat.id).length} Gesetze
+              </Text>
             </View>
             <ChevronRight size={20} color={GRAY_500} />
           </TouchableOpacity>
@@ -1286,14 +1822,22 @@ export default function SurvivalScreen() {
 
   const renderSection = () => {
     switch (activeTab) {
-      case "tools": return renderToolsSection();
-      case "emergency": return renderEmergencySection();
-      case "weather": return renderWeatherSection();
-      case "health": return renderHealthSection();
-      case "safety": return renderSafetySection();
-      case "dictionary": return renderDictionarySection();
-      case "lawhub": return renderLawHubSection();
-      default: return null;
+      case "tools":
+        return renderToolsSection();
+      case "emergency":
+        return renderEmergencySection();
+      case "weather":
+        return renderWeatherSection();
+      case "health":
+        return renderHealthSection();
+      case "safety":
+        return renderSafetySection();
+      case "dictionary":
+        return renderDictionarySection();
+      case "lawhub":
+        return renderLawHubSection();
+      default:
+        return null;
     }
   };
 
@@ -1304,7 +1848,9 @@ export default function SurvivalScreen() {
         <LinearGradient colors={[ROSE_600, PINK_700]} style={styles.header}>
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.headerTitle}>{t("survival.title") || "Survival Kit"}</Text>
+              <Text style={styles.headerTitle}>
+                {t("survival.title") || "Survival Kit"}
+              </Text>
               <Text style={styles.headerSub}>Bali Safety & Tools</Text>
             </View>
             <ShieldAlert size={30} color="white" />
@@ -1312,21 +1858,39 @@ export default function SurvivalScreen() {
         </LinearGradient>
 
         {/* Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer} contentContainerStyle={styles.tabsContent}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsContainer}
+          contentContainerStyle={styles.tabsContent}
+        >
           {TABS.map((tab) => (
             <TouchableOpacity
               key={tab.id}
               style={[styles.tab, activeTab === tab.id && styles.tabActive]}
               onPress={() => setActiveTab(tab.id)}
             >
-              <tab.icon size={18} color={activeTab === tab.id ? "#FFFFFF" : GRAY_600} />
-              <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>{tab.label}</Text>
+              <tab.icon
+                size={18}
+                color={activeTab === tab.id ? "#FFFFFF" : GRAY_600}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab.id && styles.tabTextActive,
+                ]}
+              >
+                {tab.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
         {/* Content */}
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {renderSection()}
         </ScrollView>
       </View>
@@ -1337,65 +1901,224 @@ export default function SurvivalScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: BG },
   root: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   headerTitle: { fontSize: 28, fontWeight: "800", color: WHITE },
   headerSub: { fontSize: 14, color: "rgba(255,255,255,0.8)", marginTop: 4 },
-  tabsContainer: { paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: GRAY_200 },
+  tabsContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: GRAY_200,
+  },
   tabsContent: { gap: 8 },
-  tab: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, backgroundColor: WHITE, borderWidth: 1, borderColor: GRAY_200, gap: 6, boxShadow: "0 2px 4px rgba(0, 0, 0, 0.08)", elevation: 2 },
+  tab: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: WHITE,
+    borderWidth: 1,
+    borderColor: GRAY_200,
+    gap: 6,
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.08)",
+    elevation: 2,
+  },
   tabActive: { backgroundColor: ROSE_600, borderColor: "transparent" },
   tabText: { fontSize: 13, fontWeight: "600", color: GRAY_600 },
   tabTextActive: { color: WHITE },
   scrollContent: { padding: 16, paddingBottom: 100 },
-  card: { backgroundColor: WHITE, borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", elevation: 2 },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 },
+  card: {
+    backgroundColor: WHITE,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
   cardTitle: { fontSize: 17, fontWeight: "700", color: GRAY_800, flex: 1 },
   editText: { fontSize: 13, color: ROSE_600, fontWeight: "600" },
   converterSection: { gap: 12 },
-  converterRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  converterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   converterInput: { flex: 1, alignItems: "center" },
   converterLabel: { fontSize: 12, color: GRAY_500, marginBottom: 4 },
-  converterInputText: { fontSize: 24, fontWeight: "800", color: GRAY_800, textAlign: "center" },
-  converterResultText: { fontSize: 24, fontWeight: "800", color: GREEN_500, textAlign: "center" },
-  reverseBtn: { padding: 10, backgroundColor: GRAY_100, borderRadius: 50, marginHorizontal: 12 },
-  rateInfo: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderTopWidth: 1, borderTopColor: GRAY_200 },
+  converterInputText: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: GRAY_800,
+    textAlign: "center",
+  },
+  converterResultText: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: GREEN_500,
+    textAlign: "center",
+  },
+  reverseBtn: {
+    padding: 10,
+    backgroundColor: GRAY_100,
+    borderRadius: 50,
+    marginHorizontal: 12,
+  },
+  rateInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: GRAY_200,
+  },
   rateInfoText: { fontSize: 13, color: GRAY_500 },
   visaLoading: { alignItems: "center", paddingVertical: 20 },
   visaContent: { gap: 16 },
-  visaMainRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  visaMainRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   visaDaysContainer: { alignItems: "center" },
   visaDaysText: { fontSize: 56, fontWeight: "900" },
   visaDaysLabel: { fontSize: 14, color: GRAY_500, fontWeight: "600" },
-  visaStatusBadge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: GRAY_100 },
+  visaStatusBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: GRAY_100,
+  },
   visaStatusText: { fontSize: 14, fontWeight: "700" },
   visaDetails: { gap: 8 },
   visaDetailRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   visaDetailText: { fontSize: 14, color: GRAY_600 },
-  visaWarning: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(239,68,68,0.1)", padding: 12, borderRadius: 12 },
+  visaWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(239,68,68,0.1)",
+    padding: 12,
+    borderRadius: 12,
+  },
   visaWarningText: { fontSize: 13, color: RED_500, fontWeight: "600", flex: 1 },
-  bentoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
-  bentoTile: { width: "47%", aspectRatio: 1, borderRadius: 28, alignItems: "center", justifyContent: "center", gap: 12, padding: 16, boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)", elevation: 8 },
-  bentoIconContainer: { width: 72, height: 72, borderRadius: 36, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
-  bentoTitle: { fontSize: 15, fontWeight: "700", color: WHITE, textAlign: "center" },
+  bentoGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 16,
+  },
+  bentoTile: {
+    width: "47%",
+    aspectRatio: 1,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    padding: 16,
+    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)",
+    elevation: 8,
+  },
+  bentoIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bentoTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: WHITE,
+    textAlign: "center",
+  },
   bentoNumber: { fontSize: 28, fontWeight: "800", color: WHITE },
-  volcanoCard: { backgroundColor: "rgba(255, 255, 255, 0.75)", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "rgba(249, 115, 22, 0.3)" },
-  volcanoHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  volcanoCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(249, 115, 22, 0.3)",
+  },
+  volcanoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
   volcanoTitle: { fontSize: 16, fontWeight: "700", color: GRAY_800 },
-  volcanoItem: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: GRAY_100 },
+  volcanoItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: GRAY_100,
+  },
   volcanoInfo: { flex: 1 },
   volcanoName: { fontSize: 14, fontWeight: "600", color: GRAY_800 },
   volcanoDistance: { fontSize: 12, color: GRAY_500 },
-  volcanoStatus: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  volcanoStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
   volcanoStatusText: { fontSize: 11, fontWeight: "700" },
-  magmaButton: { flexDirection: "row", backgroundColor: ORANGE_500, paddingVertical: 12, borderRadius: 12, alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12 },
+  magmaButton: {
+    flexDirection: "row",
+    backgroundColor: ORANGE_500,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 12,
+  },
   magmaButtonText: { fontSize: 14, fontWeight: "700", color: WHITE },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
   loadingText: { fontSize: 15, color: GRAY_500, marginTop: 12 },
-  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
   errorText: { fontSize: 15, color: GRAY_500, marginTop: 12 },
-  weatherCard: { backgroundColor: "rgba(255, 255, 255, 0.75)", borderRadius: 16, padding: 20, marginBottom: 16 },
-  weatherMain: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 16 },
+  weatherCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  weatherMain: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 16,
+  },
   weatherIcon: { fontSize: 48 },
   weatherTemp: { flex: 1 },
   temperature: { fontSize: 42, fontWeight: "800", color: GRAY_800 },
@@ -1404,167 +2127,648 @@ const styles = StyleSheet.create({
   weatherDetail: { alignItems: "center", gap: 4 },
   weatherDetailLabel: { fontSize: 12, color: GRAY_500 },
   weatherDetailValue: { fontSize: 14, fontWeight: "700", color: GRAY_800 },
-  weatherAlerts: { backgroundColor: "rgba(245, 158, 11, 0.1)", borderRadius: 12, padding: 12 },
-  alertTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 8 },
-  alertItem: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+  weatherAlerts: {
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    borderRadius: 12,
+    padding: 12,
+  },
+  alertTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 8,
+  },
+  alertItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
   alertText: { fontSize: 13, color: GRAY_500, flex: 1 },
-  infoCard: { backgroundColor: "rgba(255, 255, 255, 0.75)", borderRadius: 12, padding: 14, marginBottom: 12 },
-  infoTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 6 },
+  infoCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 6,
+  },
   infoText: { fontSize: 13, color: GRAY_500, lineHeight: 18 },
-  symptomsCard: { backgroundColor: "rgba(255, 255, 255, 0.75)", borderRadius: 12, padding: 14, marginBottom: 12 },
-  symptomsTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 8 },
+  symptomsCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  symptomsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 8,
+  },
   symptomList: { gap: 4 },
   symptom: { fontSize: 13, color: GRAY_600 },
-  treatmentCard: { backgroundColor: "rgba(16, 185, 129, 0.1)", borderRadius: 12, padding: 14, marginBottom: 12 },
-  treatmentTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 8 },
+  treatmentCard: {
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  treatmentTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 8,
+  },
   treatmentList: { gap: 4 },
   treatment: { fontSize: 13, color: GRAY_600 },
-  warningCard: { backgroundColor: "rgba(239, 68, 68, 0.1)", borderRadius: 16, padding: 16, alignItems: "center", marginBottom: 12, borderWidth: 1, borderColor: "rgba(239, 68, 68, 0.3)" },
-  warningTitle: { fontSize: 16, fontWeight: "800", color: RED_500, marginTop: 8, textAlign: "center" },
-  warningText: { fontSize: 13, color: GRAY_500, textAlign: "center", marginTop: 6, lineHeight: 18 },
-  firstAidCard: { backgroundColor: "rgba(255, 255, 255, 0.75)", borderRadius: 16, padding: 16, marginBottom: 12 },
-  firstAidTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 12 },
+  warningCard: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: RED_500,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  warningText: {
+    fontSize: 13,
+    color: GRAY_500,
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  firstAidCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  firstAidTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 12,
+  },
   stepList: { gap: 10 },
   step: { flexDirection: "row", gap: 12 },
-  stepNumber: { width: 28, height: 28, borderRadius: 14, backgroundColor: RED_500, justifyContent: "center", alignItems: "center" },
+  stepNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: RED_500,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   stepNumberText: { fontSize: 13, fontWeight: "700", color: WHITE },
   stepText: { fontSize: 13, color: GRAY_600, flex: 1, lineHeight: 18 },
-  clinicsCard: { backgroundColor: "rgba(255, 255, 255, 0.75)", borderRadius: 16, padding: 16, marginBottom: 12 },
-  clinicsTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 12 },
-  rabiesClinicItem: { backgroundColor: WHITE, borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: GRAY_200 },
-  rabiesClinicInfo: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  clinicsCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  clinicsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 12,
+  },
+  rabiesClinicItem: {
+    backgroundColor: WHITE,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: GRAY_200,
+  },
+  rabiesClinicInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
   rabiesClinicName: { fontSize: 14, fontWeight: "600", color: GRAY_800 },
-  rabiesClinicPhone: { fontSize: 13, color: GREEN_500, fontWeight: "600", marginBottom: 8 },
+  rabiesClinicPhone: {
+    fontSize: 13,
+    color: GREEN_500,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
   rabiesClinicActions: { flexDirection: "row", gap: 8 },
-  callButtonSmall: { flexDirection: "row", backgroundColor: GREEN_500, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignItems: "center", gap: 6 },
+  callButtonSmall: {
+    flexDirection: "row",
+    backgroundColor: GREEN_500,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    gap: 6,
+  },
   callButtonText: { fontSize: 12, fontWeight: "600", color: WHITE },
-  mapsButtonSmall: { flexDirection: "row", backgroundColor: "#00B4D8", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignItems: "center", gap: 6 },
+  mapsButtonSmall: {
+    flexDirection: "row",
+    backgroundColor: "#00B4D8",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    gap: 6,
+  },
   mapsButtonText: { fontSize: 12, fontWeight: "600", color: WHITE },
-  emergencyCallButton: { flexDirection: "row", backgroundColor: RED_500, paddingVertical: 16, borderRadius: 14, alignItems: "center", justifyContent: "center", gap: 10 },
+  emergencyCallButton: {
+    flexDirection: "row",
+    backgroundColor: RED_500,
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
   emergencyCallText: { fontSize: 16, fontWeight: "800", color: WHITE },
-  methanolWarningCard: { backgroundColor: "rgba(239, 68, 68, 0.1)", borderRadius: 16, padding: 20, alignItems: "center", marginBottom: 12, borderWidth: 1, borderColor: "rgba(239, 68, 68, 0.3)" },
-  methanolWarningTitle: { fontSize: 18, fontWeight: "800", color: RED_500, marginTop: 8, textAlign: "center" },
-  methanolWarningText: { fontSize: 13, color: GRAY_500, textAlign: "center", marginTop: 6, lineHeight: 18 },
-  methanolSymptomsTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 8 },
+  methanolWarningCard: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+  },
+  methanolWarningTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: RED_500,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  methanolWarningText: {
+    fontSize: 13,
+    color: GRAY_500,
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  methanolSymptomsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 8,
+  },
   methanolSymptomList: { gap: 6 },
   methanolSymptom: { fontSize: 13, color: GRAY_600 },
-  safeBarsCard: { backgroundColor: "rgba(16, 185, 129, 0.1)", borderRadius: 12, padding: 14, marginBottom: 12 },
-  safeBarsTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 10 },
-  safeBarItem: { backgroundColor: WHITE, borderRadius: 10, padding: 10, marginBottom: 6 },
-  safeBarInfo: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  safeBarsCard: {
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  safeBarsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 10,
+  },
+  safeBarItem: {
+    backgroundColor: WHITE,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 6,
+  },
+  safeBarInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
   safeBarName: { fontSize: 14, fontWeight: "600", color: GRAY_800 },
   safeBarAddress: { fontSize: 12, color: GRAY_500, marginBottom: 2 },
   safeBarNotes: { fontSize: 11, color: GREEN_500 },
-  tipsCard: { backgroundColor: "rgba(255, 255, 255, 0.75)", borderRadius: 12, padding: 14 },
-  tipsTitle: { fontSize: 14, fontWeight: "700", color: GRAY_800, marginBottom: 6 },
+  tipsCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    borderRadius: 12,
+    padding: 14,
+  },
+  tipsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 6,
+  },
   tipsText: { fontSize: 13, color: GRAY_600, lineHeight: 20 },
   // === Scanner Styles ===
   scannerAllergenSection: { marginBottom: 20 },
-  scannerSectionTitle: { fontSize: 16, fontWeight: "600", color: GRAY_800, marginBottom: 12 },
+  scannerSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: GRAY_800,
+    marginBottom: 12,
+  },
   scannerAllergenChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  scannerAllergenChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, gap: 6 },
+  scannerAllergenChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+  },
   scannerAllergenIcon: { fontSize: 16 },
   scannerAllergenText: { fontSize: 13 },
   scannerCameraSection: { marginBottom: 20 },
-  scannerCameraContainer: { height: 280, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  scannerCameraContainer: {
+    height: 280,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   scannerCameraText: { fontSize: 14, marginTop: 12, textAlign: "center" },
-  scannerPermissionButton: { marginTop: 16, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
-  scannerPermissionButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
-  scannerCameraWrapper: { height: 280, borderRadius: 24, overflow: "hidden", position: "relative" },
+  scannerPermissionButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  scannerPermissionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  scannerCameraWrapper: {
+    height: 280,
+    borderRadius: 24,
+    overflow: "hidden",
+    position: "relative",
+  },
   scannerCamera: { flex: 1 },
-  scannerCameraOverlay: { flex: 1, alignItems: "center", justifyContent: "center" },
+  scannerCameraOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   scannerScanFrame: { width: 220, height: 220, position: "relative" },
-  scannerCornerTopLeft: { position: "absolute", top: 0, left: 0, width: 40, height: 40, borderTopWidth: 3, borderLeftWidth: 3, borderColor: "#FFFFFF", borderTopLeftRadius: 12 },
-  scannerCornerTopRight: { position: "absolute", top: 0, right: 0, width: 40, height: 40, borderTopWidth: 3, borderRightWidth: 3, borderColor: "#FFFFFF", borderTopRightRadius: 12 },
-  scannerCornerBottomLeft: { position: "absolute", bottom: 0, left: 0, width: 40, height: 40, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: "#FFFFFF", borderBottomLeftRadius: 12 },
-  scannerCornerBottomRight: { position: "absolute", bottom: 0, right: 0, width: 40, height: 40, borderBottomWidth: 3, borderRightWidth: 3, borderColor: "#FFFFFF", borderBottomRightRadius: 12 },
-  scannerScanGuideText: { color: "#FFFFFF", fontSize: 14, marginTop: 16, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  scannerScanButton: { position: "absolute", bottom: 16, alignSelf: "center", flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.9)", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 28, gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" },
+  scannerCornerTopLeft: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderColor: "#FFFFFF",
+    borderTopLeftRadius: 12,
+  },
+  scannerCornerTopRight: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderColor: "#FFFFFF",
+    borderTopRightRadius: 12,
+  },
+  scannerCornerBottomLeft: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderColor: "#FFFFFF",
+    borderBottomLeftRadius: 12,
+  },
+  scannerCornerBottomRight: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderColor: "#FFFFFF",
+    borderBottomRightRadius: 12,
+  },
+  scannerScanGuideText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    marginTop: 16,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  scannerScanButton: {
+    position: "absolute",
+    bottom: 16,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 28,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+  },
   scannerScanButtonDisabled: { opacity: 0.7 },
   scannerScanButtonText: { color: ROSE_600, fontSize: 14, fontWeight: "600" },
   scannerInfoCard: { borderRadius: 20, padding: 16, marginBottom: 20 },
-  scannerInfoCardContent: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  scannerInfoCardContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
   scannerInfoCardText: { flex: 1 },
-  scannerInfoCardTitle: { fontSize: 14, fontWeight: "600", color: GRAY_800, marginBottom: 4 },
+  scannerInfoCardTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: GRAY_800,
+    marginBottom: 4,
+  },
   scannerInfoCardDescription: { fontSize: 13, color: GRAY_500, lineHeight: 18 },
-  scannerResultsHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+  scannerResultsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
   scannerResultsTitle: { fontSize: 18, fontWeight: "700", color: GRAY_800 },
-  scannerResetButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  scannerResetButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
   scannerResetButtonText: { fontSize: 13, fontWeight: "600" },
   scannerSummaryCard: { borderRadius: 20, padding: 16, marginBottom: 16 },
-  scannerSummaryStats: { flexDirection: "row", justifyContent: "space-around", alignItems: "center" },
+  scannerSummaryStats: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
   scannerSummaryStat: { alignItems: "center" },
   scannerSummaryStatDivider: { width: 1, height: 40 },
   scannerSummaryStatValue: { fontSize: 28, fontWeight: "800" },
   scannerSummaryStatLabel: { fontSize: 12, marginTop: 4 },
-  scannerMenuItemCard: { borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1 },
-  scannerMenuItemHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  scannerMenuItemCard: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  scannerMenuItemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
   scannerMenuItemInfo: { flex: 1, marginRight: 12 },
   scannerMenuItemMeta: { alignItems: "flex-end" },
   scannerMenuItemName: { fontSize: 16, fontWeight: "600" },
   scannerMenuItemDescription: { fontSize: 13, marginTop: 4 },
   scannerMenuItemPrice: { fontSize: 16, fontWeight: "700" },
-  scannerSafetyBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, marginTop: 8, gap: 4 },
+  scannerSafetyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    marginTop: 8,
+    gap: 4,
+  },
   scannerSafetyBadgeText: { fontSize: 11, fontWeight: "600" },
-  scannerAllergenTags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
-  scannerAllergenTag: { backgroundColor: "rgba(239,68,68,0.1)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  scannerAllergenTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 12,
+  },
+  scannerAllergenTag: {
+    backgroundColor: "rgba(239,68,68,0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
   scannerAllergenTagText: { fontSize: 11, color: "#EF4444", fontWeight: "600" },
   // === Dictionary Styles ===
-  dictSearchBar: { flexDirection: "row", alignItems: "center", backgroundColor: WHITE, borderRadius: 12, paddingHorizontal: 12, gap: 8, marginBottom: 12 },
-  dictSearchInput: { flex: 1, fontSize: 16, color: GRAY_800, paddingVertical: 12 },
+  dictSearchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: WHITE,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    gap: 8,
+    marginBottom: 12,
+  },
+  dictSearchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: GRAY_800,
+    paddingVertical: 12,
+  },
   dictCategoriesScroll: { marginBottom: 12 },
   dictCategoriesContent: { gap: 8 },
-  dictCategoryChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: WHITE, borderWidth: 1, borderColor: GRAY_200 },
+  dictCategoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: WHITE,
+    borderWidth: 1,
+    borderColor: GRAY_200,
+  },
   dictCategoryChipText: { fontSize: 14, color: GRAY_500, fontWeight: "600" },
   dictResultsCount: { fontSize: 14, color: GRAY_500, marginBottom: 8 },
-  dictEntryCard: { backgroundColor: WHITE, borderRadius: 12, padding: 16, marginBottom: 12 },
-  dictEntryHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
+  dictEntryCard: {
+    backgroundColor: WHITE,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  dictEntryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
   dictEntryMain: { flex: 1 },
-  dictEntryIndonesian: { fontSize: 18, fontWeight: "700", color: GRAY_800, marginBottom: 4 },
-  dictEntryPronunciation: { fontSize: 14, color: GRAY_500, fontStyle: "italic" },
+  dictEntryIndonesian: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 4,
+  },
+  dictEntryPronunciation: {
+    fontSize: 14,
+    color: GRAY_500,
+    fontStyle: "italic",
+  },
   dictCopyButton: { padding: 4 },
   dictEntryTranslation: { marginBottom: 8 },
-  dictEntryGerman: { fontSize: 16, color: GREEN_500, fontWeight: "600", marginBottom: 2 },
+  dictEntryGerman: {
+    fontSize: 16,
+    color: GREEN_500,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
   dictEntryEnglish: { fontSize: 14, color: GRAY_500 },
-  dictCategoryBadge: { fontSize: 12, color: GRAY_500, backgroundColor: GRAY_100, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start", marginBottom: 12 },
-  dictExamplesSection: { borderTopWidth: 1, borderTopColor: GRAY_200, paddingTop: 12 },
-  dictExamplesTitle: { fontSize: 12, fontWeight: "600", color: GRAY_500, marginBottom: 8 },
+  dictCategoryBadge: {
+    fontSize: 12,
+    color: GRAY_500,
+    backgroundColor: GRAY_100,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginBottom: 12,
+  },
+  dictExamplesSection: {
+    borderTopWidth: 1,
+    borderTopColor: GRAY_200,
+    paddingTop: 12,
+  },
+  dictExamplesTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: GRAY_500,
+    marginBottom: 8,
+  },
   dictExample: { marginBottom: 8 },
   dictExampleIndonesian: { fontSize: 14, color: GRAY_800, marginBottom: 2 },
   dictExampleGerman: { fontSize: 14, color: GRAY_500 },
   dictEmptyState: { alignItems: "center", paddingVertical: 60 },
   dictEmptyText: { fontSize: 16, color: GRAY_500, marginTop: 12 },
-  dictSectionTitle: { fontSize: 18, fontWeight: "700", color: GRAY_800, marginBottom: 12 },
+  dictSectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginBottom: 12,
+  },
   // === Law Hub Styles ===
-  lawIntroSection: { alignItems: "center", paddingVertical: 24, marginBottom: 16 },
-  lawIntroTitle: { fontSize: 20, fontWeight: "700", color: GRAY_800, marginTop: 12, marginBottom: 8 },
-  lawIntroText: { fontSize: 14, color: GRAY_500, textAlign: "center", lineHeight: 20 },
-  lawCategoryCard: { flexDirection: "row", alignItems: "center", backgroundColor: WHITE, borderRadius: 12, padding: 16, marginBottom: 8, borderLeftWidth: 4 },
+  lawIntroSection: {
+    alignItems: "center",
+    paddingVertical: 24,
+    marginBottom: 16,
+  },
+  lawIntroTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: GRAY_800,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  lawIntroText: {
+    fontSize: 14,
+    color: GRAY_500,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  lawCategoryCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: WHITE,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+  },
   lawCategoryIcon: { fontSize: 32, marginRight: 12 },
   lawCategoryInfo: { flex: 1 },
-  lawCategoryTitle: { fontSize: 16, fontWeight: "600", color: GRAY_800, marginBottom: 4 },
+  lawCategoryTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: GRAY_800,
+    marginBottom: 4,
+  },
   lawCategoryCount: { fontSize: 12, color: GRAY_500 },
-  lawCategoryHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 8 },
+  lawCategoryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 8,
+  },
   lawCategoryHeaderIcon: { fontSize: 32 },
   lawCategoryHeaderTitle: { fontSize: 20, fontWeight: "700", color: GRAY_800 },
-  lawCard: { backgroundColor: WHITE, borderRadius: 12, padding: 16, marginBottom: 8 },
-  lawHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  lawTitleSection: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
+  lawCard: {
+    backgroundColor: WHITE,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+  },
+  lawHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  lawTitleSection: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   lawTitle: { fontSize: 16, fontWeight: "600", color: GRAY_800, flex: 1 },
-  lawSeverityBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  lawSeverityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
   lawSeverityBadgeText: { fontSize: 10, fontWeight: "700", color: WHITE },
   lawDescription: { fontSize: 14, color: GRAY_500, lineHeight: 20 },
-  lawBackButton: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 16 },
+  lawBackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 16,
+  },
   lawBackText: { fontSize: 14, color: ROSE_600, fontWeight: "600" },
   lawSeverityText: { fontSize: 14, fontWeight: "700" },
-  lawDetailCard: { backgroundColor: WHITE, borderRadius: 12, padding: 16, marginBottom: 12 },
-  lawDetailLabel: { fontSize: 12, fontWeight: "600", color: GRAY_500, textTransform: "uppercase", marginBottom: 8 },
+  lawDetailCard: {
+    backgroundColor: WHITE,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  lawDetailLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: GRAY_500,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
   lawDetailText: { fontSize: 14, color: GRAY_800, lineHeight: 22 },
-  lawPenaltyCard: { backgroundColor: "rgba(239,68,68,0.05)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)" },
+  lawPenaltyCard: {
+    backgroundColor: "rgba(239,68,68,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.2)",
+  },
   lawPenaltyText: { color: RED_500, fontWeight: "600" },
   lawTip: { flexDirection: "row", gap: 8, marginBottom: 8 },
   lawTipBullet: { fontSize: 14, color: GREEN_500 },
   lawTipText: { flex: 1, fontSize: 14, color: GRAY_800, lineHeight: 22 },
-  lawDisclaimer: { backgroundColor: "rgba(245,158,11,0.1)", borderRadius: 12, padding: 16, marginTop: 8 },
-  lawDisclaimerText: { fontSize: 12, color: "rgba(146,64,14,1)", lineHeight: 18, fontStyle: "italic" },
+  lawDisclaimer: {
+    backgroundColor: "rgba(245,158,11,0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+  },
+  lawDisclaimerText: {
+    fontSize: 12,
+    color: "rgba(146,64,14,1)",
+    lineHeight: 18,
+    fontStyle: "italic",
+  },
 });

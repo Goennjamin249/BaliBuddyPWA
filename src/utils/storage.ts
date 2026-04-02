@@ -47,6 +47,7 @@ export interface CachedWeather {
   condition: string;
   icon: string;
   location: string;
+  timestamp: number;
 }
 
 export interface CachedRate {
@@ -122,7 +123,12 @@ export async function getPOIs(): Promise<StorageResult<CachedPOI[]>> {
       ? Date.now() - timestamp > CACHE_DURATION.POIS
       : false;
 
-    return { data: poisData, isCached: !!poisData, timestamp, isExpired: !!isExpired };
+    return {
+      data: poisData,
+      isCached: !!poisData,
+      timestamp,
+      isExpired: !!isExpired,
+    };
   } catch (error) {
     console.error("[Storage] Failed to get POIs:", error);
     return { data: null, isCached: false, isExpired: false };
@@ -142,7 +148,10 @@ export async function addToFavorite(poi: CachedPOI): Promise<void> {
   try {
     const favorites = await getFavorites();
     if (favorites.some((f) => f.id === poi.id)) return;
-    await kvStore.setJSON(STORAGE_KEYS.FAVORITES, [...favorites, { ...poi, isFavorite: true }]);
+    await kvStore.setJSON(STORAGE_KEYS.FAVORITES, [
+      ...favorites,
+      { ...poi, isFavorite: true },
+    ]);
   } catch (error) {
     console.error("[Storage] Failed to add favorite:", error);
   }
@@ -151,7 +160,10 @@ export async function addToFavorite(poi: CachedPOI): Promise<void> {
 export async function removeFromFavorites(poiId: string): Promise<void> {
   try {
     const favorites = await getFavorites();
-    await kvStore.setJSON(STORAGE_KEYS.FAVORITES, favorites.filter((f) => f.id !== poiId));
+    await kvStore.setJSON(
+      STORAGE_KEYS.FAVORITES,
+      favorites.filter((f) => f.id !== poiId),
+    );
   } catch (error) {
     console.error("[Storage] Failed to remove favorite:", error);
   }
@@ -178,10 +190,16 @@ export async function isFavorite(poiId: string): Promise<boolean> {
   }
 }
 
-export async function saveWeather(weather: CachedWeather): Promise<void> {
+export async function saveWeather(
+  weather: Omit<CachedWeather, "timestamp">,
+): Promise<void> {
   try {
-    await kvStore.setJSON(STORAGE_KEYS.WEATHER, weather);
-    await kvStore.set(STORAGE_KEYS.WEATHER_TIMESTAMP, Date.now().toString());
+    // Add timestamp to weather data for cache validation
+    const weatherWithTimestamp: CachedWeather = {
+      ...weather,
+      timestamp: Date.now(),
+    };
+    await kvStore.setJSON(STORAGE_KEYS.WEATHER, weatherWithTimestamp);
   } catch (error) {
     console.error("[Storage] Failed to save weather:", error);
   }
@@ -189,12 +207,10 @@ export async function saveWeather(weather: CachedWeather): Promise<void> {
 
 export async function getWeather(): Promise<StorageResult<CachedWeather>> {
   try {
-    const [weatherData, timestampData] = await Promise.all([
-      kvStore.getJSON<CachedWeather>(STORAGE_KEYS.WEATHER),
-      kvStore.get(STORAGE_KEYS.WEATHER_TIMESTAMP),
-    ]);
-
-    const timestamp = timestampData ? parseInt(timestampData, 10) : 0;
+    const weatherData = await kvStore.getJSON<CachedWeather>(
+      STORAGE_KEYS.WEATHER,
+    );
+    const timestamp = weatherData?.timestamp ?? 0;
     const isExpired = timestamp
       ? Date.now() - timestamp > CACHE_DURATION.WEATHER
       : false;
@@ -229,7 +245,10 @@ export async function getScannerResult(): Promise<ScannerResult | null> {
 
 export async function saveScannerAllergens(allergens: string[]): Promise<void> {
   try {
-    await kvStore.set(STORAGE_KEYS.SCANNER_ALLERGENS, JSON.stringify(allergens));
+    await kvStore.set(
+      STORAGE_KEYS.SCANNER_ALLERGENS,
+      JSON.stringify(allergens),
+    );
   } catch (error) {
     console.error("[Storage] Failed to save scanner allergens:", error);
   }
@@ -246,7 +265,7 @@ export async function getScannerAllergens(): Promise<string[]> {
 
 export async function clearScannerResult(): Promise<void> {
   try {
-    await kvStore.set(STORAGE_KEYS.SCANNER_RESULTS, null);
+    await kvStore.remove(STORAGE_KEYS.SCANNER_RESULTS);
   } catch (error) {
     console.error("[Storage] Failed to clear scanner result:", error);
   }
@@ -263,7 +282,9 @@ export async function saveDictionaryFavorites(ids: string[]): Promise<void> {
 
 export async function getDictionaryFavorites(): Promise<string[]> {
   try {
-    const data = await kvStore.getJSON<string[]>(STORAGE_KEYS.DICTIONARY_FAVORITES);
+    const data = await kvStore.getJSON<string[]>(
+      STORAGE_KEYS.DICTIONARY_FAVORITES,
+    );
     return data ?? [];
   } catch {
     return [];
