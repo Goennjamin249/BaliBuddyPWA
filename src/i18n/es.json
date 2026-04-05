@@ -1,7 +1,42 @@
 {
   "tabs": { "radar": "Radar", "survival": "Supervivencia", "wallet": "Fondo de Grupo", "settings": "Ajustes" },
-  "radar": { "title": "Radar de Cercanía", "map": "Mapa", "list": "Lista", "distance": "Distancia", "route": "Ruta", "call": "Llamar" },
+  "radar": { 
+    "title": "Radar de Cercanía", 
+    "map": "Mapa", 
+    "list": "Lista", 
+    "distance": "Distancia", 
+    "route": "Ruta", 
+    "call": "Llamar",
+    "online": "En línea",
+    "places_active": "Lugares activos",
+    "all": "Todos",
+    "loading": "Cargando..."
+  },
   "survival": { "title": "Kit de Supervivencia", "currency": "Conversor de Moneda", "visa": "Cuenta atrás Visa", "days": "Días restantes", "entry": "Fecha de entrada" },
   "wallet": { "title": "Caja de Grupo", "members": "Miembros", "balances": "Saldos", "expenses": "Gastos", "add_expense": "Añadir gasto" },
-  "settings": { "title": "Ajustes", "language": "Idioma", "sync": "Sincronizar ahora", "online": "En línea", "offline": "Desconectado", "stats": "Estadísticas de datos" }
+  "settings": { 
+    "title": "Ajustes", 
+    "language": "Idioma", 
+    "sync": "Sincronizar ahora", 
+    "online": "En línea", 
+    "offline": "Desconectado", 
+    "stats": "Estadísticas de datos",
+    "connection": "Conexión",
+    "lastSync": "Última sincronización",
+    "groups": "Grupos",
+    "contacts": "Contactos",
+    "rates": "Tasas de cambio",
+    "darkMode": "Modo oscuro",
+    "clearData": "Borrar datos",
+    "clear_data_title": "Borrar datos locales",
+    "clear_data_message": "¿Realmente quieres borrar todos los datos locales?",
+    "appSettings": "Configuración de la aplicación"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "save": "Guardar",
+    "edit": "Editar",
+    "add": "Añadir"
+  }
 }

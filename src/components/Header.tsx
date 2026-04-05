@@ -8,7 +8,6 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme/ThemeContext";
 
 interface HeaderProps {
@@ -28,7 +27,6 @@ export default function Header({
   style,
   titleStyle,
 }: HeaderProps) {
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
 
   return (

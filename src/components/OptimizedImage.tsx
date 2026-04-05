@@ -1,4 +1,3 @@
-import React, { memo, useCallback, useState } from 'react';
 import {
   View,
   Text,

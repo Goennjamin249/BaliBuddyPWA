@@ -1,4 +1,3 @@
-import React, { useState, useEffect, memo, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -25,7 +24,7 @@ declare global {
   }
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+const { height: screenHeight } = Dimensions.get("window");
 
 function InstallPromptComponent() {
   const [deferredPrompt, setDeferredPrompt] =
@@ -100,10 +99,10 @@ function InstallPromptComponent() {
       const { outcome } = await deferredPrompt.userChoice;
 
       if (outcome === "accepted") {
-        console.log("User accepted the install prompt");
+
         setShowInstallButton(false);
       } else {
-        console.log("User dismissed the install prompt");
+
       }
 
       setDeferredPrompt(null);

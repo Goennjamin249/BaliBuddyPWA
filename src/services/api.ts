@@ -1,11 +1,11 @@
 // API Configuration - All external API calls now go through our serverless functions
 const API_CONFIG = {
   // Local API endpoints (secured via Vercel Serverless Functions)
-  WEATHER_ENDPOINT: '/api/weather',
-  VOLCANO_ENDPOINT: '/api/volcano',
-  EXCHANGE_RATE_ENDPOINT: '/api/exchange-rate',
-  OVERPASS_ENDPOINT: '/api/overpass',
-  SYNC_ENDPOINT: '/api/sync',
+  WEATHER_ENDPOINT: "/api/weather",
+  VOLCANO_ENDPOINT: "/api/volcano",
+  EXCHANGE_RATE_ENDPOINT: "/api/exchange-rate",
+  OVERPASS_ENDPOINT: "/api/overpass",
+  SYNC_ENDPOINT: "/api/sync",
 };
 
 // Types
@@ -31,7 +31,7 @@ export interface WeatherForecast {
 export interface VolcanoAlert {
   id: string;
   name: string;
-  level: 'normal' | 'watch' | 'warning' | 'eruption';
+  level: "normal" | "watch" | "warning" | "eruption";
   levelColor: string;
   description: string;
   lastUpdate: string;
@@ -46,7 +46,8 @@ export interface CurrencyRates {
 
 // Cache management
 class APICache {
-  private cache: Map<string, { data: any; timestamp: number; ttl: number }> = new Map();
+  private cache: Map<string, { data: any; timestamp: number; ttl: number }> =
+    new Map();
 
   set(key: string, data: any, ttlMinutes: number = 30): void {
     this.cache.set(key, {
@@ -59,12 +60,12 @@ class APICache {
   get(key: string): any | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
-    
+
     if (Date.now() - cached.timestamp > cached.ttl) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return cached.data;
   }
 
@@ -80,7 +81,7 @@ async function fetchWithRetry(
   url: string,
   options: RequestInit = {},
   retries: number = 3,
-  timeout: number = 10000
+  timeout: number = 10000,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -99,67 +100,77 @@ async function fetchWithRetry(
         throw error;
       }
       // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
     }
   }
-  
-  throw new Error('Max retries reached');
+
+  throw new Error("Max retries reached");
 }
 
 // Weather API Service
 export const WeatherService = {
-  async getWeather(location: string = 'Denpasar'): Promise<WeatherData> {
+  async getWeather(location: string = "Denpasar"): Promise<WeatherData> {
     const cacheKey = `weather_${location}`;
     const cached = cache.get(cacheKey);
     if (cached) return cached;
 
     try {
-      const response = await fetchWithRetry(`${API_CONFIG.WEATHER_ENDPOINT}?location=${encodeURIComponent(location)}`);
-      
+      const response = await fetchWithRetry(
+        `${API_CONFIG.WEATHER_ENDPOINT}?location=${encodeURIComponent(location)}`,
+      );
+
       if (!response.ok) {
         throw new Error(`Weather API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Transform API response to match our interface
       const weatherData: WeatherData = {
         location: data.location || location,
         temperature: data.temperature || data.current?.temperature_2m || 28,
         humidity: data.humidity || data.current?.relative_humidity_2m || 75,
-        description: data.description || data.current?.weather_code?.toString() || 'Klar',
-        icon: data.icon || '☀️',
+        description:
+          data.description || data.current?.weather_code?.toString() || "Klar",
+        icon: data.icon || "☀️",
         windSpeed: data.windSpeed || data.current?.wind_speed_10m || 10,
-        forecast: data.forecast || data.daily?.map((day: any, i: number) => ({
-          date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toLocaleDateString('de-DE'),
-          tempMin: day.temperature_2m_min || 24,
-          tempMax: day.temperature_2m_max || 30,
-          description: day.weather_code?.toString() || 'Klar',
-          icon: '☀️',
-          precipitation: day.precipitation || 0,
-        })) || [],
+        forecast:
+          data.forecast ||
+          data.daily?.map((day: any, i: number) => ({
+            date: new Date(
+              Date.now() + i * 24 * 60 * 60 * 1000,
+            ).toLocaleDateString("de-DE"),
+            tempMin: day.temperature_2m_min || 24,
+            tempMax: day.temperature_2m_max || 30,
+            description: day.weather_code?.toString() || "Klar",
+            icon: "☀️",
+            precipitation: day.precipitation || 0,
+          })) ||
+          [],
       };
 
       cache.set(cacheKey, weatherData, 30); // Cache for 30 minutes
       return weatherData;
     } catch (error) {
-      console.error('Weather API error:', error);
-      throw new Error('Wetterdaten konnten nicht geladen werden');
+      console.error("Weather API error:", error);
+      throw new Error("Wetterdaten konnten nicht geladen werden");
     }
   },
 
   async getWeatherAlerts(location: string): Promise<string[]> {
     try {
-      const response = await fetchWithRetry(`${API_CONFIG.WEATHER_ENDPOINT}?location=${encodeURIComponent(location)}&alerts=true`);
-      
+      const response = await fetchWithRetry(
+        `${API_CONFIG.WEATHER_ENDPOINT}?location=${encodeURIComponent(location)}&alerts=true`,
+      );
+
       if (!response.ok) {
         return [];
       }
-      
+
       const data = await response.json();
       return data.alerts || [];
     } catch (error) {
-      console.error('Weather alerts error:', error);
+      console.error("Weather alerts error:", error);
       return [];
     }
   },
@@ -168,70 +179,87 @@ export const WeatherService = {
 // Volcano API Service
 export const VolcanoService = {
   async getVolcanoAlerts(): Promise<VolcanoAlert[]> {
-    const cacheKey = 'volcano_alerts';
+    const cacheKey = "volcano_alerts";
     const cached = cache.get(cacheKey);
     if (cached) return cached;
 
     try {
       const response = await fetchWithRetry(API_CONFIG.VOLCANO_ENDPOINT);
-      
+
       if (!response.ok) {
         throw new Error(`Volcano API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Transform API response to match our interface
-      const volcanoes: VolcanoAlert[] = data.volcanoes?.map((volcano: any) => ({
-        id: volcano.id,
-        name: volcano.name,
-        level: volcano.status === 'Normal' ? 'normal' : volcano.status === 'Waspada' ? 'watch' : volcano.status === 'Siaga' ? 'warning' : 'eruption',
-        levelColor: volcano.alertLevel === 1 ? '#90BE6D' : volcano.alertLevel === 2 ? '#F59E0B' : '#FF6B6B',
-        description: volcano.description || `${volcano.name} - Status: ${volcano.status}`,
-        lastUpdate: volcano.lastEruption || new Date().toISOString(),
-        recommendations: volcano.recommendations || [],
-      })) || [];
+      const volcanoes: VolcanoAlert[] =
+        data.volcanoes?.map((volcano: any) => ({
+          id: volcano.id,
+          name: volcano.name,
+          level:
+            volcano.status === "Normal"
+              ? "normal"
+              : volcano.status === "Waspada"
+                ? "watch"
+                : volcano.status === "Siaga"
+                  ? "warning"
+                  : "eruption",
+          levelColor:
+            volcano.alertLevel === 1
+              ? "#90BE6D"
+              : volcano.alertLevel === 2
+                ? "#F59E0B"
+                : "#FF6B6B",
+          description:
+            volcano.description ||
+            `${volcano.name} - Status: ${volcano.status}`,
+          lastUpdate: volcano.lastEruption || new Date().toISOString(),
+          recommendations: volcano.recommendations || [],
+        })) || [];
 
       cache.set(cacheKey, volcanoes, 15); // Cache for 15 minutes
       return volcanoes;
     } catch (error) {
-      console.error('Volcano API error:', error);
-      throw new Error('Vulkandaten konnten nicht geladen werden');
+      console.error("Volcano API error:", error);
+      throw new Error("Vulkandaten konnten nicht geladen werden");
     }
   },
 
   async getVolcanoById(id: string): Promise<VolcanoAlert | null> {
     const volcanoes = await this.getVolcanoAlerts();
-    return volcanoes.find(v => v.id === id) || null;
+    return volcanoes.find((v) => v.id === id) || null;
   },
 
   getLevelDescription(level: string): string {
     const descriptions: Record<string, string> = {
-      normal: 'Normal - Keine besonderen Vorsichtsmaßnahmen',
-      watch: 'Waspada (Watch) - Erhöhte Aufmerksamkeit',
-      warning: 'Siaga (Warning) - Bereitschaft zur Evakuierung',
-      eruption: 'Awas (Eruption) - Sofortige Evakuierung',
+      normal: "Normal - Keine besonderen Vorsichtsmaßnahmen",
+      watch: "Waspada (Watch) - Erhöhte Aufmerksamkeit",
+      warning: "Siaga (Warning) - Bereitschaft zur Evakuierung",
+      eruption: "Awas (Eruption) - Sofortige Evakuierung",
     };
-    return descriptions[level] || 'Unbekannt';
+    return descriptions[level] || "Unbekannt";
   },
 };
 
 // Currency API Service
 export const CurrencyService = {
-  async getRates(baseCurrency: string = 'IDR'): Promise<CurrencyRates> {
+  async getRates(baseCurrency: string = "IDR"): Promise<CurrencyRates> {
     const cacheKey = `currency_${baseCurrency}`;
     const cached = cache.get(cacheKey);
     if (cached) return cached;
 
     try {
-      const response = await fetchWithRetry(`${API_CONFIG.EXCHANGE_RATE_ENDPOINT}?from=${baseCurrency}`);
-      
+      const response = await fetchWithRetry(
+        `${API_CONFIG.EXCHANGE_RATE_ENDPOINT}?from=${baseCurrency}`,
+      );
+
       if (!response.ok) {
         throw new Error(`Currency API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Transform API response to match our interface
       const rates: CurrencyRates = {
         base: data.base || baseCurrency,
@@ -240,7 +268,7 @@ export const CurrencyService = {
           IDR: 1,
           EUR: 0.000057,
           USD: 0.000062,
-          GBP: 0.000050,
+          GBP: 0.00005,
           AUD: 0.000095,
           SGD: 0.000083,
           JPY: 0.0091,
@@ -251,12 +279,17 @@ export const CurrencyService = {
       cache.set(cacheKey, rates, 60); // Cache for 60 minutes
       return rates;
     } catch (error) {
-      console.error('Currency API error:', error);
-      throw new Error('Wechselkurse konnten nicht geladen werden');
+      console.error("Currency API error:", error);
+      throw new Error("Wechselkurse konnten nicht geladen werden");
     }
   },
 
-  convert(amount: number, from: string, to: string, rates: CurrencyRates): number {
+  convert(
+    amount: number,
+    from: string,
+    to: string,
+    rates: CurrencyRates,
+  ): number {
     const fromRate = rates.rates[from] || 1;
     const toRate = rates.rates[to] || 1;
     return (amount / fromRate) * toRate;
@@ -277,7 +310,7 @@ export interface EarthquakeData {
 // BMKG API Service (Indonesian Meteorological Agency)
 export const BMKGService = {
   async getEarthquakeData(): Promise<EarthquakeData[]> {
-    const cacheKey = 'earthquake_data';
+    const cacheKey = "earthquake_data";
     const cached = cache.get(cacheKey);
     if (cached) return cached;
 
@@ -285,19 +318,19 @@ export const BMKGService = {
       // Simulated earthquake data
       const earthquakes: EarthquakeData[] = [
         {
-          id: '1',
+          id: "1",
           magnitude: 4.2,
           depth: 10,
-          location: 'Bali Sea',
+          location: "Bali Sea",
           time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
           lat: -8.3405,
-          lng: 115.0920,
+          lng: 115.092,
         },
         {
-          id: '2',
+          id: "2",
           magnitude: 3.8,
           depth: 15,
-          location: 'Lombok Strait',
+          location: "Lombok Strait",
           time: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
           lat: -8.5611,
           lng: 115.5545,
@@ -307,8 +340,8 @@ export const BMKGService = {
       cache.set(cacheKey, earthquakes, 10); // Cache for 10 minutes
       return earthquakes;
     } catch (error) {
-      console.error('BMKG API error:', error);
-      throw new Error('Erdbeben-Daten konnten nicht geladen werden');
+      console.error("BMKG API error:", error);
+      throw new Error("Erdbeben-Daten konnten nicht geladen werden");
     }
   },
 
@@ -319,10 +352,6 @@ export const BMKGService = {
 };
 
 // Sync API Service
-interface SyncPullRequest {
-  collection: string;
-  lastPulledTimestamp?: number;
-}
 
 interface SyncPushRequest {
   collection: string;
@@ -337,10 +366,10 @@ export const SyncService = {
   async pull(collection: string, lastPulledTimestamp?: number): Promise<any[]> {
     try {
       const response = await fetchWithRetry(API_CONFIG.SYNC_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'pull',
+          action: "pull",
           collection,
           lastPulledTimestamp,
         }),
@@ -349,18 +378,21 @@ export const SyncService = {
       const data = await response.json();
       return data.changes || [];
     } catch (error) {
-      console.error('[SyncService] Pull error:', error);
+      console.error("[SyncService] Pull error:", error);
       return [];
     }
   },
 
-  async push(collection: string, changes: SyncPushRequest['changes']): Promise<{ success: boolean; synced: string[]; errors?: string[] }> {
+  async push(
+    collection: string,
+    changes: SyncPushRequest["changes"],
+  ): Promise<{ success: boolean; synced: string[]; errors?: string[] }> {
     try {
       const response = await fetchWithRetry(API_CONFIG.SYNC_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'push',
+          action: "push",
           collection,
           changes,
         }),
@@ -368,7 +400,7 @@ export const SyncService = {
       if (!response.ok) throw new Error(`Sync push error: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('[SyncService] Push error:', error);
+      console.error("[SyncService] Push error:", error);
       return { success: false, synced: [], errors: [String(error)] };
     }
   },
@@ -376,14 +408,14 @@ export const SyncService = {
   async initializeDatabase(): Promise<{ success: boolean; message: string }> {
     try {
       const response = await fetchWithRetry(API_CONFIG.SYNC_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'init' }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "init" }),
       });
       if (!response.ok) throw new Error(`Sync init error: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error('[SyncService] Init error:', error);
+      console.error("[SyncService] Init error:", error);
       return { success: false, message: String(error) };
     }
   },

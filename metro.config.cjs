@@ -1,13 +1,15 @@
-const { getDefaultConfig } = require('expo/metro-config');
+/* global __dirname */
+const { getDefaultConfig } = require("expo/metro-config");
 
 const config = getDefaultConfig(__dirname);
 
-// Add 'mjs' and 'cjs' to the list of supported extensions
-config.resolver.sourceExts.push('mjs', 'cjs');
+config.resolver = {
+  ...(config.resolver ?? {}),
+  sourceExts: [...(config.resolver?.sourceExts ?? []), "mjs", "cjs"],
+};
 
-// Enable require.context for Expo Router file-based routing
 config.transformer = {
-  ...config.transformer,
+  ...(config.transformer ?? {}),
   unstable_allowRequireContext: true,
 };
 

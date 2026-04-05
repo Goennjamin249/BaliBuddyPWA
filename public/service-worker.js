@@ -1,155 +1,173 @@
-/* eslint-disable no-restricted-globals */
-/* Service Worker for BaliBuddy PWA - Offline-First Asset Caching */
+ 
+/**
+ * BaliBuddy PWA Service Worker
+ * Caching strategy:
+ * - NetworkFirst for HTML, API routes, and critical assets
+ * - StaleWhileRevalidate for JS/CSS bundles
+ * - CacheFirst for static assets (images, fonts, map tiles)
+ */
 
-const CACHE_NAME = 'balibuddy-v2';
-const OFFLINE_URL = '/offline.html';
+const CACHE_NAME = 'balibuddy-v1';
+const RUNTIME_CACHE = 'balibuddy-runtime-v1';
 
-// Static assets to precache
-const STATIC_ASSETS = [
+// Assets to precache on install
+const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/offline.html',
   '/manifest.json',
 ];
 
-// Install event - cache static assets including offline page
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
   self.skipWaiting();
 });
 
-// Activate event - clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    })
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME && key !== RUNTIME_CACHE)
+          .map((key) => caches.delete(key))
+      )
+    )
   );
   self.clients.claim();
 });
 
-// Fetch event - Cache-First strategy for assets, Network-First for API
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Cache-First for static assets (images, fonts, JS, CSS)
-  if (
-    url.pathname.startsWith('/_expo/') ||
-    url.pathname.startsWith('/assets/') ||
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.css') ||
-    url.pathname.endsWith('.json') ||
-    url.pathname.match(/\.(png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico)$/)
-  ) {
-    event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(request).then((networkResponse) => {
-          // Cache successful responses
-          if (networkResponse && networkResponse.ok) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        }).catch(() => {
-          // Return offline page for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match(OFFLINE_URL);
-          }
-          // Return a basic Response to prevent errors
-          return new Response('', { status: 408, statusText: 'Request Timeout' });
-        });
-      })
-    );
+  // Skip non-GET requests
+  if (request.method !== 'GET') return;
+
+  // Skip chrome-extension and other non-http requests
+  if (!url.protocol.startsWith('http')) return;
+
+  // HTML pages – NetworkFirst
+  if (request.destination === 'document' || url.pathname.endsWith('.html')) {
+    event.respondWith(networkFirst(request, CACHE_NAME));
     return;
   }
 
-  // Network-First for API requests (with cache fallback)
+  // API routes – NetworkFirst with 5-second stale timeout
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          // Only cache GET/POST requests, not HEAD
-          if (networkResponse && networkResponse.ok && request.method === 'GET') {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // Fallback to cache if network fails
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            return new Response(JSON.stringify({ error: 'Offline' }), {
-              status: 503,
-              headers: { 'Content-Type': 'application/json' }
-            });
-          });
-        })
-    );
+    event.respondWith(networkFirst(request, RUNTIME_CACHE, 5));
     return;
   }
 
-  // Navigate requests - Network-First with offline fallback
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).then((response) => {
-        if (response && response.ok) {
-          return response;
-        }
-        return caches.match(OFFLINE_URL);
-      }).catch(() => {
-        return caches.match(OFFLINE_URL);
-      })
-    );
+  // JS & CSS bundles – StaleWhileRevalidate
+  if (
+    request.destination === 'script' ||
+    request.destination === 'style'
+  ) {
+    event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
     return;
   }
 
-  // Default: Network-First with cache fallback
-  event.respondWith(
-    fetch(request)
-      .then((networkResponse) => {
-        // Only cache GET requests, not HEAD
-        if (networkResponse && networkResponse.ok && request.method === 'GET') {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Return a basic Response for non-navigation requests to prevent errors
-          return new Response('', { status: 408, statusText: 'Request Timeout' });
-        });
-      })
-  );
+  // Images, fonts, icons – CacheFirst
+  if (
+    request.destination === 'image' ||
+    request.destination === 'font' ||
+    url.pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf|eot)$/)
+  ) {
+    event.respondWith(cacheFirst(request, RUNTIME_CACHE));
+    return;
+  }
+
+  // Map tiles – CacheFirst with long TTL
+  if (
+    url.hostname.includes('tile.openstreetmap') ||
+    url.hostname.includes('mapbox') ||
+    url.hostname.includes('maplibre')
+  ) {
+    event.respondWith(cacheFirst(request, RUNTIME_CACHE));
+    return;
+  }
+
+  // Everything else – NetworkFirst
+  event.respondWith(networkFirst(request, RUNTIME_CACHE));
 });
 
-// Handle messages from main thread
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+/**
+ * NetworkFirst: Try network, fallback to cache.
+ * @param {Request} request
+ * @param {string} cacheName
+ * @param {number} staleTimeout – seconds before falling back to cache
+ */
+async function networkFirst(request, cacheName, staleTimeout = 3) {
+  const timeoutMs = staleTimeout * 1000;
+
+  try {
+    const networkResponse = await fetchWithTimeout(request, timeoutMs);
+    if (networkResponse && networkResponse.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+  } catch {
+    // Network failed – try cache
   }
-});
+
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) return cachedResponse;
+
+  // If nothing in cache, return a generic offline fallback
+  if (request.destination === 'document') {
+    return caches.match('/index.html');
+  }
+
+  return new Response('Offline', {
+    status: 503,
+    statusText: 'Service Unavailable',
+  });
+}
+
+/**
+ * CacheFirst: Try cache, fallback to network.
+ */
+async function cacheFirst(request, cacheName) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch {
+    return new Response('Offline', { status: 503 });
+  }
+}
+
+/**
+ * StaleWhileRevalidate: Return cache immediately, update in background.
+ */
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await caches.match(request);
+
+  const networkFetch = fetch(request).then(async (res) => {
+    if (res.ok) cache.put(request, res.clone());
+    return res;
+  }).catch(() => null);
+
+  return cached || networkFetch || new Response('Offline', { status: 503 });
+}
+
+/**
+ * Fetch with timeout.
+ */
+function fetchWithTimeout(request, timeoutMs) {
+  return Promise.race([
+    fetch(request),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), timeoutMs)
+    ),
+  ]);
+}

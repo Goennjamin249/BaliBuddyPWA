@@ -1,7 +1,42 @@
 {
   "tabs": { "radar": "Radar", "survival": "Survival", "wallet": "Group Fund", "settings": "Settings" },
-  "radar": { "title": "Proximity Radar", "map": "Map", "list": "List", "distance": "Distance", "route": "Route", "call": "Call" },
+  "radar": { 
+    "title": "Proximity Radar", 
+    "map": "Map", 
+    "list": "List", 
+    "distance": "Distance", 
+    "route": "Route", 
+    "call": "Call",
+    "online": "Online",
+    "places_active": "Places active",
+    "all": "All",
+    "loading": "Loading..."
+  },
   "survival": { "title": "Survival Kit", "currency": "Currency Converter", "visa": "Visa Countdown", "days": "Days left", "entry": "Entry Date" },
   "wallet": { "title": "Group Wallet", "members": "Members", "balances": "Balances", "expenses": "Expenses", "add_expense": "Add Expense" },
-  "settings": { "title": "Settings", "language": "Language", "sync": "Sync Now", "online": "Online", "offline": "Offline", "stats": "Data Statistics" }
+  "settings": { 
+    "title": "Settings", 
+    "language": "Language", 
+    "sync": "Sync Now", 
+    "online": "Online", 
+    "offline": "Offline", 
+    "stats": "Data Statistics",
+    "connection": "Connection",
+    "lastSync": "Last Sync",
+    "groups": "Groups",
+    "contacts": "Contacts",
+    "rates": "Exchange Rates",
+    "darkMode": "Dark Mode",
+    "clearData": "Clear Data",
+    "clear_data_title": "Clear Local Data",
+    "clear_data_message": "Do you really want to delete all local data?",
+    "appSettings": "App Settings"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "edit": "Edit",
+    "add": "Add"
+  }
 }

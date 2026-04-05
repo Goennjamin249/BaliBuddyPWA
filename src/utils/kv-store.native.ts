@@ -72,7 +72,7 @@ export async function getMultiple(keys: string[]): Promise<Map<string, string | 
   return result;
 }
 
-export async function setMultiple(entries: Array<[string, string]>): Promise<void> {
+export async function setMultiple(entries: [string, string][]): Promise<void> {
   const database = await initDB();
   
   await database.withTransactionAsync(async () => {

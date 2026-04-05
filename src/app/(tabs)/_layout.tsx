@@ -9,7 +9,7 @@ export default function TabLayout() {
         headerShown: false,
       }}
     >
-      <Tabs.Screen name="smart-map" options={{ title: "Radar" }} />
+      <Tabs.Screen name="radar" options={{ title: "Radar" }} />
       <Tabs.Screen name="survival" options={{ title: "Survival" }} />
       <Tabs.Screen name="wallet" options={{ title: "Wallet" }} />
       <Tabs.Screen name="settings" options={{ title: "Settings" }} />

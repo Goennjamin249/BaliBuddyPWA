@@ -1,57 +1,119 @@
+import { useEffect } from "react";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { Map, Wallet, BookOpen, Settings } from "lucide-react-native";
-import React from "react";
-import { Text, TouchableOpacity, View, StyleSheet, Platform, useWindowDimensions } from "react-native";
+import {
+  TouchableOpacity,
+  View,
+  StyleSheet,
+  Platform,
+  useWindowDimensions,
+  Text,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
+import Animated, {
+  useAnimatedStyle,
+  withSpring,
+  useSharedValue,
+} from "react-native-reanimated";
 
 const TABS = [
-  { key: "smart-map", titleKey: "tabs.radar", icon: Map },
+  { key: "radar", titleKey: "tabs.radar", icon: Map },
   { key: "survival", titleKey: "tabs.survival", icon: BookOpen },
   { key: "wallet", titleKey: "tabs.wallet", icon: Wallet },
   { key: "settings", titleKey: "tabs.settings", icon: Settings },
 ];
 
-export default function BottomMenu({ state, navigation }: { state: { index: number; routes: { key: string; title: string }[] }; navigation: { navigate: (route: string) => void } }) {
-  const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const activeIndex = state.index;
-  const isSmall = width < 375;
-  const containerH = isSmall ? 72 : 80;
-  const iconSize = isSmall ? 22 : 24;
-  const fontSize = isSmall ? 10 : 11;
-  const bottomPad = Platform.OS === "ios" ? Math.max(insets.bottom, 8) : 8;
+const GLOW = "#059669";
+const OFF = "#64748B";
 
-  const handlePress = async () => { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); };
+export default function BottomMenu({
+  state,
+  navigation,
+}: {
+  state: { index: number; routes: { key: string; title: string }[] };
+  navigation: { navigate: (route: string) => void };
+}) {
+  const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const activeIndex = state.index;
+
+  const barW = Math.min(width - 32, 500);
+  const tabW = barW / TABS.length;
+
+  // Animated glow pill
+  const x = useSharedValue(activeIndex * tabW + 6);
+
+  useEffect(() => {
+    x.value = withSpring(activeIndex * tabW + 6, {
+      damping: 18,
+      stiffness: 160,
+      mass: 0.7,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- x is a Reanimated shared value
+  }, [activeIndex, tabW]);
+
+  const pill = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value }],
+  }));
+
+  const pad = Platform.OS === "ios" ? Math.max(insets.bottom, 8) : 8;
 
   return (
-    <View style={[styles.container, { bottom: bottomPad, height: containerH }]}>
-      <BlurView tint="systemChromeMaterial" intensity={80} style={styles.blurView}>
-        <View style={styles.menuBar}>
-        {TABS.map((tab, index) => {
-          const isActive = index === activeIndex;
-          const Icon = tab.icon;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={styles.tabButton}
-              onPress={async () => { await handlePress(); navigation.navigate(tab.key); }}
-              activeOpacity={0.7}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-              accessibilityLabel={t(tab.titleKey)}
-            >
-              {isActive && <LinearGradient colors={["#059669", "#0F766E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.bg, { width: isSmall ? 48 : 52, height: isSmall ? 48 : 52, borderRadius: isSmall ? 24 : 26 }]} />}
-              <View style={[styles.iconC, { width: isSmall ? 40 : 44, height: isSmall ? 40 : 44, borderRadius: isSmall ? 20 : 22 }]}>
-                <Icon size={iconSize} color={isActive ? "#FFF" : "#64748B"} strokeWidth={isActive ? 2.5 : 2} />
-              </View>
-              <Text style={[styles.label, isActive && styles.labelA, { fontSize }]}>{t(tab.titleKey)}</Text>
-            </TouchableOpacity>
-          );
-        })}
+    <View style={[styles.root, { bottom: pad }]}>
+      <BlurView intensity={80} tint="systemChromeMaterial" style={styles.shell}>
+        <View style={[styles.bar, { width: barW }]}>
+          {/* Glow pill */}
+          <Animated.View
+            style={[
+              pill,
+              {
+                position: "absolute",
+                top: 6,
+                left: 0,
+                width: tabW - 12,
+                height: 48,
+                borderRadius: 24,
+              },
+            ]}
+          >
+            <View style={styles.glow} />
+          </Animated.View>
+
+          {/* Tabs */}
+          {TABS.map((tab, i) => {
+            const on = i === activeIndex;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={styles.btn}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  navigation.navigate(tab.key);
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={t(tab.titleKey)}
+              >
+                <View style={styles.row}>
+                  <tab.icon
+                    size={18}
+                    color={on ? "#fff" : OFF}
+                    strokeWidth={on ? 2.5 : 1.8}
+                  />
+                  <Text
+                    style={[styles.lbl, { color: on ? "#fff" : OFF, fontWeight: on ? "700" : "500" }]}
+                    numberOfLines={1}
+                  >
+                    {t(tab.titleKey)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </BlurView>
     </View>
@@ -59,12 +121,64 @@ export default function BottomMenu({ state, navigation }: { state: { index: numb
 }
 
 const styles = StyleSheet.create({
-  container: { position: "absolute", left: 16, right: 16, zIndex: 100, ...Platform.select({ ios: { boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }, android: { elevation: 8 }, web: { boxShadow: "0 8px 32px rgba(0,0,0,0.12)" } }) },
-  blurView: { flex: 1, borderRadius: 28, overflow: "hidden" },
-  menuBar: { flex: 1, flexDirection: "row", overflow: "hidden", alignItems: "center", justifyContent: "space-around", borderRadius: 28, borderWidth: 1, backgroundColor: "rgba(255, 255, 255, 0.72)", borderColor: "rgba(255, 255, 255, 0.5)" },
-  tabButton: { flex: 1, alignItems: "center", justifyContent: "center", height: "100%", position: "relative" },
-  bg: { position: "absolute", zIndex: 0 },
-  iconC: { alignItems: "center", justifyContent: "center", zIndex: 10 },
-  label: { marginTop: 2, zIndex: 10, color: "#64748B" },
-  labelA: { fontWeight: "800", color: "#FFF" },
+  root: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 100,
+  },
+  shell: {
+    borderRadius: 32,
+    overflow: "hidden",
+    alignSelf: "center",
+    ...Platform.select({
+      ios: {
+        boxShadow: "0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)",
+      },
+      android: { elevation: 8 },
+      web: {
+        boxShadow: "0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)",
+      },
+    }),
+  },
+  bar: {
+    flexDirection: "row",
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.4)",
+    backgroundColor: "rgba(255,255,255,0.65)",
+    overflow: "hidden",
+    position: "relative",
+  },
+  btn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    height: 60,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  lbl: {
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
+  glow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: GLOW,
+    borderRadius: 24,
+    shadowColor: GLOW,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    ...Platform.select({
+      ios: {},
+      web: {
+        boxShadow: `0 0 20px ${GLOW}80, 0 0 40px ${GLOW}40`,
+      },
+    }),
+  },
 });

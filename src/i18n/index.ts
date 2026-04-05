@@ -1,5 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import HttpBackend from 'i18next-http-backend';
 import * as Localization from 'expo-localization';
 
 import de from './de.json';
@@ -7,40 +8,121 @@ import en from './en.json';
 import fr from './fr.json';
 import es from './es.json';
 
+/**
+ * Supported application languages
+ * Following iOS locale standards
+ */
+export const SUPPORTED_LANGUAGES = ['de', 'en', 'fr', 'es'] as const;
+export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
+
+/**
+ * Default fallback language for the application
+ */
+export const DEFAULT_LANGUAGE: SupportedLanguage = 'de';
+
+/**
+ * Type-safe i18n resources definition
+ */
 const resources = {
   de: { translation: de },
   en: { translation: en },
   fr: { translation: fr },
   es: { translation: es },
-};
+} as const satisfies Record<SupportedLanguage, { translation: unknown }>;
 
-const getDeviceLanguage = (): string => {
+/**
+ * Gets the device's preferred language with proper fallback handling
+ * Follows Expo Localization best practices for cross-platform consistency
+ * 
+ * @returns Valid supported language code
+ */
+const getDeviceLanguage = (): SupportedLanguage => {
   try {
     const locales = Localization.getLocales();
-    if (locales && locales.length > 0) {
-      const languageCode = locales[0].languageCode;
-      if (languageCode && Object.keys(resources).includes(languageCode)) {
-        return languageCode;
+    
+    if (!locales || locales.length === 0) {
+      return DEFAULT_LANGUAGE;
+    }
+
+    // Iterate through all device locales in priority order
+    for (const locale of locales) {
+      const languageCode = locale.languageCode?.toLowerCase();
+      
+      if (languageCode && 
+          SUPPORTED_LANGUAGES.includes(languageCode as SupportedLanguage)) {
+        return languageCode as SupportedLanguage;
       }
     }
   } catch (error) {
-    console.warn('Failed to get device language:', error);
+    console.warn('[i18n] Failed to detect device language, using default:', error);
   }
-  return 'de';
+
+  return DEFAULT_LANGUAGE;
 };
 
-i18n
+/**
+ * Initialize i18next with React Native / Expo optimizations
+ * Configured for iOS PWA native feeling
+ */
+void i18n
+  .use(HttpBackend)
   .use(initReactI18next)
   .init({
     resources,
     lng: getDeviceLanguage(),
-    fallbackLng: 'de',
+    fallbackLng: DEFAULT_LANGUAGE,
+    supportedLngs: [...SUPPORTED_LANGUAGES],
+    
     interpolation: {
-      escapeValue: false,
+      escapeValue: false, // React already escapes values
+      skipOnVariables: false,
+      prefix: '{{',
+      suffix: '}}',
+      formatSeparator: ',',
     },
+
     react: {
-      useSuspense: false,
+      useSuspense: false, // Disable Suspense for React Native compatibility
+      bindI18n: 'languageChanged',
+      transSupportBasicHtmlNodes: true,
+      transWrapTextNodes: false,
+      reuseTranslations: true,
+    },
+
+    debug: __DEV__, // Enable debug logging only in development
+    load: 'languageOnly', // Ignore region codes (de-DE → de)
+    lowerCaseLng: true,
+    cleanCode: true,
+    initImmediate: false,
+    keySeparator: '.',
+    nsSeparator: ':',
+    partialBundledLanguages: true,
+    saveMissing: __DEV__,
+    missingKeyHandler: __DEV__ 
+      ? (lngs, ns, key) => console.warn(`[i18n] Missing translation: ${key} (${lngs.join(',')})`)
+      : undefined,
+    preload: SUPPORTED_LANGUAGES,
+    returnEmptyString: false,
+    returnNull: false,
+    returnObjects: true,
+
+    // Backend Configuration
+    backend: {
+      loadPath: '/locales/{{lng}}.json',
+      requestOptions: {
+        cache: 'force-cache',
+        credentials: 'same-origin',
+      },
+      reloadInterval: false,
     },
   });
+
+// Type augmentation for fully type-safe translations
+declare module 'i18next' {
+  interface CustomTypeOptions {
+    defaultNS: 'translation';
+    resources: typeof resources.de;
+  }
+}
 
 export default i18n;

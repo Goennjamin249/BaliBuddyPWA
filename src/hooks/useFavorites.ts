@@ -10,8 +10,6 @@ import {
   getFavorites,
   addToFavorite,
   removeFromFavorites,
-  toggleFavorite as toggleFavoriteStorage,
-  isFavorite as isFavoriteStorage,
   type CachedPOI,
 } from "../utils/storage";
 import { addToQueue } from "../utils/sync-queue";
@@ -57,55 +55,49 @@ export function useFavorites(): UseFavoritesReturn {
     [favorites],
   );
 
-  const addFavorite = useCallback(
-    async (poi: CachedPOI) => {
-      try {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        
-        // Optimistic update - update UI immediately
-        setFavorites((prev) => [...prev, poi.id]);
-        setFavoritesData((prev) => [...prev, { ...poi, isFavorite: true }]);
-        
-        // Save to local storage
-        await addToFavorite(poi);
-        
-        // Add to sync queue for background sync
-        await addToQueue('ADD_FAVORITE', { poi });
-        
-        console.log("[useFavorites] Added favorite with sync queue:", poi.id);
-      } catch (error) {
-        console.error("[useFavorites] Add failed:", error);
-        // Revert optimistic update on error
-        setFavorites((prev) => prev.filter((id) => id !== poi.id));
-        setFavoritesData((prev) => prev.filter((f) => f.id !== poi.id));
-      }
-    },
-    [],
-  );
+  const addFavorite = useCallback(async (poi: CachedPOI) => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-  const removeFavorite = useCallback(
-    async (poiId: string) => {
-      try {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        
-        // Optimistic update - update UI immediately
-        setFavorites((prev) => prev.filter((id) => id !== poiId));
-        setFavoritesData((prev) => prev.filter((f) => f.id !== poiId));
-        
-        // Save to local storage
-        await removeFromFavorites(poiId);
-        
-        // Add to sync queue for background sync
-        await addToQueue('REMOVE_FAVORITE', { poiId });
-        
-        console.log("[useFavorites] Removed favorite with sync queue:", poiId);
-      } catch (error) {
-        console.error("[useFavorites] Remove failed:", error);
-        // Note: We don't revert on remove failure as the item is already gone
-      }
-    },
-    [],
-  );
+      // Optimistic update - update UI immediately
+      setFavorites((prev) => [...prev, poi.id]);
+      setFavoritesData((prev) => [...prev, { ...poi, isFavorite: true }]);
+
+      // Save to local storage
+      await addToFavorite(poi);
+
+      // Add to sync queue for background sync
+      await addToQueue("ADD_FAVORITE", { poi });
+
+
+    } catch (error) {
+      console.error("[useFavorites] Add failed:", error);
+      // Revert optimistic update on error
+      setFavorites((prev) => prev.filter((id) => id !== poi.id));
+      setFavoritesData((prev) => prev.filter((f) => f.id !== poi.id));
+    }
+  }, []);
+
+  const removeFavorite = useCallback(async (poiId: string) => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      // Optimistic update - update UI immediately
+      setFavorites((prev) => prev.filter((id) => id !== poiId));
+      setFavoritesData((prev) => prev.filter((f) => f.id !== poiId));
+
+      // Save to local storage
+      await removeFromFavorites(poiId);
+
+      // Add to sync queue for background sync
+      await addToQueue("REMOVE_FAVORITE", { poiId });
+
+
+    } catch (error) {
+      console.error("[useFavorites] Remove failed:", error);
+      // Note: We don't revert on remove failure as the item is already gone
+    }
+  }, []);
 
   const toggleFavorite = useCallback(
     async (poi: CachedPOI): Promise<boolean> => {

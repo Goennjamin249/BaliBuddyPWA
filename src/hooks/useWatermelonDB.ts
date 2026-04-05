@@ -33,7 +33,7 @@ export function useCollection<T>(tableName: string, dependencies: any[] = []) {
       });
 
     return () => subscription.unsubscribe();
-  }, [tableName, ...dependencies]);
+  }, [tableName, ...dependencies]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { records, loading, error };
 }

@@ -1,6 +1,5 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, Globe, Moon, Settings, Sun } from "lucide-react-native";
-import React, { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

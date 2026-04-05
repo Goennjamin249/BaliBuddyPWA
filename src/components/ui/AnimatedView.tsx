@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, ViewStyle } from "react-native";
+import { ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -45,7 +45,7 @@ export function AnimatedView({
     }, delay);
 
     return () => clearTimeout(timeout);
-  }, [animation, delay]);
+  }, [animation, delay, opacity, scale, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

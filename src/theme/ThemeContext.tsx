@@ -63,9 +63,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [theme, systemColorScheme]);
 
-  // Determine effective theme mode
-  const effectiveThemeMode: "light" | "dark" = isDark ? "dark" : "light";
-
   // Memoize colors to prevent unnecessary re-renders
   const colors = useMemo(
     () => (isDark ? DARK_COLORS : LIGHT_COLORS),

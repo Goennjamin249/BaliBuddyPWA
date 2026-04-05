@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -21,39 +20,11 @@ import {
 import * as Haptics from "expo-haptics";
 
 import { useTheme } from "../theme/ThemeContext";
-import { saveWeather, getWeather, type CachedWeather } from "../utils/storage";
+import { saveWeather, getWeather } from "../utils/storage";
 import {
-  fromCachedWeather as mapperFromCached,
-  toCachedWeather as mapperToCached,
-  type WeatherData as WeatherDataType,
+  fromCachedWeather,
+  toCachedWeather,
 } from "../utils/weatherMapper";
-
-// Map WeatherData to CachedWeather for storage
-const toCachedWeather = (data: WeatherData): Omit<CachedWeather, "timestamp"> =>
-  mapperToCached({
-    temperature: data.temp,
-    feelsLike: data.feelsLike,
-    humidity: data.humidity,
-    windSpeed: data.windSpeed,
-    condition: data.condition,
-    icon: data.icon,
-    location: data.location,
-  });
-
-// Map CachedWeather to WeatherData for display
-const fromCachedWeather = (cached: CachedWeather): WeatherData => {
-  const mapped = mapperFromCached(cached);
-  return {
-    temp: mapped.temperature,
-    feelsLike: mapped.feelsLike,
-    humidity: mapped.humidity,
-    windSpeed: mapped.windSpeed,
-    condition: mapped.condition,
-    description: mapped.condition,
-    icon: mapped.icon,
-    location: mapped.location,
-  };
-};
 
 interface WeatherData {
   temp: number;

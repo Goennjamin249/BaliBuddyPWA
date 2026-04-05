@@ -53,7 +53,7 @@ export async function initSyncQueue(): Promise<void> {
   try {
     const stored = await kvStore.getJSON<SyncOperation[]>(SYNC_QUEUE_KEY);
     queueCache = stored ?? [];
-    console.log(`[SyncQueue] Initialized with ${queueCache.length} pending operations`);
+
   } catch (error) {
     console.error('[SyncQueue] Failed to initialize:', error);
     queueCache = [];
@@ -91,7 +91,7 @@ export async function addToQueue(
   // Persist to storage
   await saveQueue();
 
-  console.log(`[SyncQueue] Added operation: ${operation.id} (${type})`);
+
   return operation.id;
 }
 
@@ -104,7 +104,7 @@ export async function removeFromQueue(operationId: string): Promise<void> {
   queueCache = queueCache.filter(op => op.id !== operationId);
   await saveQueue();
 
-  console.log(`[SyncQueue] Removed operation: ${operationId}`);
+
 }
 
 /**
@@ -158,11 +158,11 @@ export async function processQueue(): Promise<{ synced: number; failed: number }
 
   const online = await isOnline();
   if (!online) {
-    console.log('[SyncQueue] Offline, skipping sync');
+
     return { synced: 0, failed: 0 };
   }
 
-  console.log(`[SyncQueue] Processing ${queueCache.length} operations...`);
+
 
   let synced = 0;
   let failed = 0;
@@ -189,7 +189,7 @@ export async function processQueue(): Promise<{ synced: number; failed: number }
   // Update last sync timestamp
   await kvStore.set(LAST_SYNC_KEY, Date.now().toString());
 
-  console.log(`[SyncQueue] Sync complete: ${synced} synced, ${failed} failed`);
+
   return { synced, failed };
 }
 
@@ -237,7 +237,7 @@ function getChangeType(type: SyncOperationType): 'created' | 'updated' | 'delete
  * Sync individual operation with real API
  */
 async function syncOperation(operation: SyncOperation): Promise<boolean> {
-  console.log(`[SyncQueue] Syncing: ${operation.type} (${operation.id})`);
+
   
   try {
     const collection = getCollectionForOperation(operation.type, operation.data);
@@ -250,7 +250,7 @@ async function syncOperation(operation: SyncOperation): Promise<boolean> {
     }]);
     
     if (result.success) {
-      console.log(`[SyncQueue] Successfully synced: ${operation.id}`);
+
       return true;
     }
     
@@ -280,7 +280,7 @@ export async function getLastSyncTimestamp(): Promise<number | null> {
 export async function clearQueue(): Promise<void> {
   queueCache = [];
   await kvStore.remove(SYNC_QUEUE_KEY);
-  console.log('[SyncQueue] Queue cleared');
+
 }
 
 /**

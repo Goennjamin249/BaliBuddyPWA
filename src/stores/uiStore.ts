@@ -53,7 +53,7 @@ export const useUIStore = create<UIState>()(
     (set, get) => ({
       // Theme
       theme: "system",
-      isDark: false,
+      isDark: calculateIsDark("system"), // Initialize with correct value
       setTheme: (theme) => {
         set({ theme, isDark: calculateIsDark(theme) });
       },
@@ -92,6 +92,13 @@ export const useUIStore = create<UIState>()(
         theme: state.theme,
         language: state.language,
       }),
+      onRehydrateStorage: (state) => {
+        return (state) => {
+          if (state) {
+            state.setTheme(state.theme);
+          }
+        };
+      },
     }
   )
 );

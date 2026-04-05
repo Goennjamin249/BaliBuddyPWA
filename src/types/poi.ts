@@ -1,16 +1,29 @@
 /**
  * Gemeinsamer POI-Typ für die gesamte Anwendung
+ * Synchronisiert mit OverpassSeeder.ts
  */
 export type Category =
   | "atm"
-  | "warung"
-  | "klinik"
-  | "police"
-  | "fuel"
-  | "bar"
-  | "hotel"
+  | "bank"
+  | "pharmacy"
+  | "hospital"
+  | "clinic"
+  | "laundry"
   | "restaurant"
-  | "accommodation";
+  | "cafe"
+  | "bar"
+  | "warung"
+  | "guesthouse"
+  | "hotel"
+  | "hostel"
+  | "resort"
+  | "waterfall"
+  | "temple"
+  | "beach"
+  | "viewpoint"
+  | "surf"
+  | "police"
+  | "fuel";
 
 export interface POI {
   id: string;
@@ -22,5 +35,7 @@ export interface POI {
   rating: number;
   phone: string;
   tags: string[];
+  verified: boolean;
+  updated_at: number;
   distance?: number;
 }

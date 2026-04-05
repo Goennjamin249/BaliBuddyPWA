@@ -6,30 +6,12 @@
  * Uses Expo Router API format
  */
 
-// Import sync handler
 import syncHandler from "../../../api/sync";
 
 // Route mapping for catch-all API routes
 const routeHandlers: Record<string, (req: any, res: any) => Promise<void>> = {
   sync: syncHandler,
 };
-
-/**
- * Create Express-like request object from Expo Router request
- */
-function createExpressLikeRequest(req: any, params: { slug: string[] }) {
-  const slug = params.slug;
-  const route = slug[0] || "";
-
-  return {
-    method: req.method || "GET",
-    query: req.query || {},
-    body: req.body || {},
-    headers: req.headers || {},
-    url: req.url || "",
-    route,
-  };
-}
 
 /**
  * Create Express-like response object
@@ -69,31 +51,77 @@ function createExpressLikeResponse() {
 }
 
 /**
+ * Validate and parse route parameters
+ */
+function validateParams(params: { slug: string[] } | undefined): { route: string; slug: string[] } {
+  const slug = params?.slug || [];
+  const route = slug[0] || "";
+  
+  if (!route) {
+    throw new Error("Missing route parameter. Expected: /api/[route]");
+  }
+  
+  return { route, slug };
+}
+
+/**
+ * Parse request body safely
+ */
+async function parseRequestBody(request: Request, method: string): Promise<any> {
+  if (method !== "POST" && method !== "PUT") {
+    return {};
+  }
+  
+  try {
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return await request.json();
+    }
+    return {};
+  } catch (error) {
+    console.warn(`Failed to parse request body for ${method} ${request.url}:`, error);
+    return {};
+  }
+}
+
+/**
+ * Parse query parameters from URL
+ */
+function parseQueryParams(url: string): Record<string, string> {
+  const parsedUrl = new URL(url);
+  const query: Record<string, string> = {};
+  parsedUrl.searchParams.forEach((value, key) => {
+    query[key] = value;
+  });
+  return query;
+}
+
+/**
  * Main handler for catch-all API route
  * Expo Router API format
  */
-export function GET(
+export async function GET(
   request: Request,
   { params }: { params: { slug: string[] } },
 ) {
   return handleRequest(request, params, "GET");
 }
 
-export function POST(
+export async function POST(
   request: Request,
   { params }: { params: { slug: string[] } },
 ) {
   return handleRequest(request, params, "POST");
 }
 
-export function PUT(
+export async function PUT(
   request: Request,
   { params }: { params: { slug: string[] } },
 ) {
   return handleRequest(request, params, "PUT");
 }
 
-export function DELETE(
+export async function DELETE(
   request: Request,
   { params }: { params: { slug: string[] } },
 ) {
@@ -105,12 +133,27 @@ async function handleRequest(
   params: { slug: string[] } | undefined,
   method: string,
 ) {
-  const slug = params?.slug || [];
-  const route = slug[0] || "";
+  let route: string;
+  
+  try {
+    const validated = validateParams(params);
+    route = validated.route;
+  } catch (error) {
+    console.error(`Invalid route parameters:`, error);
+    return Response.json(
+      {
+        error: "Invalid route parameters",
+        message: error instanceof Error ? error.message : "Missing route segment",
+        availableRoutes: Object.keys(routeHandlers),
+      },
+      { status: 400 },
+    );
+  }
 
   // Check if route exists
   const handler = routeHandlers[route];
   if (!handler) {
+    console.warn(`Route not found: ${route}`);
     return Response.json(
       {
         error: `Route not found: ${route}`,
@@ -122,22 +165,10 @@ async function handleRequest(
 
   try {
     // Parse query parameters
-    const url = new URL(request.url);
-    const query: Record<string, string> = {};
-    url.searchParams.forEach((value, key) => {
-      query[key] = value;
-    });
+    const query = parseQueryParams(request.url);
 
     // Parse body for POST/PUT requests
-    let body = {};
-    if (method === "POST" || method === "PUT") {
-      try {
-        body = await request.json();
-      } catch (e) {
-        // Body might be empty or not JSON
-        body = {};
-      }
-    }
+    const body = await parseRequestBody(request, method);
 
     // Create Express-like request/response objects
     const req = {
@@ -159,12 +190,17 @@ async function handleRequest(
       headers: res.headers,
     });
   } catch (error) {
-    console.error(`API Error [${route}]:`, error);
+    console.error(`API Error [${route}] [${method}]:`, error);
+    
+    const isDevelopment = process.env.NODE_ENV === "development";
+    
     return Response.json(
       {
         error: "Internal Server Error",
         route,
+        method,
         message: error instanceof Error ? error.message : "Unknown error",
+        ...(isDevelopment && { stack: error instanceof Error ? error.stack : undefined }),
       },
       { status: 500 },
     );

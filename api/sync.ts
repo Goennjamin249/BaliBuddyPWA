@@ -167,7 +167,7 @@ async function initializeDatabase(): Promise<{
   for (const collectionName of collections) {
     if (!existingNames.includes(collectionName)) {
       await db.createCollection(collectionName);
-      console.log(`Created collection: ${collectionName}`);
+
     }
   }
 

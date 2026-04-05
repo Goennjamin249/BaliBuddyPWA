@@ -6,8 +6,8 @@
 
 import { getCachedRate, saveRate } from "../utils/storage";
 
-// Exchange rate API endpoint
-const EXCHANGE_RATE_API = "https://api.frankfurter.app/latest?from=EUR&to=IDR";
+// Exchange rate API endpoint (supports CORS for localhost development)
+const EXCHANGE_RATE_API = "https://api.exchangerate-api.com/v4/latest/EUR";
 
 // In-memory cache to prevent duplicate concurrent requests
 let inFlightRequest: Promise<number> | null = null;
@@ -30,15 +30,26 @@ export async function fetchExchangeRate(): Promise<number> {
   // Create new request with deduplication
   inFlightRequest = (async () => {
     try {
-      const res = await fetch(EXCHANGE_RATE_API);
+      const res = await fetch(EXCHANGE_RATE_API, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        cache: 'force-cache'
+      });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
       if (data.rates?.IDR) {
         await saveRate({ eur: 1, idr: data.rates.IDR, timestamp: Date.now() });
         return data.rates.IDR;
       }
       throw new Error("Invalid exchange rate data");
-    } catch (e) {
-      console.error("Fetch exchange rate error:", e);
+    } catch {
+      // Silent fail - use cache without logging errors to console
       const fallbackCached = await getCachedRate();
       if (fallbackCached) return Number(fallbackCached);
       return 17200; // Default fallback rate

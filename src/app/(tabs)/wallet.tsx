@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,7 +20,6 @@ import {
   Trash2,
   Users,
   X,
-  Receipt,
   ChevronRight,
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
@@ -26,7 +27,8 @@ import * as Haptics from "expo-haptics";
 import { Q } from "@nozbe/watermelondb";
 
 import db from "../../db/index";
-import { Group, Expense, SquadMember } from "../../db/models";
+
+import { useTheme } from "../../theme/ThemeContext";
 
 // === V2 Design Tokens ===
 const VIOLET_600 = "#7C3AED";
@@ -34,7 +36,6 @@ const PURPLE_700 = "#6D28D9";
 const BG = "#F2F2F7";
 const WHITE = "#FFFFFF";
 const GRAY_100 = "#F3F4F6";
-const GRAY_200 = "#E5E7EB";
 const GRAY_500 = "#6B7280";
 const GRAY_600 = "#4B5563";
 const GRAY_800 = "#1F2937";
@@ -68,9 +69,12 @@ interface ExpenseRecord {
 }
 
 export default function WalletScreen() {
+  const { isDark } = useTheme();
   const { t } = useTranslation();
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<GroupWithMembers | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<GroupWithMembers | null>(
+    null,
+  );
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -96,7 +100,8 @@ export default function WalletScreen() {
 
       const groupsWithMembers: GroupWithMembers[] = [];
       for (const group of allGroups) {
-        const membersData = (group as any).members || (group as any)._raw?.members || "[]";
+        const membersData =
+          (group as any).members || (group as any)._raw?.members || "[]";
         let members: { id: string; name: string }[] = [];
         try {
           members = JSON.parse(membersData);
@@ -155,20 +160,29 @@ export default function WalletScreen() {
     if (!selectedGroup || selectedGroup.members.length === 0) return null;
 
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const perPerson = totalExpenses / selectedGroup.members.length;
+    const memberCount = selectedGroup.members.length;
+    
+    // Ganzzahl Division ohne Rundungsfehler:
+    const perPersonBase = Math.floor(totalExpenses / memberCount);
+    const remainder = totalExpenses % memberCount;
 
-    const memberBalances = selectedGroup.members.map((member) => {
+    const memberBalances = selectedGroup.members.map((member, index) => {
       const paid = expenses
         .filter((e) => e.paidBy === member.id || e.paidBy === member.name)
         .reduce((sum, e) => sum + e.amount, 0);
+      
+      // Verteile den Rest auf die ersten Mitglieder um 100% Genauigkeit zu erreichen
+      const extra = index < remainder ? 1 : 0;
+      const memberShare = perPersonBase + extra;
+      
       return {
         ...member,
         paid,
-        balance: paid - perPerson,
+        balance: paid - memberShare,
       };
     });
 
-    return { totalExpenses, perPerson, members: memberBalances };
+    return { totalExpenses, perPerson: perPersonBase, members: memberBalances };
   }, [expenses, selectedGroup]);
 
   // === Gruppe erstellen ===
@@ -188,19 +202,36 @@ export default function WalletScreen() {
     }
 
     try {
+      let createdGroupId = '';
       await db.write(async () => {
         const collection = db.collections.get("groups");
-        await collection.create((record: any) => {
+        const record = await collection.create((record: any) => {
           record.name = newGroupName.trim();
           record.emoji = newGroupEmoji;
           record.members = JSON.stringify(validMembers);
         });
+        createdGroupId = record.id;
       });
       setNewGroupName("");
       setNewGroupEmoji("👥");
       setNewMemberNames([""]);
       setShowAddGroup(false);
       await loadGroups();
+      
+      // Automatisch neu erstellte Gruppe öffnen
+      const allGroups = await db.collections.get("groups").query().fetch();
+      const newGroup = allGroups.find(g => g.id === createdGroupId);
+      if (newGroup) {
+        const membersData = (newGroup as any).members || (newGroup as any)._raw?.members || "[]";
+        let members = [];
+        try { members = JSON.parse(membersData); } catch { members = []; }
+        setSelectedGroup({
+          id: newGroup.id,
+          name: (newGroup as any).name || (newGroup as any)._raw?.name || "Gruppe",
+          emoji: (newGroup as any).emoji || (newGroup as any)._raw?.emoji || "👥",
+          members
+        });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       console.error("Create group error:", e);
@@ -210,37 +241,63 @@ export default function WalletScreen() {
 
   // === Gruppe löschen ===
   const handleDeleteGroup = async (groupId: string) => {
-    Alert.alert("Gruppe löschen", "Möchtest du diese Gruppe wirklich löschen?", [
-      { text: "Abbrechen", style: "cancel" },
-      {
-        text: "Löschen",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const group = await db.collections.get("groups").find(groupId);
-            await db.write(async () => {
-              await group.destroyPermanently();
-            });
-            setSelectedGroup(null);
-            await loadGroups();
-          } catch (e) {
-            console.error("Delete group error:", e);
-          }
+    Alert.alert(
+      "Gruppe löschen",
+      "Möchtest du diese Gruppe wirklich löschen?",
+      [
+        { text: "Abbrechen", style: "cancel" },
+        {
+          text: "Löschen",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await db.write(async () => {
+                const groupCollection = db.collections.get("groups");
+                const group = await groupCollection.find(groupId);
+                await group.destroyPermanently();
+                
+                // Delete associated expenses
+                const expenseCollection = db.collections.get("expenses");
+                const groupExpenses = await expenseCollection.query(
+                  Q.where("squad_id", groupId)
+                ).fetch();
+                for (const expense of groupExpenses) {
+                  await expense.destroyPermanently();
+                }
+              });
+              
+              setSelectedGroup(null);
+              await loadGroups();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch (e) {
+              console.error("Delete group error:", e);
+              Alert.alert("Fehler", "Gruppe konnte nicht gelöscht werden");
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   // === Ausgabe hinzufügen ===
   const handleAddExpense = async () => {
     if (!desc.trim() || !amount || !paidBy || !selectedGroup) return;
 
+    // Komma zu Punkt umwandeln für deutsche Tastatur Unterstützung
+    const normalizedAmount = amount.replace(',', '.');
+    const amountValue = Math.round(Math.abs(parseFloat(normalizedAmount) || 0));
+    
+    if (amountValue < 100) {
+      Alert.alert("Fehler", "Mindestbetrag ist Rp 100");
+      return;
+    }
+
     try {
       await db.write(async () => {
         const collection = db.collections.get("expenses");
         await collection.create((record: any) => {
           record.description = desc.trim();
-          record.amountIdr = parseFloat(amount);
+          record.amountIdr = amountValue;
           record.paidBy = paidBy;
           record.squadId = selectedGroup.id;
           record.category = category;
@@ -279,98 +336,125 @@ export default function WalletScreen() {
   // === Group Detail View ===
   if (selectedGroup && balances) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: isDark ? "#0D0D1A" : BG }]}>
         <LinearGradient colors={[VIOLET_600, PURPLE_700]} style={styles.header}>
           <SafeAreaView>
             <View style={styles.headerRow}>
-              <TouchableOpacity onPress={() => setSelectedGroup(null)}>
+              <TouchableOpacity onPress={() => setSelectedGroup(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <X size={24} color="#FFF" />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>
                 {selectedGroup.emoji} {selectedGroup.name}
               </Text>
-              <TouchableOpacity onPress={() => handleDeleteGroup(selectedGroup.id)}>
+              <TouchableOpacity
+                onPress={() => handleDeleteGroup(selectedGroup.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ zIndex: 100 }}
+              >
                 <Trash2 size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
           </SafeAreaView>
         </LinearGradient>
 
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {/* Summary */}
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Gesamtausgaben</Text>
-            <Text style={styles.summaryValue}>{formatIDR(balances.totalExpenses)}</Text>
-            <Text style={styles.summarySub}>
-              {formatIDR(balances.perPerson)} pro Person
-            </Text>
-          </View>
-
-          {/* Abrechnung */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Users size={18} color={GRAY_600} />
-              <Text style={styles.cardTitle}>Abrechnung</Text>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {/* Summary */}
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Gesamtausgaben</Text>
+              <Text style={styles.summaryValue}>
+                {formatIDR(balances.totalExpenses)}
+              </Text>
+              <Text style={styles.summarySub}>
+                {formatIDR(balances.perPerson)} pro Person
+              </Text>
             </View>
-            {balances.members.map((m) => (
-              <View key={m.id} style={styles.memberRow}>
-                <View style={styles.memberLeft}>
-                  <View style={styles.memberAvatar}>
-                    <Text style={styles.memberAvatarText}>
-                      {m.name.charAt(0).toUpperCase()}
+
+            {/* Abrechnung */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Users size={18} color={GRAY_600} />
+                <Text style={styles.cardTitle}>Abrechnung</Text>
+              </View>
+              {balances.members.map((m) => (
+                <View key={m.id} style={styles.memberRow}>
+                  <View style={styles.memberLeft}>
+                    <View style={styles.memberAvatar}>
+                      <Text style={styles.memberAvatarText}>
+                        {m.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={styles.memberName}>{m.name}</Text>
+                  </View>
+                  <View style={styles.memberRight}>
+                    <Text style={styles.memberPaid}>
+                      Bezahlt: {formatIDR(m.paid)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.memberBalance,
+                        { color: m.balance >= 0 ? GREEN_500 : RED_500 },
+                      ]}
+                    >
+                      {m.balance >= 0 ? "Bekommt" : "Schuldet"}:{" "}
+                      {formatIDR(Math.abs(m.balance))}
                     </Text>
                   </View>
-                  <Text style={styles.memberName}>{m.name}</Text>
                 </View>
-                <View style={styles.memberRight}>
-                  <Text style={styles.memberPaid}>Bezahlt: {formatIDR(m.paid)}</Text>
-                  <Text
-                    style={[
-                      styles.memberBalance,
-                      { color: m.balance >= 0 ? GREEN_500 : RED_500 },
-                    ]}
-                  >
-                    {m.balance >= 0 ? "Bekommt" : "Schuldet"}: {formatIDR(Math.abs(m.balance))}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
 
-          {/* Ausgaben */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Ausgaben</Text>
-            {expenses.length === 0 ? (
-              <Text style={styles.empty}>Noch keine Ausgaben</Text>
-            ) : (
-              expenses.map((e) => {
-                const cat = EXPENSE_CATEGORIES.find((c) => c.id === e.category) || EXPENSE_CATEGORIES[5];
-                const payer = selectedGroup.members.find(
-                  (m) => m.id === e.paidBy || m.name === e.paidBy
-                );
-                return (
-                  <View key={e.id} style={styles.expenseRow}>
-                    <View style={styles.expenseLeft}>
-                      <Text style={styles.expenseIcon}>{cat.icon}</Text>
-                      <View style={styles.expenseInfo}>
-                        <Text style={styles.expenseDesc}>{e.description}</Text>
-                        <Text style={styles.expenseMeta}>
-                          {payer?.name || "Unbekannt"}
+            {/* Ausgaben */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Ausgaben</Text>
+              {expenses.length === 0 ? (
+                <Text style={styles.empty}>Noch keine Ausgaben</Text>
+              ) : (
+                expenses.map((e) => {
+                  const cat =
+                    EXPENSE_CATEGORIES.find((c) => c.id === e.category) ||
+                    EXPENSE_CATEGORIES[5];
+                  const payer = selectedGroup.members.find(
+                    (m) => m.id === e.paidBy || m.name === e.paidBy,
+                  );
+                  return (
+                    <View key={e.id} style={styles.expenseRow}>
+                      <View style={styles.expenseLeft}>
+                        <Text style={styles.expenseIcon}>{cat.icon}</Text>
+                        <View style={styles.expenseInfo}>
+                          <Text style={styles.expenseDesc}>
+                            {e.description}
+                          </Text>
+                          <Text style={styles.expenseMeta}>
+                            {payer?.name || "Unbekannt"}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.expenseRight}>
+                        <Text style={styles.expenseAmount}>
+                          {formatIDR(e.amount)}
                         </Text>
+                        <TouchableOpacity
+                          onPress={() => handleDeleteExpense(e.id)}
+                        >
+                          <Trash2 size={16} color={RED_500} />
+                        </TouchableOpacity>
                       </View>
                     </View>
-                    <View style={styles.expenseRight}>
-                      <Text style={styles.expenseAmount}>{formatIDR(e.amount)}</Text>
-                      <TouchableOpacity onPress={() => handleDeleteExpense(e.id)}>
-                        <Trash2 size={16} color={RED_500} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })
-            )}
-          </View>
-        </ScrollView>
+                  );
+                })
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         {/* FAB */}
         <TouchableOpacity
@@ -387,7 +471,12 @@ export default function WalletScreen() {
         </TouchableOpacity>
 
         {/* Add Expense Modal */}
-        <Modal visible={showAddExpense} animationType="slide" transparent onRequestClose={() => setShowAddExpense(false)}>
+        <Modal
+          visible={showAddExpense}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowAddExpense(false)}
+        >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
@@ -410,15 +499,28 @@ export default function WalletScreen() {
                 keyboardType="numeric"
               />
               <Text style={styles.modalLabel}>Kategorie</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.catScroll}
+                bounces={false}
+              >
                 {EXPENSE_CATEGORIES.map((c) => (
                   <TouchableOpacity
                     key={c.id}
-                    style={[styles.catChip, category === c.id && styles.catChipActive]}
+                    style={[
+                      styles.catChip,
+                      category === c.id && styles.catChipActive,
+                    ]}
                     onPress={() => setCategory(c.id)}
                   >
                     <Text>{c.icon}</Text>
-                    <Text style={[styles.catText, category === c.id && styles.catTextActive]}>
+                    <Text
+                      style={[
+                        styles.catText,
+                        category === c.id && styles.catTextActive,
+                      ]}
+                    >
                       {c.label}
                     </Text>
                   </TouchableOpacity>
@@ -429,14 +531,20 @@ export default function WalletScreen() {
                 {selectedGroup.members.map((m) => (
                   <TouchableOpacity
                     key={m.id}
-                    style={[styles.payerChip, paidBy === m.id && styles.payerChipActive]}
+                    style={[
+                      styles.payerChip,
+                      paidBy === m.id && styles.payerChipActive,
+                    ]}
                     onPress={() => setPaidBy(m.id)}
                   >
                     <Text style={styles.payerText}>{m.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              <TouchableOpacity style={styles.submitBtn} onPress={handleAddExpense}>
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={handleAddExpense}
+              >
                 <ArrowDownLeft size={20} color="#FFF" />
                 <Text style={styles.submitText}>Hinzufügen</Text>
               </TouchableOpacity>
@@ -449,47 +557,76 @@ export default function WalletScreen() {
 
   // === Gruppen-Übersicht ===
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: isDark ? "#0D0D1A" : BG }]}>
       <LinearGradient colors={[VIOLET_600, PURPLE_700]} style={styles.header}>
         <SafeAreaView>
-          <Text style={styles.headerTitle}>{t("wallet.title") || "Gruppenkasse"}</Text>
+          <Text style={styles.headerTitle}>
+            {t("wallet.title") || "Gruppenkasse"}
+          </Text>
           <Text style={styles.headerSub}>Wer schuldet wem was?</Text>
         </SafeAreaView>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={VIOLET_600} />
-          </View>
-        ) : groups.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Users size={48} color={GRAY_500} />
-            <Text style={styles.emptyText}>Noch keine Gruppen</Text>
-            <Text style={styles.emptySubText}>Erstelle eine Gruppe, um Ausgaben zu teilen</Text>
-          </View>
-        ) : (
-          groups.map((group) => (
-            <TouchableOpacity
-              key={group.id}
-              style={styles.groupCard}
-              onPress={() => setSelectedGroup(group)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.groupCardLeft}>
-                <Text style={styles.groupEmoji}>{group.emoji}</Text>
-                <View>
-                  <Text style={styles.groupName}>{group.name}</Text>
-                  <Text style={styles.groupMembers}>
-                    {group.members.length} Mitglieder
-                  </Text>
-                </View>
-              </View>
-              <ChevronRight size={20} color={GRAY_500} />
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={VIOLET_600} />
+            </View>
+          ) : groups.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Users size={48} color={GRAY_500} />
+              <Text style={styles.emptyText}>Noch keine Gruppen</Text>
+              <Text style={styles.emptySubText}>
+                Erstelle eine Gruppe, um Ausgaben zu teilen
+              </Text>
+            </View>
+          ) : (
+             groups.map((group) => (
+               <View
+                 key={group.id}
+                 style={[
+                   styles.groupCard,
+                   { backgroundColor: isDark ? "#1A1A2E" : WHITE },
+                 ]}
+               >
+                 <TouchableOpacity
+                   style={styles.groupCardLeft}
+                   onPress={() => setSelectedGroup(group)}
+                   activeOpacity={0.7}
+                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                 >
+                   <Text style={styles.groupEmoji}>{group.emoji}</Text>
+                   <View>
+                     <Text style={[styles.groupName, { color: isDark ? "#FFFFFF" : GRAY_800 }]}>{group.name}</Text>
+                     <Text style={[styles.groupMembers, { color: isDark ? "#9CA3AF" : GRAY_500 }]}>
+                       {group.members.length} Mitglieder
+                     </Text>
+                   </View>
+                 </TouchableOpacity>
+                 
+                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                   <TouchableOpacity
+                     onPress={() => handleDeleteGroup(group.id)}
+                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                   >
+                     <Trash2 size={18} color={isDark ? "#EF4444" : RED_500} />
+                   </TouchableOpacity>
+                   <ChevronRight size={20} color={isDark ? "#9CA3AF" : GRAY_500} />
+                 </View>
+               </View>
+             ))
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* FAB */}
       <TouchableOpacity
@@ -501,7 +638,12 @@ export default function WalletScreen() {
       </TouchableOpacity>
 
       {/* Add Group Modal */}
-      <Modal visible={showAddGroup} animationType="slide" transparent onRequestClose={() => setShowAddGroup(false)}>
+      <Modal
+        visible={showAddGroup}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAddGroup(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -516,7 +658,10 @@ export default function WalletScreen() {
               {["👥", "🏖️", "🛵", "🎉", "💰", "🏠"].map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
-                  style={[styles.emojiChip, newGroupEmoji === emoji && styles.emojiChipActive]}
+                  style={[
+                    styles.emojiChip,
+                    newGroupEmoji === emoji && styles.emojiChipActive,
+                  ]}
                   onPress={() => setNewGroupEmoji(emoji)}
                 >
                   <Text style={styles.emojiText}>{emoji}</Text>
@@ -547,7 +692,9 @@ export default function WalletScreen() {
                 {newMemberNames.length > 1 && (
                   <TouchableOpacity
                     onPress={() => {
-                      setNewMemberNames(newMemberNames.filter((_, i) => i !== idx));
+                      setNewMemberNames(
+                        newMemberNames.filter((_, i) => i !== idx),
+                      );
                     }}
                   >
                     <X size={20} color={RED_500} />
@@ -563,7 +710,10 @@ export default function WalletScreen() {
               <Text style={styles.addMemberText}>Mitglied hinzufügen</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.submitBtn} onPress={handleCreateGroup}>
+            <TouchableOpacity
+              style={styles.submitBtn}
+              onPress={handleCreateGroup}
+            >
               <Text style={styles.submitText}>Gruppe erstellen</Text>
             </TouchableOpacity>
           </View>
@@ -576,13 +726,32 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   headerTitle: { fontSize: 28, fontWeight: "800", color: "#FFF" },
   headerSub: { fontSize: 14, color: "rgba(255,255,255,0.8)", marginTop: 4 },
   scroll: { padding: 16, paddingBottom: 100 },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 60 },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 60 },
-  emptyText: { fontSize: 18, fontWeight: "700", color: GRAY_600, marginTop: 16 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: GRAY_600,
+    marginTop: 16,
+  },
   emptySubText: { fontSize: 14, color: GRAY_500, marginTop: 4 },
   summaryCard: {
     backgroundColor: VIOLET_600,
@@ -591,8 +760,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     alignItems: "center",
   },
-  summaryLabel: { fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
-  summaryValue: { fontSize: 28, fontWeight: "800", color: "#FFF", marginTop: 4 },
+  summaryLabel: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "600",
+  },
+  summaryValue: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#FFF",
+    marginTop: 4,
+  },
   summarySub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 4 },
   card: {
     backgroundColor: WHITE,
@@ -602,7 +780,12 @@ const styles = StyleSheet.create({
     boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
     elevation: 2,
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
   cardTitle: { fontSize: 17, fontWeight: "700", color: GRAY_800 },
   memberRow: {
     flexDirection: "row",
@@ -646,6 +829,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 100,
     right: 20,
+    paddingBottom: 20,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -670,7 +854,11 @@ const styles = StyleSheet.create({
   groupEmoji: { fontSize: 28 },
   groupName: { fontSize: 16, fontWeight: "700", color: GRAY_800 },
   groupMembers: { fontSize: 13, color: GRAY_500 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
   modalContent: {
     backgroundColor: WHITE,
     borderTopLeftRadius: 24,
@@ -679,7 +867,11 @@ const styles = StyleSheet.create({
     gap: 14,
     maxHeight: "85%",
   },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   modalTitle: { fontSize: 20, fontWeight: "800", color: GRAY_800 },
   input: {
     backgroundColor: GRAY_100,
@@ -687,6 +879,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
+    color: GRAY_800,
   },
   modalLabel: { fontSize: 14, fontWeight: "600", color: GRAY_600 },
   catScroll: { gap: 8 },

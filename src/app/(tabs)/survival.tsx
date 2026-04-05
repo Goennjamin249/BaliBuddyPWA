@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -36,7 +36,6 @@ import {
   Camera,
   Scan,
   XCircle,
-  Utensils,
   Book,
   Scale,
   ChevronRight,
@@ -51,7 +50,6 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import db from "../../db/index";
 import {
   getCachedRate,
-  saveRate,
   saveScannerResult,
   getScannerResult,
   saveScannerAllergens,
@@ -91,11 +89,6 @@ const YELLOW_500 = "#F59E0B";
 const RED_500 = "#EF4444";
 const BLUE_500 = "#3B82F6";
 const ORANGE_500 = "#F97316";
-const GREEN_100 = "#D1FAE5";
-const BLUE_100 = "#DBEAFE";
-const ORANGE_100 = "#FFEDD5";
-const PURPLE_500 = "#8B5CF6";
-const PURPLE_100 = "#EDE9FE";
 
 // === TYPES ===
 interface Price {
@@ -333,7 +326,7 @@ export default function SurvivalScreen() {
     try {
       const rate = await fetchExchangeRate();
       setRate(rate);
-    } catch (e) {
+    } catch {
       const cached = await getCachedRate();
       if (cached) setRate(Number(cached));
     } finally {
@@ -592,15 +585,15 @@ export default function SurvivalScreen() {
     );
   };
 
-  const formatIDR = (n: number) => `Rp${Math.round(n).toLocaleString("de-DE")}`;
-  const formatEUR = (n: number) => `€${n.toFixed(2)}`;
+  const formatIDR = useCallback((n: number) => `Rp${Math.round(n).toLocaleString("de-DE")}`, []);
+  const formatEUR = useCallback((n: number) => `€${n.toFixed(2)}`, []);
 
-  const formatPrice = (price: Price): string => {
+  const formatPrice = useCallback((price: Price): string => {
     if (price.currency === "IDR") {
       return formatIDR(price.amount);
     }
     return formatEUR(price.amount);
-  };
+  }, [formatIDR, formatEUR]);
 
   // === Scanner Functions ===
   const handleToggleAllergen = useCallback(async (id: string) => {
@@ -672,7 +665,7 @@ export default function SurvivalScreen() {
       selectedAllergens: selectedAllergenIds,
     });
     await saveScannerAllergens(selectedAllergenIds);
-  }, [scannerAllergens]);
+  }, [scannerAllergens, formatPrice]);
 
   const handleResetScanner = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1125,63 +1118,63 @@ export default function SurvivalScreen() {
 
   const renderEmergencySection = () => (
     <>
-      {/* Notfallnummern - Bento Grid */}
+      {/* Notfallnummern - V2 Premium Cards */}
       <View style={styles.bentoGrid}>
         <TouchableOpacity
-          style={[styles.bentoTile, { backgroundColor: RED_500 }]}
+          style={[styles.bentoTile]}
           onPress={async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             callEmergency("ambulance");
           }}
           activeOpacity={0.7}
         >
-          <View style={styles.bentoIconContainer}>
-            <Activity size={40} color="#FFFFFF" />
+          <View style={[styles.bentoIconContainer, { backgroundColor: RED_500 }]}>
+            <Activity size={20} color="#FFFFFF" />
           </View>
           <Text style={styles.bentoTitle}>Krankenwagen</Text>
-          <Text style={styles.bentoNumber}>{EMERGENCY_NUMBERS.ambulance}</Text>
+          <Text style={[styles.bentoNumber, { color: RED_500 }]}>{EMERGENCY_NUMBERS.ambulance}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.bentoTile, { backgroundColor: BLUE_500 }]}
+          style={[styles.bentoTile]}
           onPress={async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             callEmergency("police");
           }}
           activeOpacity={0.7}
         >
-          <View style={styles.bentoIconContainer}>
-            <Shield size={40} color="#FFFFFF" />
+          <View style={[styles.bentoIconContainer, { backgroundColor: BLUE_500 }]}>
+            <Shield size={20} color="#FFFFFF" />
           </View>
           <Text style={styles.bentoTitle}>Polizei</Text>
-          <Text style={styles.bentoNumber}>{EMERGENCY_NUMBERS.police}</Text>
+          <Text style={[styles.bentoNumber, { color: BLUE_500 }]}>{EMERGENCY_NUMBERS.police}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.bentoTile, { backgroundColor: ORANGE_500 }]}
+          style={[styles.bentoTile]}
           onPress={async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             callEmergency("fire");
           }}
           activeOpacity={0.7}
         >
-          <View style={styles.bentoIconContainer}>
-            <AlertTriangle size={40} color="#FFFFFF" />
+          <View style={[styles.bentoIconContainer, { backgroundColor: ORANGE_500 }]}>
+            <AlertTriangle size={20} color="#FFFFFF" />
           </View>
           <Text style={styles.bentoTitle}>Feuerwehr</Text>
-          <Text style={styles.bentoNumber}>{EMERGENCY_NUMBERS.fire}</Text>
+          <Text style={[styles.bentoNumber, { color: ORANGE_500 }]}>{EMERGENCY_NUMBERS.fire}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.bentoTile, { backgroundColor: GREEN_500 }]}
+          style={[styles.bentoTile]}
           onPress={async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             callEmergency("sar");
           }}
           activeOpacity={0.7}
         >
-          <View style={styles.bentoIconContainer}>
-            <Navigation size={40} color="#FFFFFF" />
+          <View style={[styles.bentoIconContainer, { backgroundColor: GREEN_500 }]}>
+            <Navigation size={20} color="#FFFFFF" />
           </View>
           <Text style={styles.bentoTitle}>SAR</Text>
-          <Text style={styles.bentoNumber}>{EMERGENCY_NUMBERS.sar}</Text>
+          <Text style={[styles.bentoNumber, { color: GREEN_500 }]}>{EMERGENCY_NUMBERS.sar}</Text>
         </TouchableOpacity>
       </View>
 
@@ -1920,8 +1913,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: GRAY_200,
+    zIndex: 999,
   },
-  tabsContent: { gap: 8 },
+  tabsContent: { gap: 8, flexGrow: 0 },
   tab: {
     flexDirection: "row",
     alignItems: "center",
@@ -1934,8 +1928,13 @@ const styles = StyleSheet.create({
     gap: 6,
     boxShadow: "0 2px 4px rgba(0, 0, 0, 0.08)",
     elevation: 2,
+    width: 95,
+    minWidth: 95,
+    maxWidth: 95,
+    flexShrink: 0,
+    justifyContent: 'center',
   },
-  tabActive: { backgroundColor: ROSE_600, borderColor: "transparent" },
+  tabActive: { backgroundColor: ROSE_600, borderColor: ROSE_600 },
   tabText: { fontSize: 13, fontWeight: "600", color: GRAY_600 },
   tabTextActive: { color: WHITE },
   scrollContent: { padding: 16, paddingBottom: 100 },
@@ -2027,30 +2026,33 @@ const styles = StyleSheet.create({
   },
   bentoTile: {
     width: "47%",
-    aspectRatio: 1,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    padding: 16,
-    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)",
-    elevation: 8,
+    height: 60,
+    borderRadius: 14,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 4,
+    padding: 10,
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
+    elevation: 4,
+    flexShrink: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.80)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.40)",
   },
   bentoIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
   bentoTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: WHITE,
-    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "600",
+    color: GRAY_800,
   },
-  bentoNumber: { fontSize: 28, fontWeight: "800", color: WHITE },
+  bentoNumber: { fontSize: 16, fontWeight: "800", color: WHITE },
   volcanoCard: {
     backgroundColor: "rgba(255, 255, 255, 0.75)",
     borderRadius: 16,
@@ -2566,6 +2568,8 @@ const styles = StyleSheet.create({
   scannerAllergenTagText: { fontSize: 11, color: "#EF4444", fontWeight: "600" },
   // === Dictionary Styles ===
   dictSearchBar: {
+    zIndex: 10,
+    position: 'relative',
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: WHITE,
@@ -2573,6 +2577,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 8,
     marginBottom: 12,
+    marginHorizontal: 0,
   },
   dictSearchInput: {
     flex: 1,

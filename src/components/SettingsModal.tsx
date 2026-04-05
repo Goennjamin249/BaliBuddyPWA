@@ -3,7 +3,6 @@
  * AMOLED Black Design with Mode Toggle and Favorites
  */
 
-import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,10 +12,24 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
-import { X, Sun, Moon, Heart, MapPin, Trash2, Navigation, RefreshCw, CheckCircle } from "lucide-react-native";
+import {
+  X,
+  Sun,
+  Moon,
+  MapPin,
+  Trash2,
+  Navigation,
+  RefreshCw,
+  CheckCircle,
+} from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme/ThemeContext";
-import { getFavorites, removeFromFavorites, type CachedPOI, saveRate } from "../utils/storage";
+import {
+  getFavorites,
+  removeFromFavorites,
+  saveRate,
+  type CachedPOI,
+} from "../utils/storage";
 import { fetchWeather } from "../services/weather";
 import { fetchExchangeRate } from "../services/currency";
 
@@ -35,7 +48,9 @@ export default function SettingsModal({
   const [favorites, setFavorites] = useState<CachedPOI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">("idle");
+  const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">(
+    "idle",
+  );
 
   // Load favorites when modal opens
   useEffect(() => {
@@ -140,6 +155,7 @@ export default function SettingsModal({
           <ScrollView
             style={styles.content}
             showsVerticalScrollIndicator={false}
+            bounces={false}
           >
             {/* Sync Section */}
             <View style={styles.section}>
@@ -150,16 +166,18 @@ export default function SettingsModal({
                 style={[
                   styles.syncButton,
                   {
-                    backgroundColor: syncStatus === "success"
-                      ? "rgba(16, 185, 129, 0.2)"
-                      : syncStatus === "error"
-                        ? "rgba(239, 68, 68, 0.2)"
-                        : "rgba(255, 255, 255, 0.1)",
-                    borderColor: syncStatus === "success"
-                      ? "#10B981"
-                      : syncStatus === "error"
-                        ? "#EF4444"
-                        : colors.border,
+                    backgroundColor:
+                      syncStatus === "success"
+                        ? "rgba(16, 185, 129, 0.2)"
+                        : syncStatus === "error"
+                          ? "rgba(239, 68, 68, 0.2)"
+                          : "rgba(255, 255, 255, 0.1)",
+                    borderColor:
+                      syncStatus === "success"
+                        ? "#10B981"
+                        : syncStatus === "error"
+                          ? "#EF4444"
+                          : colors.border,
                   },
                 ]}
                 onPress={handleSync}
@@ -167,7 +185,11 @@ export default function SettingsModal({
                 activeOpacity={0.7}
               >
                 {isSyncing ? (
-                  <RefreshCw size={20} color={colors.text} style={{ transform: [{ rotate: '45deg' }] }} />
+                  <RefreshCw
+                    size={20}
+                    color={colors.text}
+                    style={{ transform: [{ rotate: "45deg" }] }}
+                  />
                 ) : syncStatus === "success" ? (
                   <CheckCircle size={20} color="#10B981" />
                 ) : syncStatus === "error" ? (
@@ -179,11 +201,12 @@ export default function SettingsModal({
                   style={[
                     styles.syncButtonText,
                     {
-                      color: syncStatus === "success"
-                        ? "#10B981"
-                        : syncStatus === "error"
-                          ? "#EF4444"
-                          : colors.text,
+                      color:
+                        syncStatus === "success"
+                          ? "#10B981"
+                          : syncStatus === "error"
+                            ? "#EF4444"
+                            : colors.text,
                     },
                   ]}
                 >
@@ -234,15 +257,11 @@ export default function SettingsModal({
               </Text>
 
               {isLoading ? (
-                <Text
-                  style={[styles.emptyText, { color: colors.textMuted }]}
-                >
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                   Lade Favoriten...
                 </Text>
               ) : favorites.length === 0 ? (
-                <Text
-                  style={[styles.emptyText, { color: colors.textMuted }]}
-                >
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                   Noch keine Favoriten gespeichert
                 </Text>
               ) : (
@@ -263,10 +282,7 @@ export default function SettingsModal({
                       <MapPin size={16} color={colors.primary} />
                       <View style={styles.favoriteDetails}>
                         <Text
-                          style={[
-                            styles.favoriteName,
-                            { color: colors.text },
-                          ]}
+                          style={[styles.favoriteName, { color: colors.text }]}
                           numberOfLines={1}
                         >
                           {fav.name}

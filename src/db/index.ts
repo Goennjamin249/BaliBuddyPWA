@@ -1,31 +1,18 @@
 import { Database, Q } from "@nozbe/watermelondb";
-import { Platform } from "react-native";
+import LokiJSAdapter from "@nozbe/watermelondb/adapters/lokijs";
 
 import { allModels } from "./models";
 import schema from "./schema";
 import { migrations } from "./migrations";
 
-// Platform-specific adapter setup
-let adapter: any;
-
-if (Platform.OS === "web") {
-  // For web, use LokiJS adapter without web worker to avoid "self is not defined" error
-  const LokiJSAdapter = require("@nozbe/watermelondb/adapters/lokijs").default;
-  adapter = new LokiJSAdapter({
-    schema,
-    migrations,
-    useWebWorker: false, // Disable web worker for web compatibility
-    useIncrementalIndexedDB: true,
-  });
-} else {
-  // For native, use SQLite adapter for better performance
-  const SQLiteAdapter = require("@nozbe/watermelondb/adapters/sqlite").default;
-  adapter = new SQLiteAdapter({
-    schema,
-    migrations,
-    dbName: "balibuddy",
-  });
-}
+// Use LokiJS adapter for all platforms to ensure web compatibility
+// LokiJS works on web (IndexedDB) and native (in-memory/fallback)
+const adapter = new LokiJSAdapter({
+  schema,
+  migrations,
+  useWebWorker: false, // Disabled for web compatibility
+  useIncrementalIndexedDB: true, // Use IndexedDB on web for persistence
+});
 
 // Create database instance with all models
 const database = new Database({
@@ -35,7 +22,7 @@ const database = new Database({
 
 // Optimized batch write helper for performance
 export async function batchWrite(
-  operations: Array<() => Promise<any>>,
+  operations: (() => Promise<any>)[],
 ): Promise<void> {
   await database.write(async () => {
     const records = await Promise.all(operations.map((op) => op()));

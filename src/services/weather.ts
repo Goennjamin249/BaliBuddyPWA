@@ -24,7 +24,6 @@ const WEATHER_CACHE_DURATION_MS = 30 * 60 * 1000;
 
 // In-memory cache to prevent duplicate requests
 let inFlightRequest: Promise<_WeatherData> | null = null;
-let lastFetchTime: number = 0;
 
 /**
  * Check if cached weather data is still valid (30 minutes)
@@ -83,7 +82,6 @@ export async function fetchWeather(
 
       // Cache the result
       await saveWeather(toCachedWeather(weatherData));
-      lastFetchTime = Date.now();
 
       return weatherData;
     } catch (error) {

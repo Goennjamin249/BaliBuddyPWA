@@ -1,7 +1,42 @@
 {
   "tabs": { "radar": "Radar", "survival": "Survival", "wallet": "Gruppenkasse", "settings": "Optionen" },
-  "radar": { "title": "Umgebungsradar", "map": "Karte", "list": "Liste", "distance": "Entfernung", "route": "Route", "call": "Anrufen" },
+  "radar": { 
+    "title": "Umgebungsradar", 
+    "map": "Karte", 
+    "list": "Liste", 
+    "distance": "Entfernung", 
+    "route": "Route", 
+    "call": "Anrufen",
+    "online": "Online",
+    "places_active": "Orte aktiv",
+    "all": "Alle",
+    "loading": "Lade..."
+  },
   "survival": { "title": "Survival Kit", "currency": "Währungsrechner", "visa": "Visa-Countdown", "days": "Tage verbleibend", "entry": "Einreise" },
   "wallet": { "title": "Gruppenkasse", "members": "Mitglieder", "balances": "Salden", "expenses": "Ausgaben", "add_expense": "Ausgabe hinzufügen" },
-  "settings": { "title": "Einstellungen", "language": "Sprache", "sync": "Jetzt synchronisieren", "online": "Online", "offline": "Offline", "stats": "Daten-Statistik" }
+  "settings": { 
+    "title": "Einstellungen", 
+    "language": "Sprache", 
+    "sync": "Jetzt synchronisieren", 
+    "online": "Online", 
+    "offline": "Offline", 
+    "stats": "Daten-Statistik",
+    "connection": "Verbindung",
+    "lastSync": "Letzte Synchronisierung",
+    "groups": "Gruppen",
+    "contacts": "Kontakte",
+    "rates": "Wechselkurse",
+    "darkMode": "Dunkelmodus",
+    "clearData": "Daten löschen",
+    "clear_data_title": "Lokale Daten löschen",
+    "clear_data_message": "Möchtest du wirklich alle lokalen Daten löschen?",
+    "appSettings": "App-Einstellungen"
+  },
+  "common": {
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "edit": "Bearbeiten",
+    "add": "Hinzufügen"
+  }
 }
