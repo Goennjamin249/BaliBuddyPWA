@@ -2,7 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "module": "commonjs",
+    "module": "preserve",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "experimentalDecorators": true,

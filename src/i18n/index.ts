@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import HttpBackend from 'i18next-http-backend';
 import * as Localization from 'expo-localization';
 
 import de from './de.json';
@@ -64,10 +63,10 @@ const getDeviceLanguage = (): SupportedLanguage => {
  * Initialize i18next with React Native / Expo optimizations
  * Configured for iOS PWA native feeling
  */
-void i18n
-  .use(HttpBackend)
+i18n
   .use(initReactI18next)
   .init({
+    // @ts-expect-error - resources type compatibility
     resources,
     lng: getDeviceLanguage(),
     fallbackLng: DEFAULT_LANGUAGE,
@@ -98,23 +97,13 @@ void i18n
     nsSeparator: ':',
     partialBundledLanguages: true,
     saveMissing: __DEV__,
-    missingKeyHandler: __DEV__ 
-      ? (lngs, ns, key) => console.warn(`[i18n] Missing translation: ${key} (${lngs.join(',')})`)
+    missingKeyHandler: __DEV__
+      ? (lngs: string[], ns: string, key: string) => console.warn(`[i18n] Missing translation: ${key} (${lngs.join(',')})`)
       : undefined,
     preload: SUPPORTED_LANGUAGES,
     returnEmptyString: false,
     returnNull: false,
     returnObjects: true,
-
-    // Backend Configuration
-    backend: {
-      loadPath: '/locales/{{lng}}.json',
-      requestOptions: {
-        cache: 'force-cache',
-        credentials: 'same-origin',
-      },
-      reloadInterval: false,
-    },
   });
 
 // Type augmentation for fully type-safe translations

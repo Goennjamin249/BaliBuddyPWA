@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -24,27 +25,16 @@ import { saveWeather, getWeather } from "../utils/storage";
 import {
   fromCachedWeather,
   toCachedWeather,
+  type WeatherData,
 } from "../utils/weatherMapper";
-
-interface WeatherData {
-  temp: number;
-  feelsLike: number;
-  humidity: number;
-  windSpeed: number;
-  condition: string;
-  description: string;
-  icon: string;
-  location: string;
-}
 
 // Fallback data for offline/API errors
 const FALLBACK_WEATHER: WeatherData = {
-  temp: 29,
+  temperature: 29,
   feelsLike: 33,
   humidity: 75,
   windSpeed: 12,
   condition: "Sunny",
-  description: "Sonnig",
   icon: "01d",
   location: "Bali, Indonesien",
 };
@@ -129,12 +119,11 @@ export default function WeatherWidget({
       }
 
       const weatherData: WeatherData = {
-        temp: Math.round(data.main.temp),
+        temperature: Math.round(data.main.temp),
         feelsLike: Math.round(data.main.feels_like),
         humidity: data.main.humidity,
         windSpeed: Math.round(data.wind?.speed || 0),
         condition: data.weather[0].main,
-        description: data.weather[0].description,
         icon: data.weather[0].icon,
         location: `${data.name}, ${data.sys?.country || "ID"}`,
       };
@@ -209,7 +198,7 @@ export default function WeatherWidget({
         {getWeatherIcon(weather.condition, 32, colors.primary)}
         <View style={styles.compactInfo}>
           <Text style={[styles.compactTemp, { color: colors.text }]}>
-            {weather.temp}°C
+            {weather.temperature}°C
           </Text>
           <Text style={[styles.compactLocation, { color: colors.textMuted }]}>
             {weather.location.split(",")[0]}
@@ -253,10 +242,10 @@ export default function WeatherWidget({
         )}
         <View style={styles.tempContainer}>
           <Text style={[styles.temperature, { color: colors.text }]}>
-            {weather?.temp || FALLBACK_WEATHER.temp}°C
+            {weather?.temperature || FALLBACK_WEATHER.temperature}°C
           </Text>
           <Text style={[styles.description, { color: colors.textMuted }]}>
-            {weather?.description || FALLBACK_WEATHER.description}
+            {weather?.condition || FALLBACK_WEATHER.condition}
           </Text>
         </View>
       </View>

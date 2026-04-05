@@ -19,10 +19,10 @@ import Animated, {
 } from "react-native-reanimated";
 
 const TABS = [
-  { key: "radar", titleKey: "tabs.radar", icon: Map },
-  { key: "survival", titleKey: "tabs.survival", icon: BookOpen },
-  { key: "wallet", titleKey: "tabs.wallet", icon: Wallet },
-  { key: "settings", titleKey: "tabs.settings", icon: Settings },
+  { key: "radar" as const, titleKey: "tabs.radar" as const, icon: Map },
+  { key: "survival" as const, titleKey: "tabs.survival" as const, icon: BookOpen },
+  { key: "wallet" as const, titleKey: "tabs.wallet" as const, icon: Wallet },
+  { key: "settings" as const, titleKey: "tabs.settings" as const, icon: Settings },
 ];
 
 const GLOW = "#059669";

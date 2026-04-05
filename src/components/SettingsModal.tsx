@@ -3,6 +3,7 @@
  * AMOLED Black Design with Mode Toggle and Favorites
  */
 
+import { useEffect, useState } from "react";
 import {
   View,
   Text,

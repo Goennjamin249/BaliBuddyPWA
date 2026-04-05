@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Globe, Moon, Settings, Sun } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
