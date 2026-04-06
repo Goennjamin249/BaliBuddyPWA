@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n from "../i18n";
 
 // Theme Type
@@ -86,7 +85,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: "balibuddy-ui-storage",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => localStorage),
       // Only persist theme and language, not transient states
       partialize: (state) => ({
         theme: state.theme,

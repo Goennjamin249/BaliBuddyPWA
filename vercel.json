@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx expo export",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
   "rewrites": [
     {
