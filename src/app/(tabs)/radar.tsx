@@ -26,7 +26,7 @@ import {
   Droplets,
   Star,
   Phone,
-} from "lucide-react";
+} from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";

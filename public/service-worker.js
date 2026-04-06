@@ -117,7 +117,7 @@ async function networkFirst(request, cacheName, staleTimeout = 3) {
 
   // If nothing in cache, return a generic offline fallback
   if (request.destination === 'document') {
-    return caches.match('/index.html');
+    return await caches.match('/index.html');
   }
 
   return new Response('Offline', {

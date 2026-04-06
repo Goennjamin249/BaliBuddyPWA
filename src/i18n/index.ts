@@ -67,7 +67,6 @@ const getDeviceLanguage = (): SupportedLanguage => {
 i18n
   .use(initReactI18next)
   .init({
-    // @ts-expect-error - resources type compatibility
     resources,
     lng: getDeviceLanguage(),
     fallbackLng: DEFAULT_LANGUAGE,
@@ -75,7 +74,7 @@ i18n
     
     interpolation: {
       escapeValue: false, // React already escapes values
-      skipOnVariables: false,
+      skipOnVariables: true, // ✅ Sicher: Keine Interpolation in Variablen (verhindert XSS + Endlosloops)
       prefix: '{{',
       suffix: '}}',
       formatSeparator: ',',
@@ -85,21 +84,19 @@ i18n
       useSuspense: false, // Disable Suspense for React Native compatibility
       bindI18n: 'languageChanged',
       transSupportBasicHtmlNodes: true,
-      transWrapTextNodes: false,
-      reuseTranslations: true,
+      transWrapTextNodes: '',
     },
 
-    debug: __DEV__, // Enable debug logging only in development
+    debug: process.env.NODE_ENV === 'development', // Enable debug logging only in development
     load: 'languageOnly', // Ignore region codes (de-DE → de)
     lowerCaseLng: true,
     cleanCode: true,
-    initImmediate: false,
     keySeparator: '.',
     nsSeparator: ':',
     partialBundledLanguages: false,
-    saveMissing: __DEV__,
-    missingKeyHandler: __DEV__
-      ? (lngs: string[], ns: string, key: string) => console.warn(`[i18n] Missing translation: ${key} (${lngs.join(',')})`)
+    saveMissing: process.env.NODE_ENV === 'development',
+    missingKeyHandler: process.env.NODE_ENV === 'development'
+      ? (lngs: readonly string[], ns: string, key: string, fallbackValue: string, updateMissing: boolean, options: any) => console.warn(`[i18n] Missing translation: ${key} (${lngs.join(',')})`)
       : undefined,
     preload: SUPPORTED_LANGUAGES,
     returnEmptyString: false,
