@@ -1,6 +1,12 @@
 {
-  "buildCommand": "npm run vercel-build",
+  "buildCommand": "npx expo install --fix && npm run vercel-build",
   "outputDirectory": "dist",
+  "node": "22.x",
+  "functions": {
+    "api/**/*": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

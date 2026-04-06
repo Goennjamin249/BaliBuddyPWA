@@ -65,24 +65,7 @@ export default function BottomMenu({
     <View style={[styles.root, { bottom: pad }]}>
       <BlurView intensity={80} tint="systemChromeMaterial" style={styles.shell}>
         <View style={[styles.bar, { width: barW }]}>
-          {/* Glow pill */}
-          <Animated.View
-            style={[
-              pill,
-              {
-                position: "absolute",
-                top: 6,
-                left: 0,
-                width: tabW - 12,
-                height: 48,
-                borderRadius: 24,
-              },
-            ]}
-          >
-            <View style={styles.glow} />
-          </Animated.View>
-
-          {/* Tabs */}
+          {/* Tabs First */}
           {TABS.map((tab, i) => {
             const on = i === activeIndex;
             return (
@@ -90,10 +73,10 @@ export default function BottomMenu({
                 key={tab.key}
                 style={styles.btn}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   navigation.navigate(tab.key);
                 }}
-                activeOpacity={0.7}
+                activeOpacity={0.9}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: on }}
                 accessibilityLabel={t(tab.titleKey)}
@@ -114,6 +97,25 @@ export default function BottomMenu({
               </TouchableOpacity>
             );
           })}
+
+          {/* Glow Pill LAST = on top */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              pill,
+              {
+                position: "absolute",
+                top: 6,
+                left: 0,
+                width: tabW - 12,
+                height: 48,
+                borderRadius: 24,
+                zIndex: 10,
+              },
+            ]}
+          >
+            <View style={styles.glow} />
+          </Animated.View>
         </View>
       </BlurView>
     </View>
@@ -156,6 +158,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     height: 60,
+    zIndex: 20,
+    position: "relative",
   },
   row: {
     flexDirection: "row",
