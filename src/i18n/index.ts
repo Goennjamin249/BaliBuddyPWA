@@ -63,6 +63,7 @@ const getDeviceLanguage = (): SupportedLanguage => {
  * Initialize i18next with React Native / Expo optimizations
  * Configured for iOS PWA native feeling
  */
+// eslint-disable-next-line import/no-named-as-default-member
 i18n
   .use(initReactI18next)
   .init({
@@ -95,7 +96,7 @@ i18n
     initImmediate: false,
     keySeparator: '.',
     nsSeparator: ':',
-    partialBundledLanguages: true,
+    partialBundledLanguages: false,
     saveMissing: __DEV__,
     missingKeyHandler: __DEV__
       ? (lngs: string[], ns: string, key: string) => console.warn(`[i18n] Missing translation: ${key} (${lngs.join(',')})`)

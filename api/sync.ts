@@ -162,7 +162,7 @@ async function initializeDatabase(): Promise<{
   ];
 
   const existingCollections = await db.listCollections().toArray();
-  const existingNames = existingCollections.map((c) => c.name);
+  const existingNames = existingCollections.map((c: { name: string }) => c.name);
 
   for (const collectionName of collections) {
     if (!existingNames.includes(collectionName)) {
