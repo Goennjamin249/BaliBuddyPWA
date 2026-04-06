@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 2,
+  version: 3,
   tables: [
     // Currencies for offline conversion
     tableSchema({
@@ -265,6 +265,19 @@ export default appSchema({
         { name: 'key', type: 'string' },
         { name: 'value', type: 'string' },
         { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+
+    // Pending Offline Sync Queue
+    tableSchema({
+      name: 'pending_sync',
+      columns: [
+        { name: 'table_name', type: 'string' },
+        { name: 'operation', type: 'string' },
+        { name: 'data', type: 'string' },
+        { name: 'created_at', type: 'number' },
+        { name: 'retry_count', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
     }),

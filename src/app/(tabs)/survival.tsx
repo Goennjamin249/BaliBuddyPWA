@@ -74,7 +74,7 @@ import {
   DEFAULT_WEATHER,
   type WeatherData as WeatherDataType,
 } from "../../services/weather";
-// Tesseract wird lazy geladen für bessere Performance
+import Tesseract from 'tesseract.js';
 
 // === V2 Design Tokens ===
 const ROSE_600 = "#e11d48";
