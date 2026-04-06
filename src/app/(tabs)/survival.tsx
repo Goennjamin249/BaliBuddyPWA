@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -47,6 +47,7 @@ import { useTranslation } from "react-i18next";
 import { Q } from "@nozbe/watermelondb";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'lucide-react-native';
 
 import db from "../../db/index";
 import {
@@ -73,7 +74,7 @@ import {
   DEFAULT_WEATHER,
   type WeatherData as WeatherDataType,
 } from "../../services/weather";
-import { fetchExchangeRate } from "../../services/currency";
+// Tesseract wird lazy geladen für bessere Performance
 
 // === V2 Design Tokens ===
 const ROSE_600 = "#e11d48";
@@ -630,8 +631,7 @@ export default function SurvivalScreen() {
           .filter((a) => a.selected)
           .map((a) => a.id);
 
-        // Dynamisch import Tesseract nur bei Bedarf (spart Ladezeit)
-        const Tesseract = (await import('tesseract.js')).default;
+// Tesseract ist bereits oben importiert
         
         // OCR Ausführung
         const ocrResult = await Tesseract.recognize(
@@ -756,6 +756,161 @@ export default function SurvivalScreen() {
       setIsScanning(false);
     }
   }, [scannerAllergens, formatPrice, cameraRef]);
+
+  const handleScanFromGallery = useCallback(async () => {
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setIsScanning(true);
+
+    try {
+      // Request media library permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlaube den Zugriff auf die Galerie.');
+        setIsScanning(false);
+        return;
+      }
+
+      // Pick image from gallery
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) {
+        setIsScanning(false);
+        return;
+      }
+
+      const photoUri = result.assets[0].uri;
+
+      // Extract selected user allergens
+      const userAllergenIds = scannerAllergens
+        .filter((a) => a.selected)
+        .map((a) => a.id);
+
+      // Use Tesseract for OCR
+      const ocrResult = await Tesseract.recognize(
+        photoUri,
+        'deu+ind+eng',
+        {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              console.log(`OCR Fortschritt: ${Math.round(m.progress * 100)}%`);
+            }
+          }
+        }
+      );
+
+      // Allergen Erkennung Logik
+      const detectedText = ocrResult.data.text.toLowerCase();
+      const foundItems: MenuItem[] = [];
+
+      // Allergen Datenbank
+      const ALLERGENS: Record<string, { keywords: string[], name: string }> = {
+        gluten: { keywords: ["weizen", "gerste", "roggen", "gluten", "nudeln", "pasta", "mie", "brot", "mehl"], name: "Gluten" },
+        dairy: { keywords: ["milch", "käse", "butter", "sahne", "casein", "laktose"], name: "Milch" },
+        nuts: { keywords: ["nüsse", "erdnuss", "mandel", "cashew", "kacang", "peanut"], name: "Nüsse" },
+        shellfish: { keywords: ["garnelen", "krebs", "muscheln", "udang", "seafood", "shrimp"], name: "Meeresfrüchte" },
+        eggs: { keywords: ["ei", "eier", "telur", "egg"], name: "Eier" },
+        soy: { keywords: ["soja", "tofu", "tempeh", "kedelai", "soy"], name: "Soja" }
+      };
+
+      // Indische Gerichte Datenbank
+      const INDONESIAN_DISHES: Record<string, { allergens: string[], price: number, description: string }> = {
+        "nasi goreng": { allergens: ["eggs", "soy"], price: 45000, description: "Gebratener Reis" },
+        "mie goreng": { allergens: ["gluten", "shellfish", "soy"], price: 50000, description: "Gebratene Nudeln" },
+        "gado gado": { allergens: ["nuts"], price: 35000, description: "Gemüsesalat mit Erdnusssauce" },
+        "satay": { allergens: ["nuts", "soy"], price: 40000, description: "Fleischspieße" },
+        "rendang": { allergens: ["soy"], price: 55000, description: "Geschmortes Rindfleisch" },
+        "bakso": { allergens: ["gluten"], price: 30000, description: "Fleischbällchen Suppe" },
+        "martabak": { allergens: ["gluten", "eggs", "dairy"], price: 25000, description: "Gefüllter Pfannkuchen" }
+      };
+
+      // Erkannte Gerichte finden
+      Object.entries(INDONESIAN_DISHES).forEach(([dishName, dishData]) => {
+        if (detectedText.includes(dishName)) {
+          const matchingAllergens = dishData.allergens
+            .filter(a => userAllergenIds.includes(a))
+            .map(id => ALLERGENS[id].name);
+
+          let riskLevel: "low" | "medium" | "high" = "low";
+          let isSafe = true;
+
+          if (matchingAllergens.length > 0) {
+            isSafe = false;
+            riskLevel = matchingAllergens.length >= 2 ? "high" : "medium";
+          }
+
+          foundItems.push({
+            id: `dish-${Date.now()}-${Math.random()}`,
+            name: dishName.charAt(0).toUpperCase() + dishName.slice(1),
+            description: dishData.description,
+            price: { amount: dishData.price, currency: "IDR" },
+            allergens: matchingAllergens,
+            isSafe,
+            riskLevel
+          });
+        }
+      });
+
+      // Direkte Allergen Erkennung
+      Object.entries(ALLERGENS).forEach(([allergenId, allergenData]) => {
+        if (userAllergenIds.includes(allergenId)) {
+          for (const keyword of allergenData.keywords) {
+            if (detectedText.includes(keyword) && !foundItems.some(i => i.allergens.includes(allergenData.name))) {
+              foundItems.push({
+                id: `allergen-${Date.now()}-${Math.random()}`,
+                name: keyword.charAt(0).toUpperCase() + keyword.slice(1),
+                description: "⚠️ Allergen direkt erkannt",
+                price: { amount: 0, currency: "IDR" },
+                allergens: [allergenData.name],
+                isSafe: false,
+                riskLevel: "high"
+              });
+              break;
+            }
+          }
+        }
+      });
+
+      // Fallback falls nichts erkannt wurde
+      const finalItems = foundItems.length > 0 ? foundItems : [
+        {
+          id: "fallback",
+          name: "Scan abgeschlossen",
+          description: "Keine bekannten Gerichte erkannt. Überprüfe das Bild nochmal.",
+          price: { amount: 0, currency: "IDR" },
+          allergens: [],
+          isSafe: true,
+          riskLevel: "low"
+        }
+      ];
+
+      setScannedItems(finalItems);
+      setShowScannerResults(true);
+      
+      // Speichere Ergebnisse
+      const selectedAllergenIds = scannerAllergens.filter((a) => a.selected).map((a) => a.id);
+      const storageItems = finalItems.map((it) => ({
+        ...it,
+        price: formatPrice(it.price),
+      }));
+      
+      await saveScannerResult({
+        timestamp: Date.now(),
+        items: storageItems,
+        selectedAllergens: selectedAllergenIds,
+        rawText: ocrResult.data.text
+      });
+
+    } catch (error) {
+      console.error('Gallery Scan Fehler:', error);
+      Alert.alert('Fehler', 'Beim Scannen ist ein Fehler aufgetreten. Bitte versuche es erneut.');
+    } finally {
+      setIsScanning(false);
+    }
+  }, [scannerAllergens, formatPrice]);
 
   const handleResetScanner = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
