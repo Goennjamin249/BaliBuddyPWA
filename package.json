@@ -35,7 +35,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.4.3",
     "@vercel/speed-insights": "^2.0.0",
-    "expo": "55.0.11",
+    "expo": "^55.0.11",
     "expo-asset": "~55.0.12",
     "expo-blur": "~55.0.12",
     "expo-camera": "^55.0.13",
