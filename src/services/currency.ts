@@ -24,11 +24,6 @@ export async function fetchExchangeRate(): Promise<number> {
     return inFlightRequest;
   }
 
-<<<<<<< HEAD
-  // Check cache first - rates only change once per day
-  const cached = await getCachedRate();
-  if (cached) return cached.idr;
-=======
   // 1. Check WatermelonDB Cache first
   try {
     const settingsCollection = db.collections.get("settings");
@@ -46,7 +41,6 @@ export async function fetchExchangeRate(): Promise<number> {
   } catch {
     // Ignore cache read errors
   }
->>>>>>> 0a14abbe21b23896b6404d339fce90b762ddbc31
 
   // 2. Fetch from Frankfurter API
   inFlightRequest = (async () => {
@@ -65,18 +59,6 @@ export async function fetchExchangeRate(): Promise<number> {
 
       const data = await res.json();
       if (data.rates?.IDR) {
-<<<<<<< HEAD
-        const rate = data.rates.IDR;
-        await saveRate({ eur: 1, idr: rate, timestamp: Date.now() });
-        return rate;
-      }
-      throw new Error("Invalid exchange rate data");
-    } catch {
-      // Silent fail - use cache without logging errors to console
-      const fallbackCached = await getCachedRate();
-      if (fallbackCached) return fallbackCached.idr;
-      return 17200; // Default fallback rate
-=======
         const rateValue = data.rates.IDR;
         
         // 3. Save to WatermelonDB persistent cache
@@ -130,7 +112,6 @@ export async function fetchExchangeRate(): Promise<number> {
       }
       
       return 17200; // Final default fallback rate
->>>>>>> 0a14abbe21b23896b6404d339fce90b762ddbc31
     } finally {
       inFlightRequest = null;
     }
@@ -143,10 +124,6 @@ export async function fetchExchangeRate(): Promise<number> {
  * Get cached exchange rate
  */
 export async function getCachedExchangeRate(): Promise<number> {
-<<<<<<< HEAD
-  const cached = await getCachedRate();
-  return cached ? cached.idr : 17200;
-=======
   try {
     const settingsCollection = db.collections.get("settings");
     const cachedRate = await settingsCollection
@@ -162,7 +139,6 @@ export async function getCachedExchangeRate(): Promise<number> {
   }
   
   return 17200;
->>>>>>> 0a14abbe21b23896b6404d339fce90b762ddbc31
 }
 
 /**
