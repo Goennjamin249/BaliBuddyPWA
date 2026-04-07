@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { database } from '../db';
-import { Q } from '@nozbe/watermelondb';
+import database from '../db';
+// Q imported for potential future query building
 
 interface PendingSync {
   id: string;

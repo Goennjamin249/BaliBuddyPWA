@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { Ionicons } from '@expo/vector-icons';
 

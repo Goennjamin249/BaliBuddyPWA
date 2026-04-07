@@ -42,8 +42,8 @@ export function useNetworkStatus() {
 
     // ✅ Native Implementierung
     // Dynamisch importieren damit es auf Web nicht crasht
-    import('@react-native-community/netinfo').then(({ NetInfo }) => {
-      const unsubscribe = NetInfo.addEventListener((state: any) => {
+    import('@react-native-community/netinfo').then((netinfo) => {
+      const unsubscribe = netinfo.addEventListener((state: any) => {
         setNetworkStatus({
           isConnected: state.isConnected,
           isInternetReachable: state.isInternetReachable,
@@ -62,8 +62,8 @@ export function useNetworkStatus() {
     }
     
     try {
-      const { NetInfo } = await import('@react-native-community/netinfo');
-      const state = await NetInfo.fetch();
+      const netinfo = await import('@react-native-community/netinfo');
+      const state = await netinfo.fetch();
       return state.isConnected && state.isInternetReachable;
     } catch {
       return true;
