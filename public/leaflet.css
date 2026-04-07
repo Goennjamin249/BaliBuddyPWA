@@ -101,8 +101,9 @@
 	}
 /* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
 .leaflet-overlay-pane svg {
+	user-select: none;
 	-moz-user-select: none;
-	}
+}
 
 .leaflet-pane         { z-index: 400; }
 
