@@ -59,6 +59,7 @@
     "lucide-react-native": "^1.7.0",
     "mongodb": "^7.1.1",
     "nativewind": "^5.0.0-preview.3",
+    "now-php": "^0.0.10",
     "openmeteo": "^1.2.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
