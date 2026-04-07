@@ -84,7 +84,7 @@
     "@types/leaflet": "^1.9.21",
     "@types/react": "~19.2.14",
     "@vercel/node": "^2.1.0",
-    "eslint": "10.2.0",
+    "eslint": "^10.2.0",
     "eslint-config-expo": "~55.0.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
