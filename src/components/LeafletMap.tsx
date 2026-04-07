@@ -6,7 +6,7 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 // Komplett vermeiden dass Leaflet jemals Server-seitig geladen wird
 const isBrowser = typeof window !== 'undefined';
@@ -21,32 +21,36 @@ let L: any = {};
 
 // NUR wenn wir wirklich im Browser sind importieren wir Leaflet
 if (isBrowser) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const ReactLeaflet = require('react-leaflet');
-  MapContainer = ReactLeaflet.MapContainer;
-  TileLayer = ReactLeaflet.TileLayer;
-  Marker = ReactLeaflet.Marker;
-  Popup = ReactLeaflet.Popup;
-  Circle = ReactLeaflet.Circle;
-  useMap = ReactLeaflet.useMap;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  L = require('leaflet');
+  import('react-leaflet').then((ReactLeaflet) => {
+    MapContainer = ReactLeaflet.MapContainer;
+    TileLayer = ReactLeaflet.TileLayer;
+    Marker = ReactLeaflet.Marker;
+    Popup = ReactLeaflet.Popup;
+    Circle = ReactLeaflet.Circle;
+    useMap = ReactLeaflet.useMap;
+  });
+  
+  import('leaflet').then((Leaflet) => {
+    L = Leaflet.default || Leaflet;
 
-  // ✅ KRITISCH: Leaflet CSS muss geladen werden!
-  if (!document.getElementById('leaflet-css')) {
-    const link = document.createElement('link');
-    link.id = 'leaflet-css';
-    link.rel = 'stylesheet';
-    link.href = '/leaflet.css';
-    document.head.appendChild(link);
-  }
+    // ✅ KRITISCH: Leaflet CSS muss geladen werden!
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = '/leaflet.css';
+      document.head.appendChild(link);
+    }
 
-  // Fix Leaflet Icon Bug
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    // Fix Leaflet Icon Bug
+    if (L.Icon && L.Icon.Default) {
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
+    }
   });
 }
 

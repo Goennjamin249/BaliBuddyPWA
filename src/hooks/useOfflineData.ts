@@ -67,8 +67,10 @@ export function useOfflineData() {
         await database.write(async () => {
           await record.destroyPermanently();
         });
-      } catch {
+      } catch (error) {
         failed.push(item.id);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        void error;
         const collection = database.get('pending_sync');
         const record = await collection.find(item.id);
         await database.write(async () => {
