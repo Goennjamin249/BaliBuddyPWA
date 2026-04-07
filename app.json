@@ -139,10 +139,7 @@
         }
       ],
       "expo-image",
-      "expo-camera",
       "expo-sqlite",
-      "expo-audio",
-      "expo-video",
       "expo-asset",
       "expo-web-browser"
     ],

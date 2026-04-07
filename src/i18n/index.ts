@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import HttpBackend from 'i18next-http-backend';
 import * as Localization from 'expo-localization';
 
 import de from './de.json';
@@ -64,8 +63,8 @@ const getDeviceLanguage = (): SupportedLanguage => {
  * Initialize i18next with React Native / Expo optimizations
  * Configured for iOS PWA native feeling
  */
-void i18n
-  .use(HttpBackend)
+// eslint-disable-next-line import/no-named-as-default-member
+i18n
   .use(initReactI18next)
   .init({
     resources,
@@ -75,7 +74,7 @@ void i18n
     
     interpolation: {
       escapeValue: false, // React already escapes values
-      skipOnVariables: false,
+      skipOnVariables: true, // ✅ Sicher: Keine Interpolation in Variablen (verhindert XSS + Endlosloops)
       prefix: '{{',
       suffix: '}}',
       formatSeparator: ',',
@@ -85,36 +84,24 @@ void i18n
       useSuspense: false, // Disable Suspense for React Native compatibility
       bindI18n: 'languageChanged',
       transSupportBasicHtmlNodes: true,
-      transWrapTextNodes: false,
-      reuseTranslations: true,
+      transWrapTextNodes: '',
     },
 
-    debug: __DEV__, // Enable debug logging only in development
+    debug: process.env.NODE_ENV === 'development', // Enable debug logging only in development
     load: 'languageOnly', // Ignore region codes (de-DE → de)
     lowerCaseLng: true,
     cleanCode: true,
-    initImmediate: false,
     keySeparator: '.',
     nsSeparator: ':',
-    partialBundledLanguages: true,
-    saveMissing: __DEV__,
-    missingKeyHandler: __DEV__ 
-      ? (lngs, ns, key) => console.warn(`[i18n] Missing translation: ${key} (${lngs.join(',')})`)
+    partialBundledLanguages: false,
+    saveMissing: process.env.NODE_ENV === 'development',
+    missingKeyHandler: process.env.NODE_ENV === 'development'
+      ? (lngs: readonly string[], ns: string, key: string, fallbackValue: string, updateMissing: boolean, options: any) => console.warn(`[i18n] Missing translation: ${key} (${lngs.join(',')})`)
       : undefined,
     preload: SUPPORTED_LANGUAGES,
     returnEmptyString: false,
     returnNull: false,
     returnObjects: true,
-
-    // Backend Configuration
-    backend: {
-      loadPath: '/locales/{{lng}}.json',
-      requestOptions: {
-        cache: 'force-cache',
-        credentials: 'same-origin',
-      },
-      reloadInterval: false,
-    },
   });
 
 // Type augmentation for fully type-safe translations

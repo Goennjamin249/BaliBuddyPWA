@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import { ScrollViewStyleReset } from "expo-router/html";
 
 /**

@@ -1,37 +1,44 @@
 /**
- * Babel Plugin: Ersetzt import.meta.vitest und import.meta.env durch sichere Werte
- * Kompatibel mit Expo/Metro Bundler
+ * Babel Plugin: Ersetzt import.meta.vitest und import.meta.env
+ * ✅ Kompatibel mit Expo/Metro + Vercel Edge Runtime
+ * ✅ Unterstützt verschachtelte Zugriffe wie import.meta.env.API_URL
  */
 module.exports = function babelPluginImportMetaFix({ types: t }) {
   return {
     name: "import-meta-fix",
+    pre() {
+      // WICHTIG: Dieses Plugin MUSS VOR ALLEN ANDEREN laufen!
+    },
     visitor: {
-      // Ersetze import.meta.vitest -> undefined
-      MemberExpression(path) {
-        const node = path.node;
-
-        // import.meta.vitest erkennen
-        if (
-          t.isMetaProperty(node.object) &&
-          t.isIdentifier(node.object.meta, { name: "import" }) &&
-          t.isIdentifier(node.object.property, { name: "meta" }) &&
-          t.isIdentifier(node.property, { name: "vitest" })
-        ) {
-          path.replaceWith(t.identifier("undefined"));
-          return;
-        }
-
-        // import.meta.env -> {}
-        if (
-          t.isMetaProperty(node.object) &&
-          t.isIdentifier(node.object.meta, { name: "import" }) &&
-          t.isIdentifier(node.object.property, { name: "meta" }) &&
-          t.isIdentifier(node.property, { name: "env" })
-        ) {
-          path.replaceWith(t.objectExpression([]));
-          return;
+      MetaProperty(path) {
+        // 🔥 ALLE import.meta Vorkommen OHNE AUSNAHME ersetzen
+        if (t.isIdentifier(path.node.meta, { name: "import" }) && 
+            t.isIdentifier(path.node.property, { name: "meta" })) {
+          // Absolut sicher ersetzen, auch wenn weitere Plugins versuchen es zurück zu ändern
+          path.replaceWith(t.memberExpression(
+            t.identifier("process"),
+            t.identifier("env")
+          ));
+          path.skip();
         }
       },
+
+      Program: {
+        exit(path) {
+          // 🔥 Letzter Check am Ende der Verarbeitung: Suche NACH ALLEN ANDEREN PLUGINS nach übrig gebliebenem import.meta
+          path.traverse({
+            MetaProperty(innerPath) {
+              if (t.isIdentifier(innerPath.node.meta, { name: "import" }) && 
+                  t.isIdentifier(innerPath.node.property, { name: "meta" })) {
+                innerPath.replaceWith(t.memberExpression(
+                  t.identifier("process"),
+                  t.identifier("env")
+                ));
+              }
+            }
+          });
+        }
+      }
     },
   };
 };

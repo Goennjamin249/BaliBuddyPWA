@@ -1,13 +1,15 @@
 {
   "tabs": { "radar": "Radar", "survival": "Survival", "wallet": "Group Fund", "settings": "Settings" },
-  "radar": { 
-    "title": "Proximity Radar", 
-    "map": "Map", 
-    "list": "List", 
-    "distance": "Distance", 
-    "route": "Route", 
+  "radar": {
+    "title": "Proximity Radar",
+    "map": "Map",
+    "list": "List",
+    "distance": "Distance",
+    "route": "Route",
     "call": "Call",
     "online": "Online",
+    "offline": "Offline Mode",
+    "start_route": "Start Route",
     "places_active": "Places active",
     "all": "All",
     "loading": "Loading..."

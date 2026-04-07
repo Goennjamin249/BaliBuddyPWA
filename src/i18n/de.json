@@ -1,13 +1,15 @@
 {
   "tabs": { "radar": "Radar", "survival": "Survival", "wallet": "Gruppenkasse", "settings": "Optionen" },
-  "radar": { 
-    "title": "Umgebungsradar", 
-    "map": "Karte", 
-    "list": "Liste", 
-    "distance": "Entfernung", 
-    "route": "Route", 
+  "radar": {
+    "title": "Umgebungsradar",
+    "map": "Karte",
+    "list": "Liste",
+    "distance": "Entfernung",
+    "route": "Route",
     "call": "Anrufen",
     "online": "Online",
+    "offline": "Offline-Modus",
+    "start_route": "Route starten",
     "places_active": "Orte aktiv",
     "all": "Alle",
     "loading": "Lade..."

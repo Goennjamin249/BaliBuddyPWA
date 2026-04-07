@@ -14,4 +14,7 @@ module.exports = [
   {
     rules: disabledReactRules,
   },
+  {
+    ignores: ['dist/**', 'node_modules/**', '.expo/**', '.expo/virtual-metro-bundler/**'],
+  },
 ];

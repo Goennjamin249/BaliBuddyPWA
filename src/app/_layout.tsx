@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider } from "../theme/ThemeContext";
+import { OfflineIndicator } from "../components/OfflineIndicator";
 import "../i18n";
 import "../global.css";
 
@@ -9,8 +10,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <SafeAreaProvider>
-        <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
-          <Stack screenOptions={{ headerShown: false }}>
+        <View style={{ flex: 1, backgroundColor: "#F8FAFC" }} className="flex-1 bg-background">
+          <OfflineIndicator />
+          <Stack screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" />
           </Stack>

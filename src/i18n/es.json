@@ -1,13 +1,15 @@
 {
   "tabs": { "radar": "Radar", "survival": "Supervivencia", "wallet": "Fondo de Grupo", "settings": "Ajustes" },
-  "radar": { 
-    "title": "Radar de Cercanía", 
-    "map": "Mapa", 
-    "list": "Lista", 
-    "distance": "Distancia", 
-    "route": "Ruta", 
+  "radar": {
+    "title": "Radar de Cercanía",
+    "map": "Mapa",
+    "list": "Lista",
+    "distance": "Distancia",
+    "route": "Ruta",
     "call": "Llamar",
     "online": "En línea",
+    "offline": "Modo desconectado",
+    "start_route": "Iniciar ruta",
     "places_active": "Lugares activos",
     "all": "Todos",
     "loading": "Cargando..."

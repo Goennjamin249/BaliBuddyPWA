@@ -4,10 +4,11 @@
  * Implements request deduplication and caching
  */
 
-import { getCachedRate, saveRate } from "../utils/storage";
+import db from "../db/index";
+import { Q } from "@nozbe/watermelondb";
 
-// Exchange rate API endpoint (supports CORS for localhost development)
-const EXCHANGE_RATE_API = "https://api.exchangerate-api.com/v4/latest/EUR";
+// Frankfurter API - Open Source Exchange Rate API
+const FRANKFURTER_API = "https://api.frankfurter.app/latest?from=EUR";
 
 // In-memory cache to prevent duplicate concurrent requests
 let inFlightRequest: Promise<number> | null = null;
@@ -23,19 +24,39 @@ export async function fetchExchangeRate(): Promise<number> {
     return inFlightRequest;
   }
 
+<<<<<<< HEAD
   // Check cache first - rates only change once per day
   const cached = await getCachedRate();
   if (cached) return cached.idr;
+=======
+  // 1. Check WatermelonDB Cache first
+  try {
+    const settingsCollection = db.collections.get("settings");
+    const cachedRate = await settingsCollection
+      .query(Q.where("key", "exchange_rate_eur_idr"))
+      .fetch();
+    
+    if (cachedRate.length > 0) {
+      const rateData = JSON.parse((cachedRate[0] as any).value);
+      // Cache is valid for 24 hours
+      if (Date.now() - rateData.timestamp < 86400000) {
+        return rateData.idr;
+      }
+    }
+  } catch {
+    // Ignore cache read errors
+  }
+>>>>>>> 0a14abbe21b23896b6404d339fce90b762ddbc31
 
-  // Create new request with deduplication
+  // 2. Fetch from Frankfurter API
   inFlightRequest = (async () => {
     try {
-      const res = await fetch(EXCHANGE_RATE_API, {
+      const res = await fetch(FRANKFURTER_API, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
-        cache: 'force-cache'
+        cache: 'no-cache'
       });
 
       if (!res.ok) {
@@ -44,6 +65,7 @@ export async function fetchExchangeRate(): Promise<number> {
 
       const data = await res.json();
       if (data.rates?.IDR) {
+<<<<<<< HEAD
         const rate = data.rates.IDR;
         await saveRate({ eur: 1, idr: rate, timestamp: Date.now() });
         return rate;
@@ -54,6 +76,61 @@ export async function fetchExchangeRate(): Promise<number> {
       const fallbackCached = await getCachedRate();
       if (fallbackCached) return fallbackCached.idr;
       return 17200; // Default fallback rate
+=======
+        const rateValue = data.rates.IDR;
+        
+        // 3. Save to WatermelonDB persistent cache
+        try {
+          await db.write(async () => {
+            const collection = db.collections.get("settings");
+            const existing = await collection
+              .query(Q.where("key", "exchange_rate_eur_idr"))
+              .fetch();
+            
+            if (existing.length > 0) {
+              await existing[0].update((record: any) => {
+                record.value = JSON.stringify({
+                  eur: 1,
+                  idr: rateValue,
+                  timestamp: Date.now()
+                });
+              });
+            } else {
+              await collection.create((record: any) => {
+                record.key = "exchange_rate_eur_idr";
+                record.value = JSON.stringify({
+                  eur: 1,
+                  idr: rateValue,
+                  timestamp: Date.now()
+                });
+              });
+            }
+          });
+        } catch {
+          // Ignore save errors
+        }
+
+        return rateValue;
+      }
+      throw new Error("Invalid exchange rate data");
+    } catch {
+      // 4. OFFLINE FALLBACK: Load last known rate from database
+      try {
+        const settingsCollection = db.collections.get("settings");
+        const cachedRate = await settingsCollection
+          .query(Q.where("key", "exchange_rate_eur_idr"))
+          .fetch();
+        
+        if (cachedRate.length > 0) {
+          const rateData = JSON.parse((cachedRate[0] as any).value);
+          return rateData.idr;
+        }
+      } catch {
+        // Fallback to default if database also fails
+      }
+      
+      return 17200; // Final default fallback rate
+>>>>>>> 0a14abbe21b23896b6404d339fce90b762ddbc31
     } finally {
       inFlightRequest = null;
     }
@@ -66,8 +143,26 @@ export async function fetchExchangeRate(): Promise<number> {
  * Get cached exchange rate
  */
 export async function getCachedExchangeRate(): Promise<number> {
+<<<<<<< HEAD
   const cached = await getCachedRate();
   return cached ? cached.idr : 17200;
+=======
+  try {
+    const settingsCollection = db.collections.get("settings");
+    const cachedRate = await settingsCollection
+      .query(Q.where("key", "exchange_rate_eur_idr"))
+      .fetch();
+    
+    if (cachedRate.length > 0) {
+      const rateData = JSON.parse((cachedRate[0] as any).value);
+      return rateData.idr;
+    }
+  } catch {
+    // Ignore errors
+  }
+  
+  return 17200;
+>>>>>>> 0a14abbe21b23896b6404d339fce90b762ddbc31
 }
 
 /**

@@ -19,10 +19,10 @@ import Animated, {
 } from "react-native-reanimated";
 
 const TABS = [
-  { key: "radar", titleKey: "tabs.radar", icon: Map },
-  { key: "survival", titleKey: "tabs.survival", icon: BookOpen },
-  { key: "wallet", titleKey: "tabs.wallet", icon: Wallet },
-  { key: "settings", titleKey: "tabs.settings", icon: Settings },
+  { key: "radar" as const, titleKey: "tabs.radar" as const, icon: Map },
+  { key: "survival" as const, titleKey: "tabs.survival" as const, icon: BookOpen },
+  { key: "wallet" as const, titleKey: "tabs.wallet" as const, icon: Wallet },
+  { key: "settings" as const, titleKey: "tabs.settings" as const, icon: Settings },
 ];
 
 const GLOW = "#059669";
@@ -71,24 +71,7 @@ export default function BottomMenu({
     <View style={[styles.root, { bottom: pad }]}>
       <BlurView intensity={80} tint="systemChromeMaterial" style={styles.shell}>
         <View style={[styles.bar, { width: barW }]}>
-          {/* Glow pill */}
-          <Animated.View
-            style={[
-              pill,
-              {
-                position: "absolute",
-                top: 6,
-                left: 0,
-                width: tabW - 12,
-                height: 48,
-                borderRadius: 24,
-              },
-            ]}
-          >
-            <View style={styles.glow} />
-          </Animated.View>
-
-          {/* Tabs */}
+          {/* Tabs First */}
           {TABS.map((tab, i) => {
             const on = i === activeIndex;
             return (
@@ -101,7 +84,7 @@ export default function BottomMenu({
                   const routeName = routes[i]?.name ?? tab.key;
                   navigation.navigate(routeName);
                 }}
-                activeOpacity={0.7}
+                activeOpacity={0.9}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: on }}
                 accessibilityLabel={t(tab.titleKey)}
@@ -122,6 +105,25 @@ export default function BottomMenu({
               </TouchableOpacity>
             );
           })}
+
+          {/* Glow Pill LAST = on top */}
+          <Animated.View
+            style={[
+              pill,
+              {
+                position: "absolute",
+                top: 6,
+                left: 0,
+                width: tabW - 12,
+                height: 48,
+                borderRadius: 24,
+                zIndex: 10,
+                pointerEvents: "none",
+              },
+            ]}
+          >
+            <View style={styles.glow} />
+          </Animated.View>
         </View>
       </BlurView>
     </View>
@@ -164,6 +166,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     height: 60,
+    zIndex: 20,
+    position: "relative",
   },
   row: {
     flexDirection: "row",

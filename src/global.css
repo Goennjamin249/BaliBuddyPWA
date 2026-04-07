@@ -1,5 +1,4 @@
-/* Mapbox GL CSS for web map rendering - MUST BE FIRST */
-@import url('https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css');
+/* Leaflet CSS for web map rendering - MUST BE FIRST */
 @import "tailwindcss";
 
 @theme {

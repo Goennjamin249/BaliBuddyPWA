@@ -1,13 +1,15 @@
 {
   "tabs": { "radar": "Radar", "survival": "Survie", "wallet": "Caisse de Groupe", "settings": "Paramètres" },
-  "radar": { 
-    "title": "Radar de Proximité", 
-    "map": "Carte", 
-    "list": "Liste", 
-    "distance": "Distance", 
-    "route": "Itinéraire", 
+  "radar": {
+    "title": "Radar de Proximité",
+    "map": "Carte",
+    "list": "Liste",
+    "distance": "Distance",
+    "route": "Itinéraire",
     "call": "Appeler",
     "online": "En ligne",
+    "offline": "Mode hors ligne",
+    "start_route": "Démarrer l'itinéraire",
     "places_active": "Lieux actifs",
     "all": "Tous",
     "loading": "Chargement..."
