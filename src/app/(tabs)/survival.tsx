@@ -2052,7 +2052,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: GRAY_800,
   },
-  bentoNumber: { fontSize: 16, fontWeight: "800", color: WHITE },
+  bentoNumber: { fontSize: 16, fontWeight: "800" },
   volcanoCard: {
     backgroundColor: "rgba(255, 255, 255, 0.75)",
     borderRadius: 16,

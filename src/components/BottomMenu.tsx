@@ -32,13 +32,19 @@ export default function BottomMenu({
   state,
   navigation,
 }: {
-  state: { index: number; routes: { key: string; title: string }[] };
+  state: { index: number; routes: { key: string; name: string; title?: string }[] };
   navigation: { navigate: (route: string) => void };
 }) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const activeIndex = state.index;
+  const activeIndex = state?.index ?? 0;
+  const routes = state?.routes ?? [];
+
+  // Guard: Don't render if no routes available yet
+  if (routes.length === 0) {
+    return <View style={[styles.root, { bottom: 8 }]} />;
+  }
 
   const barW = Math.min(width - 32, 500);
   const tabW = barW / TABS.length;
@@ -91,7 +97,9 @@ export default function BottomMenu({
                 style={styles.btn}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  navigation.navigate(tab.key);
+                  // Navigate using the actual route name from state
+                  const routeName = routes[i]?.name ?? tab.key;
+                  navigation.navigate(routeName);
                 }}
                 activeOpacity={0.7}
                 accessibilityRole="tab"
@@ -170,14 +178,18 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: GLOW,
     borderRadius: 24,
-    shadowColor: GLOW,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
     ...Platform.select({
-      ios: {},
+      ios: {
+        shadowColor: GLOW,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 16,
+      },
       web: {
         boxShadow: `0 0 20px ${GLOW}80, 0 0 40px ${GLOW}40`,
+      },
+      default: {
+        elevation: 8,
       },
     }),
   },

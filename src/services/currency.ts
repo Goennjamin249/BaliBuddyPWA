@@ -25,7 +25,7 @@ export async function fetchExchangeRate(): Promise<number> {
 
   // Check cache first - rates only change once per day
   const cached = await getCachedRate();
-  if (cached) return Number(cached);
+  if (cached) return cached.idr;
 
   // Create new request with deduplication
   inFlightRequest = (async () => {
@@ -37,21 +37,22 @@ export async function fetchExchangeRate(): Promise<number> {
         },
         cache: 'force-cache'
       });
-      
+
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
-      
+
       const data = await res.json();
       if (data.rates?.IDR) {
-        await saveRate({ eur: 1, idr: data.rates.IDR, timestamp: Date.now() });
-        return data.rates.IDR;
+        const rate = data.rates.IDR;
+        await saveRate({ eur: 1, idr: rate, timestamp: Date.now() });
+        return rate;
       }
       throw new Error("Invalid exchange rate data");
     } catch {
       // Silent fail - use cache without logging errors to console
       const fallbackCached = await getCachedRate();
-      if (fallbackCached) return Number(fallbackCached);
+      if (fallbackCached) return fallbackCached.idr;
       return 17200; // Default fallback rate
     } finally {
       inFlightRequest = null;
@@ -66,7 +67,7 @@ export async function fetchExchangeRate(): Promise<number> {
  */
 export async function getCachedExchangeRate(): Promise<number> {
   const cached = await getCachedRate();
-  return cached ? Number(cached) : 17200;
+  return cached ? cached.idr : 17200;
 }
 
 /**

@@ -52,13 +52,18 @@ const V2 = {
     textMuted: "#6B7280",
   },
   radii: { card: 24, sheet: 32, chip: 20 },
-  shadow: {
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-  },
+  shadow: Platform.select({
+    web: {
+      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    },
+    default: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+  }),
   glass: {
     backgroundColor: "rgba(255, 255, 255, 0.80)",
     backdropFilter: "blur(20px)",
