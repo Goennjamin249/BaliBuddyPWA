@@ -3,6 +3,7 @@
 # dependencies
 node_modules/
 
+
 # Expo
 .expo/
 dist/
@@ -52,3 +53,4 @@ app-example
 .vercel
 .kilocodemodes
 .clinerules
+

@@ -2,7 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "module": "preserve",
+    "module": "esnext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "experimentalDecorators": true,

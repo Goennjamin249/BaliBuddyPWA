@@ -44,7 +44,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
+      "output": "static",
       "favicon": "./assets/images/favicon.png",
       "name": "BaliBuddy - Offline Reise-Companion",
       "shortName": "BaliBuddy",
