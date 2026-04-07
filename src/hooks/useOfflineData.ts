@@ -25,9 +25,9 @@ export function useOfflineData() {
       const collection = database.get('pending_sync');
       const items = await collection.query().fetch();
       setPendingSync(items as unknown as PendingSync[]);
-    } catch (error) {
-      console.error('Error loading pending sync:', error);
-    }
+  } catch {
+    console.error('Error loading pending sync:');
+  }
   };
 
   const queueForSync = useCallback(async (
@@ -47,9 +47,9 @@ export function useOfflineData() {
         });
       });
       await loadPendingSync();
-    } catch (error) {
-      console.error('Error queueing for sync:', error);
-    }
+  } catch {
+    console.error('Error queueing for sync:');
+  }
   }, []);
 
   const syncPendingItems = useCallback(async (syncFunction: Function) => {
@@ -67,7 +67,7 @@ export function useOfflineData() {
         await database.write(async () => {
           await record.destroyPermanently();
         });
-      } catch (error) {
+      } catch {
         failed.push(item.id);
         const collection = database.get('pending_sync');
         const record = await collection.find(item.id);
