@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { NetInfo, NetInfoState } from '@react-native-community/netinfo';
+import { Platform } from 'react-native';
 
 interface NetworkStatus {
   isConnected: boolean | null;
@@ -17,21 +17,57 @@ export function useNetworkStatus() {
   });
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
-      setNetworkStatus({
-        isConnected: state.isConnected,
-        isInternetReachable: state.isInternetReachable,
-        type: state.type,
-        isOffline: !state.isConnected || state.isInternetReachable === false,
-      });
-    });
+    // ✅ Web / Browser Implementierung
+    if (Platform.OS === 'web') {
+      const updateOnlineStatus = () => {
+        const isOnline = navigator.onLine;
+        setNetworkStatus({
+          isConnected: isOnline,
+          isInternetReachable: isOnline,
+          type: 'web',
+          isOffline: !isOnline,
+        });
+      };
 
-    return () => unsubscribe();
+      updateOnlineStatus();
+      
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+
+      return () => {
+        window.removeEventListener('online', updateOnlineStatus);
+        window.removeEventListener('offline', updateOnlineStatus);
+      };
+    }
+
+    // ✅ Native Implementierung
+    // Dynamisch importieren damit es auf Web nicht crasht
+    import('@react-native-community/netinfo').then(({ NetInfo }) => {
+      const unsubscribe = NetInfo.addEventListener((state: any) => {
+        setNetworkStatus({
+          isConnected: state.isConnected,
+          isInternetReachable: state.isInternetReachable,
+          type: state.type,
+          isOffline: !state.isConnected || state.isInternetReachable === false,
+        });
+      });
+
+      return unsubscribe;
+    });
   }, []);
 
   const checkConnection = useCallback(async () => {
-    const state = await NetInfo.fetch();
-    return state.isConnected && state.isInternetReachable;
+    if (Platform.OS === 'web') {
+      return navigator.onLine;
+    }
+    
+    try {
+      const { NetInfo } = await import('@react-native-community/netinfo');
+      const state = await NetInfo.fetch();
+      return state.isConnected && state.isInternetReachable;
+    } catch {
+      return true;
+    }
   }, []);
 
   return { ...networkStatus, checkConnection };

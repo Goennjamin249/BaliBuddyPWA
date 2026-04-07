@@ -100,7 +100,6 @@ export default function BottomMenu({
 
           {/* Glow Pill LAST = on top */}
           <Animated.View
-            pointerEvents="none"
             style={[
               pill,
               {
@@ -111,6 +110,7 @@ export default function BottomMenu({
                 height: 48,
                 borderRadius: 24,
                 zIndex: 10,
+                pointerEvents: "none",
               },
             ]}
           >
@@ -174,12 +174,16 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: GLOW,
     borderRadius: 24,
-    shadowColor: GLOW,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
     ...Platform.select({
-      ios: {},
+      ios: {
+        shadowColor: GLOW,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 12,
+      },
       web: {
         boxShadow: `0 0 20px ${GLOW}80, 0 0 40px ${GLOW}40`,
       },
