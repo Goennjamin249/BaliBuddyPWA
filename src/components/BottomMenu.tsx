@@ -41,11 +41,6 @@ export default function BottomMenu({
   const activeIndex = state?.index ?? 0;
   const routes = state?.routes ?? [];
 
-  // Guard: Don't render if no routes available yet
-  if (routes.length === 0) {
-    return <View style={[styles.root, { bottom: 8 }]} />;
-  }
-
   const barW = Math.min(width - 32, 500);
   const tabW = barW / TABS.length;
 
@@ -66,6 +61,11 @@ export default function BottomMenu({
   }));
 
   const pad = Platform.OS === "ios" ? Math.max(insets.bottom, 8) : 8;
+
+  // Guard: Don't render if no routes available yet
+  if (routes.length === 0) {
+    return <View style={[styles.root, { bottom: 8 }]} />;
+  }
 
   return (
     <View style={[styles.root, { bottom: pad }]}>
